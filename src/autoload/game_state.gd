@@ -21,6 +21,10 @@ var money: int = START_MONEY
 var location_id: String = LocationDB.HOME
 ## Afinidad del protagonista con cada personaje. Sin umbrales ni efectos automáticos.
 var affinity: Dictionary = {}
+## Inventario del grupo: id de objeto (ItemDB) -> cantidad.
+var inventory: Dictionary = START_INVENTORY.duplicate()
+
+const START_INVENTORY := {"pochicola": 3}
 
 
 func new_game() -> void:
@@ -29,12 +33,24 @@ func new_game() -> void:
 	money = START_MONEY
 	location_id = LocationDB.HOME
 	affinity = {}
+	inventory = START_INVENTORY.duplicate()
 	changed.emit()
 
 
 func set_location(id: String) -> void:
 	location_id = id
 	changed.emit()
+
+
+func item_count(item_id: String) -> int:
+	return inventory.get(item_id, 0)
+
+
+func use_item(item_id: String) -> bool:
+	if item_count(item_id) <= 0:
+		return false
+	inventory[item_id] = item_count(item_id) - 1
+	return true
 
 
 func get_affinity(character_id: String) -> int:

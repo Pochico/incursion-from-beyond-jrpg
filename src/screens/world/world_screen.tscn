@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://src/screens/world/world_screen.gd" id="1_world"]
 [ext_resource type="Script" path="res://src/screens/world/location_backdrop.gd" id="2_backdrop"]
@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://src/ui/components/dialogue_box.gd" id="9_box"]
 [ext_resource type="Script" path="res://src/screens/world/interaction_menu.gd" id="10_menu"]
 [ext_resource type="Script" path="res://src/screens/world/map_overlay.gd" id="11_map"]
+[ext_resource type="Script" path="res://src/screens/world/combat/combat_view.gd" id="12_combat"]
+[ext_resource type="Script" path="res://src/screens/world/battle_transition.gd" id="13_transition"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_hint"]
 font_size = 28
@@ -203,6 +205,17 @@ script = ExtResource("9_box")
 speaker_name = ""
 text = ""
 
+[node name="Combat" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("12_combat")
+
 [node name="Interaction" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
@@ -222,3 +235,15 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("11_map")
+
+[node name="Transition" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("13_transition")

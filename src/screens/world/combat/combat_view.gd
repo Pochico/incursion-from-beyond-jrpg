@@ -1,0 +1,580 @@
+class_name CombatView
+extends Control
+## Interfaz de combate (ver docs/ui/referencias/02_combate.webp).
+##
+## Composición (base 1920×1080):
+##  - Cabecera roja con el nombre del combate; fecha y dinero arriba a la derecha.
+##  - Visor grande: fondo de la ubicación, el rival con su silueta de color,
+##    su placa de PV y el medidor de Tensión.
+##  - Columna derecha: minimapa y fichas del grupo.
+##  - Fila de comandos (Atacar, Habilidad, Objeto, Defender, Analizar, Huir).
+##  - Fila de opciones del comando seleccionado + descripción / registro.
+##
+## La lógica está en Battle; esta vista solo traduce sus eventos en animaciones.
+##
+## Uso:
+##   combat.setup("kael")         # mientras la transición tapa la pantalla
+##   combat.begin()               # tras descubrirla
+##   var won: bool = await combat.finished
+
+signal finished(player_won: bool)
+
+enum State { IDLE, COMMAND, OPTION, ANIMATING, RESULT }
+
+const VIEWPORT_RECT := Rect2(10, 96, 1418, 622)
+const COMMAND_Y := 738.0
+const OPTION_ROW := Rect2(30, 830, 1864, 70)
+const RIGHT_X := 1440.0
+
+const COMMANDS := [
+	{"id": "attack", "label": "Atacar", "icon": "swords", "desc": "Ataque básico con lo que tengas a mano."},
+	{"id": "skill", "label": "Habilidad", "icon": "sparkle", "desc": "Habilidades bloqueadas: todavía no has aprendido ninguna."},
+	{"id": "item", "label": "Objeto", "icon": "flask", "desc": "Usar un objeto del inventario."},
+	{"id": "defend", "label": "Defender", "icon": "shield", "desc": "Cubrirte para reducir el próximo golpe."},
+	{"id": "analyze", "label": "Analizar", "icon": "antenna", "desc": "Estudiar al rival. No gasta el turno."},
+	{"id": "flee", "label": "Huir", "icon": "run", "desc": "Abandonar el combate."},
+]
+
+var _battle: Battle
+var _state := State.IDLE
+var _enemy_id := ""
+var _current_command := 0
+var _info_text := ""
+var _log_text := ""             # última acción del combate (registro)
+var _result_text := ""
+var _result_color := UIStyle.LIME
+var _result_t := 0.0
+
+var _viewport: Control
+var _backdrop: LocationBackdrop
+var _enemy: CharacterSprite
+var _plate: EnemyPlate
+var _fx: Control                 # capa de efectos dentro del visor (tajos, popups)
+var _minimap: MiniMap
+var _cards: Array[CombatantCard] = []
+var _commands: Array[SlantButton] = []
+var _options: HBoxContainer
+var _info: Control
+var _tension_shown := 0.0
+var _slash_t := -1.0             # animación del tajo (−1 = inactiva)
+
+
+func _ready() -> void:
+	visible = false
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	_build()
+
+
+# --- Construcción ----------------------------------------------------------------------
+
+func _build() -> void:
+	# Visor
+	_viewport = Control.new()
+	_viewport.position = VIEWPORT_RECT.position + Vector2(2, 2)
+	_viewport.size = VIEWPORT_RECT.size - Vector2(4, 4)
+	_viewport.clip_contents = true
+	_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_viewport)
+
+	_backdrop = LocationBackdrop.new()
+	_backdrop.size = _viewport.size
+	_viewport.add_child(_backdrop)
+
+	var shade := ColorRect.new()
+	shade.color = Color(UIStyle.INK, 0.25)
+	shade.size = _viewport.size
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_viewport.add_child(shade)
+
+	_enemy = CharacterSprite.new()
+	_enemy.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_enemy.size = Vector2(560, 600)
+	_enemy.position = Vector2(_viewport.size.x * 0.56 - 280, _viewport.size.y - 600)
+	_enemy.pivot_offset = Vector2(280, 600)
+	_viewport.add_child(_enemy)
+
+	_plate = EnemyPlate.new()
+	_plate.position = Vector2(26, 22)
+	_viewport.add_child(_plate)
+
+	_fx = Control.new()
+	_fx.size = _viewport.size
+	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx.draw.connect(_draw_fx)
+	_viewport.add_child(_fx)
+
+	# Columna derecha
+	_minimap = MiniMap.new()
+	_minimap.position = Vector2(RIGHT_X, 62)
+	_minimap.size = Vector2(1908 - RIGHT_X, 238)
+	add_child(_minimap)
+	for i in 4:
+		var card := CombatantCard.new()
+		card.position = Vector2(RIGHT_X, 310 + i * 102)
+		card.size = Vector2(1908 - RIGHT_X, 94)
+		add_child(card)
+		_cards.append(card)
+
+	# Comandos
+	var x := 74.0
+	var w := 296.0
+	for i in COMMANDS.size():
+		var b := SlantButton.new()
+		b.label = COMMANDS[i].label
+		b.icon_name = COMMANDS[i].icon
+		b.description = COMMANDS[i].desc
+		b.font_size = 30
+		b.slant = 26
+		b.position = Vector2(x + i * (w + 8), COMMAND_Y)
+		b.size = Vector2(w, 72)
+		b.custom_minimum_size = Vector2(w, 72)
+		b.focus_entered.connect(_on_command_focused.bind(i))
+		b.pressed.connect(_on_command_pressed.bind(i))
+		add_child(b)
+		_commands.append(b)
+	_commands[1].disabled = true   # Habilidad: bloqueada de momento.
+
+	# Fila de opciones + descripción
+	_info = Control.new()
+	_info.position = OPTION_ROW.position
+	_info.size = OPTION_ROW.size
+	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_info.draw.connect(_draw_info)
+	add_child(_info)
+
+	_options = HBoxContainer.new()
+	_options.position = OPTION_ROW.position + Vector2(18, 10)
+	_options.size = Vector2(900, 50)
+	_options.add_theme_constant_override("separation", 18)
+	add_child(_options)
+
+
+# --- API ---------------------------------------------------------------------------------
+
+## Prepara el combate contra `enemy_id` y lo hace visible (sin dar el control).
+func setup(enemy_id: String) -> void:
+	_enemy_id = enemy_id
+	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id)
+	_state = State.IDLE
+	_tension_shown = 0.0
+	_result_text = ""
+	_result_t = 0.0
+	_slash_t = -1.0
+	_log_text = ""
+
+	_backdrop.set_location(GameState.location_id)
+	_minimap.location_id = GameState.location_id
+	_minimap.queue_redraw()
+
+	_enemy.texture = CharacterDB.portrait(enemy_id)
+	_enemy.glow_color = CharacterDB.color(enemy_id)
+	_enemy.glow_idle = 0.9
+	_enemy.modulate = Color.WHITE
+	_enemy.scale = Vector2.ONE
+	_plate.setup(_battle.enemy())
+	_plate.analyzed = false
+
+	_cards[0].setup(CharacterDB.PROTAGONIST, 1, _battle.player())
+	_cards[0].guarding = false
+	for i in range(1, _cards.size()):
+		_cards[i].setup("", i + 1)
+
+	_build_options(0)
+	_log("¡%s acepta el duelo!" % _battle.enemy().name)
+	visible = true
+	queue_redraw()
+	_fx.queue_redraw()
+
+
+## Da el control al jugador. El resultado llega por la señal `finished(player_won)`.
+func begin() -> void:
+	# Pequeño margen para que las pulsaciones de Enter con las que se avanzaba
+	# el diálogo previo no ejecuten una acción sin querer.
+	await get_tree().create_timer(0.3).timeout
+	_enter_command_state(0)
+
+
+# --- Estados y entrada ---------------------------------------------------------------------
+
+func _enter_command_state(index: int) -> void:
+	_state = State.COMMAND
+	_set_commands_enabled(true)
+	_commands[index].grab_focus()
+	_on_command_focused(index)
+
+
+func _set_commands_enabled(on: bool) -> void:
+	for b in _commands:
+		b.focus_mode = Control.FOCUS_ALL if on else Control.FOCUS_NONE
+		b.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+	for c in _options.get_children():
+		(c as Control).mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+
+
+func _on_command_focused(index: int) -> void:
+	if _state != State.COMMAND and _state != State.OPTION:
+		return
+	# Volver a la fila de comandos (con ↑ o el ratón) sale de la de opciones.
+	_state = State.COMMAND
+	_current_command = index
+	_build_options(index)
+	_set_info(COMMANDS[index].desc)
+
+
+func _on_command_pressed(index: int) -> void:
+	if _state != State.COMMAND:
+		return
+	_current_command = index
+	var first := _first_enabled_option()
+	if first:
+		_state = State.OPTION
+		first.grab_focus()
+
+
+func _first_enabled_option() -> PillButton:
+	for c in _options.get_children():
+		if c is PillButton and not c.disabled:
+			return c
+	return null
+
+
+## Opciones de cada comando.
+func _options_for(command_id: String) -> Array:
+	var p := _battle.player()
+	match command_id:
+		"attack":
+			return [{"label": p.attack, "icon": "slash", "action": "attack",
+				"desc": "Un rápido corte que inflige daño físico al rival. Daño: %d ± %d." % [p.damage, p.variance]}]
+		"skill":
+			var locked := []
+			for i in 3:
+				locked.append({"label": "Bloqueado", "icon": "lock", "disabled": true,
+					"desc": "Todavía no tienes habilidades. Se desbloquearán más adelante."})
+			return locked
+		"item":
+			var n := GameState.item_count("pochicola")
+			return [{"label": "Pochicola  ×%d" % n, "icon": "can", "action": "item:pochicola",
+				"disabled": n <= 0, "desc": ItemDB.description("pochicola") if n > 0 else "No te quedan Pochicolas."}]
+		"defend":
+			return [{"label": "Guardia", "icon": "shield", "action": "defend",
+				"desc": "Te cubres: el próximo golpe del rival te hará la mitad de daño."}]
+		"analyze":
+			return [{"label": "Escanear", "icon": "antenna", "action": "analyze",
+				"desc": "Revela los PV y el ataque del rival. No gasta el turno."}]
+		"flee":
+			return [{"label": "Rendirse", "icon": "run", "action": "flee",
+				"desc": "Abandonas el duelo. Cuenta como derrota."}]
+	return []
+
+
+func _build_options(index: int) -> void:
+	for c in _options.get_children():
+		c.queue_free()
+	for opt in _options_for(COMMANDS[index].id):
+		var b := PillButton.new()
+		b.label = opt.label
+		b.icon_name = opt.icon
+		b.selectable = true
+		b.description = opt.desc
+		b.disabled = opt.get("disabled", false)
+		b.font_size = 24
+		b.custom_minimum_size = Vector2(250, 50)
+		b.focus_entered.connect(func() -> void: _set_info(b.description))
+		if opt.has("action"):
+			b.pressed.connect(_execute.bind(opt.action))
+		_options.add_child(b)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if _state == State.OPTION and event.is_action_pressed("ui_cancel"):
+		_enter_command_state(_current_command)
+		get_viewport().set_input_as_handled()
+	elif _state == State.RESULT and (event.is_action_pressed("ui_accept") or
+			(event is InputEventMouseButton and event.pressed)):
+		_state = State.IDLE
+		get_viewport().set_input_as_handled()
+		finished.emit(_battle.player_won())
+
+
+func _gui_input(event: InputEvent) -> void:
+	if _state == State.RESULT and event is InputEventMouseButton and event.pressed:
+		_state = State.IDLE
+		accept_event()
+		finished.emit(_battle.player_won())
+
+
+# --- Ejecución de turnos ---------------------------------------------------------------------
+
+func _execute(action: String) -> void:
+	if _state != State.COMMAND and _state != State.OPTION:
+		return
+	_state = State.ANIMATING
+	get_viewport().gui_release_focus()
+	_set_commands_enabled(false)
+
+	var events: Array = []
+	var uses_turn := true
+	match action:
+		"attack":
+			events = _battle.player_attack()
+		"defend":
+			events = _battle.player_defend()
+		"analyze":
+			events = _battle.analyze()
+			uses_turn = false
+		"flee":
+			events = _battle.surrender()
+		_:
+			if action.begins_with("item:"):
+				events = _battle.player_item(action.substr(5))
+	await _play_events(events)
+
+	if not _battle.is_over() and uses_turn:
+		await get_tree().create_timer(0.35).timeout
+		await _play_events(_battle.enemy_turn())
+
+	if _battle.is_over():
+		await _show_result()
+	else:
+		_enter_command_state(_current_command)
+
+
+func _play_events(events: Array) -> void:
+	for ev: Dictionary in events:
+		match ev.type:
+			"damage":
+				if ev.target == Battle.ENEMY:
+					await _anim_player_hits(ev)
+				else:
+					await _anim_enemy_hits(ev)
+			"heal":
+				await _anim_heal(ev)
+			"defend":
+				_cards[0].guarding = true
+				_log("Aiden se pone en guardia.")
+				await get_tree().create_timer(0.6).timeout
+			"analyze":
+				_plate.analyzed = true
+				var e := _battle.enemy()
+				_log("Analizas a %s: %d / %d PV. Ataque: %s (%d de daño)." % [e.name, e.pv, e.pv_max, e.attack, e.damage])
+				await get_tree().create_timer(0.8).timeout
+			"surrender":
+				_log("Aiden levanta las manos. Se acabó el duelo.")
+				await get_tree().create_timer(0.8).timeout
+		_cards[0].guarding = _battle.player().defending
+		_tween_tension()
+
+
+func _anim_player_hits(ev: Dictionary) -> void:
+	var e := _battle.enemy()
+	_log("Aiden usa %s. %s recibe %d de daño." % [ev.move, e.name, ev.amount])
+	# Tajo lima que cruza al rival.
+	var t := create_tween()
+	t.tween_method(func(v: float) -> void:
+		_slash_t = v
+		_fx.queue_redraw(), 0.0, 1.0, 0.28)
+	await t.finished
+	_slash_t = -1.0
+	_fx.queue_redraw()
+	_flash_enemy()
+	_shake(_enemy, 14.0)
+	_plate.animate_pv(e.pv)
+	DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.WHITE)
+	await get_tree().create_timer(0.7).timeout
+
+
+func _anim_enemy_hits(ev: Dictionary) -> void:
+	var e := _battle.enemy()
+	var extra := " (guardia)" if ev.get("guarded", false) else ""
+	_log("%s usa %s. Aiden recibe %d de daño%s." % [e.name, ev.move, ev.amount, extra])
+	# El rival se abalanza hacia la cámara.
+	var t := create_tween()
+	t.tween_property(_enemy, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD)
+	t.tween_property(_enemy, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_QUAD)
+	await get_tree().create_timer(0.12).timeout
+	_shake(self, 10.0)
+	_cards[0].flash(UIStyle.RED)
+	_cards[0].animate_pv(_battle.player().pv)
+	DamagePopup.spawn(self, _cards[0].position + Vector2(_cards[0].size.x * 0.55, 30), str(ev.amount), Color("ff6b7d"), false)
+	await get_tree().create_timer(0.75).timeout
+
+
+func _anim_heal(ev: Dictionary) -> void:
+	var item_name: String = ItemDB.get_item(ev.item).get("name", "objeto")
+	if ev.target == Battle.PLAYER:
+		_log("Aiden bebe una %s. Recupera %d PV." % [item_name, ev.amount])
+		_cards[0].flash(UIStyle.LIME)
+		_cards[0].animate_pv(_battle.player().pv)
+		DamagePopup.spawn(self, _cards[0].position + Vector2(_cards[0].size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
+	else:
+		var e := _battle.enemy()
+		_log("%s bebe una %s. Recupera %d PV." % [e.name, item_name, ev.amount])
+		_plate.animate_pv(e.pv)
+		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), "+%d" % ev.amount, UIStyle.LIME)
+	await get_tree().create_timer(0.8).timeout
+
+
+func _show_result() -> void:
+	var won := _battle.player_won()
+	_result_text = "VICTORIA" if won else "DERROTA"
+	_result_color = UIStyle.LIME if won else UIStyle.RED
+	if won:
+		var t := create_tween()
+		t.tween_property(_enemy, "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
+	_set_info("Pulsa Enter para continuar.")
+	var tw := create_tween()
+	tw.tween_method(func(v: float) -> void:
+		_result_t = v
+		_fx.queue_redraw(), 0.0, 1.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	_state = State.RESULT
+
+
+# --- Efectos --------------------------------------------------------------------------------
+
+func _flash_enemy() -> void:
+	var t := create_tween()
+	_enemy.modulate = Color(2.2, 2.2, 2.2)
+	t.tween_property(_enemy, "modulate", Color.WHITE, 0.3)
+
+
+func _shake(node: Control, strength: float) -> void:
+	var origin := node.position
+	var t := create_tween()
+	for i in 6:
+		var off := Vector2(randf_range(-1, 1), randf_range(-0.5, 0.5)) * strength * (1.0 - i / 6.0)
+		t.tween_property(node, "position", origin + off, 0.035)
+	t.tween_property(node, "position", origin, 0.04)
+
+
+func _tween_tension() -> void:
+	create_tween().tween_method(func(v: float) -> void:
+		_tension_shown = v
+		_fx.queue_redraw(), _tension_shown, _battle.tension, 0.4)
+
+
+## Registro del combate: se muestra en el visor y también en la barra inferior.
+func _log(text: String) -> void:
+	_log_text = text
+	_set_info(text)
+	_fx.queue_redraw()
+
+
+func _set_info(text: String) -> void:
+	_info_text = text
+	if _info:
+		_info.queue_redraw()
+
+
+# --- Dibujo ------------------------------------------------------------------------------------
+
+func _draw() -> void:
+	var w := size.x
+	draw_rect(Rect2(Vector2.ZERO, size), UIStyle.INK)
+
+	# Cabecera izquierda: barra roja, título y subtítulo.
+	draw_rect(Rect2(28, 16, 12, 50), UIStyle.RED)
+	var title := "Combate - %s" % (CharacterDB.display_name(_enemy_id) if _enemy_id != "" else "")
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(70, 46), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, UIStyle.WHITE)
+	var sub := "%s / Zona: %s" % [GameState.region_name, LocationDB.display_name(GameState.location_id)]
+	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(72, 74), sub, 18, 1.5, Color(UIStyle.WHITE, 0.9))
+
+	# Línea de marco superior con quiebros (une cabecera y columna derecha).
+	draw_polyline(PackedVector2Array([
+		Vector2(0, 112), Vector2(24, 88), Vector2(500, 88), Vector2(522, 70),
+		Vector2(1400, 70), Vector2(1430, 40), Vector2(1440, 40),
+	]), UIStyle.LINE, 1.5, true)
+
+	# Cabecera derecha: fecha y dinero.
+	var hdr := PackedVector2Array([Vector2(1440, 40), Vector2(1470, 6), Vector2(1790, 6), Vector2(1760, 40)])
+	draw_colored_polygon(hdr, Color(UIStyle.INK, 1.0))
+	UIIcons.calendar(self, Vector2(1490, 26), 26, UIStyle.WHITE)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	draw_line(Vector2(1592, 14), Vector2(1592, 40), UIStyle.WHITE, 1.5)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608, 36), "¥ %s" % _format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	for i in 7:
+		var sx := w - 120 + i * 14
+		draw_line(Vector2(sx, 40), Vector2(sx + 16, 6), UIStyle.WHITE, 2.5, true)
+
+	# Marco del visor.
+	var vp := UIStyle.chamfer_rect(VIEWPORT_RECT, [0.0, 0.0, 22.0, 0.0])
+	UIStyle.draw_outline(self, vp, UIStyle.LINE, 1.5)
+
+	# Línea de guía a la izquierda de los comandos.
+	draw_line(Vector2(0, COMMAND_Y + 40), Vector2(70, COMMAND_Y + 40), UIStyle.LINE, 1.5)
+
+	# Pie con controles.
+	draw_string(UIStyle.FONT_REGULAR, Vector2(48, 980), "[← →] Elegir    /    [Enter] Confirmar    /    [Esc] Volver",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.45))
+
+
+func _draw_info() -> void:
+	var r := Rect2(Vector2.ZERO, _info.size)
+	var shape := PackedVector2Array([
+		Vector2(0, 16), Vector2(16, 0), Vector2(r.size.x - 22, 0), Vector2(r.size.x, 18),
+		Vector2(r.size.x, r.size.y - 16), Vector2(r.size.x - 16, r.size.y), Vector2(0, r.size.y),
+	])
+	_info.draw_colored_polygon(shape, Color(UIStyle.INK, 0.9))
+	UIStyle.draw_outline(_info, shape, UIStyle.LINE, 1.5)
+	var div_x := 960.0
+	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
+	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
+	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,
+			r.size.x - div_x - 80, 23, UIStyle.WHITE)
+
+
+func _draw_fx() -> void:
+	var vs := _fx.size
+	# Medidor de Tensión (abajo a la izquierda del visor).
+	var ty := vs.y - 50
+	var tshape := PackedVector2Array([Vector2(0, ty), Vector2(460, ty), Vector2(508, vs.y), Vector2(0, vs.y)])
+	_fx.draw_colored_polygon(tshape, Color(UIStyle.INK, 0.95))
+	UIStyle.draw_outline(_fx, tshape, UIStyle.LINE, 1.5)
+	_fx.draw_string(UIStyle.FONT_MEDIUM, Vector2(48, ty + 35), "Tensión", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, UIStyle.WHITE)
+	var filled := roundi(_tension_shown * 8.0)
+	for i in 8:
+		var col := UIStyle.MAGENTA if i < filled else Color(UIStyle.WHITE, 0.25)
+		_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(200 + i * 17, ty + 14, 12, 24), 7), col)
+	_fx.draw_string(UIStyle.FONT_MEDIUM, Vector2(360, ty + 37), "%d %%" % roundi(_tension_shown * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 30, UIStyle.WHITE)
+
+	# Registro: última acción, a la derecha del medidor.
+	if _log_text != "":
+		var lx := 540.0
+		var lshape := UIStyle.slanted_rect(Rect2(lx, ty + 6, vs.x - lx - 20, 40), 16)
+		_fx.draw_colored_polygon(lshape, Color(UIStyle.INK, 0.7))
+		_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(lx + 26, ty + 14, 8, 24), 6), UIStyle.MAGENTA)
+		_fx.draw_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(lx + 48, ty + 34), _log_text, HORIZONTAL_ALIGNMENT_LEFT,
+				vs.x - lx - 90, 21, UIStyle.WHITE)
+
+	# Tajo lima/blanco en diagonal sobre el rival.
+	if _slash_t >= 0.0:
+		var c := _enemy.position + Vector2(_enemy.size.x * 0.5, 260)
+		var a := c + Vector2(-260, 200)
+		var b := c + Vector2(260, -200)
+		var head := a.lerp(b, minf(_slash_t * 1.4, 1.0))
+		var tail := a.lerp(b, maxf(_slash_t * 1.4 - 0.5, 0.0))
+		_fx.draw_line(tail, head, Color(UIStyle.LIME, 0.9), 18.0, true)
+		_fx.draw_line(tail, head, UIStyle.WHITE, 6.0, true)
+	# Banda de resultado.
+	if _result_text != "":
+		var p := _result_t
+		var band_h := 150.0
+		var y := vs.y * 0.42
+		_fx.draw_rect(Rect2(0, y - band_h * 0.5 * p, vs.x, band_h * p), Color(UIStyle.INK, 0.85))
+		_fx.draw_rect(Rect2(0, y + band_h * 0.5 * p, vs.x * p, 4), _result_color)
+		_fx.draw_rect(Rect2(vs.x * (1.0 - p), y - band_h * 0.5 * p - 4, vs.x * p, 4), _result_color)
+		var f := UIStyle.FONT_HEAVY_ITALIC
+		var tw := f.get_string_size(_result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 110).x
+		_fx.draw_string(f, Vector2((vs.x - tw) * 0.5 + (1.0 - p) * 200, y + 40), _result_text,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 110, Color(_result_color, p))
+
+
+func _format_money(value: int) -> String:
+	var s := str(value)
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return s + out

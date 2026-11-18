@@ -9,7 +9,7 @@ extends Control
 ##
 ## Flujo: introducción en negro → libre (casa) → mapa → ubicación → personajes.
 
-enum Mode { INTRO, EXPLORE, MAP, MENU, TALK, TRAVEL }
+enum Mode { INTRO, EXPLORE, MAP, MENU, TALK, TRAVEL, COMBAT }
 
 const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 
@@ -23,6 +23,8 @@ const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 @onready var _conversation: ConversationView = %Conversation
 @onready var _interaction: InteractionMenu = %Interaction
 @onready var _map: MapOverlay = %MapOverlay
+@onready var _combat: CombatView = %Combat
+@onready var _transition: BattleTransition = %Transition
 @onready var _empty_hint: Label = %EmptyHint
 
 var mode := Mode.INTRO
@@ -248,12 +250,30 @@ func _on_action_chosen(id: String, action: String) -> void:
 	t.tween_property(_scenario, "modulate:a", 0.0, 0.25)
 	_show_hud(false)
 	await _conversation.play(DialogueDB.for_interaction(id, action), id)
+	if action == "fight":
+		var won := await _run_combat(id)
+		await _conversation.play(DialogueDB.after_fight(id, won), id)
 	t = create_tween()
 	t.tween_property(_scenario, "modulate:a", 1.0, 0.3)
 	_show_hud(true)
 	mode = Mode.EXPLORE
 	_set_cast_interactive(true)
 	_focus_character(id)
+
+
+## Transición → combate → transición. Devuelve si ha ganado el jugador.
+func _run_combat(enemy_id: String) -> bool:
+	mode = Mode.COMBAT
+	await _transition.cover(CharacterDB.display_name(enemy_id))
+	_combat.setup(enemy_id)
+	await _transition.reveal()
+	_combat.begin()
+	var won: bool = await _combat.finished
+	await _transition.cover()
+	_combat.visible = false
+	await _transition.reveal()
+	mode = Mode.TALK
+	return won
 
 
 func _on_affinity_changed(id: String, _value: int, delta: int) -> void:

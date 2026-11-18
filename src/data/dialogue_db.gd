@@ -58,8 +58,20 @@ const KAEL_TALK := [
 
 const KAEL_FIGHT := [
 	{"who": A, "text": "¿Echamos un combate?"},
-	{"who": "kael", "text": "¿Tú y yo? ¿Aquí? Venga, hombre... Si quieres pelea, te reto al Tekken. Y pierdes. Como siempre."},
-	{"who": N, "text": "(El sistema de combate todavía no está disponible.)"},
+	{"who": "kael", "text": "¿Tú y yo? ¿Aquí? Venga, hombre... Normalmente te reto al Tekken y pierdes. Como siempre."},
+	{"who": "kael", "text": "...Pero vale. Un duelo amistoso, en la vida real. Sin trampas y sin llorar luego."},
+]
+
+const KAEL_FIGHT_WIN := [
+	{"who": "kael", "text": "Vale, vale, me rindo. ¿Desde cuándo sabes moverte así? Pensaba que tu único deporte era hacer scroll."},
+	{"who": A, "text": "Desde hoy, parece."},
+	{"who": "kael", "text": "Pues que no se entere nadie del barrio. Tengo una reputación de tipo duro que mantener. ...Bueno, no la tengo. Pero podría."},
+]
+
+const KAEL_FIGHT_LOSE := [
+	{"who": "kael", "text": "¡Y ese es el combo final! Te lo dije: no se puede ganar al rey del ritmo."},
+	{"who": A, "text": "Me has dado con el bajo. Literalmente."},
+	{"who": "kael", "text": "Detalles técnicos. Anda, levanta. Te invito a una Pochicola, que me siento un poco culpable."},
 ]
 
 const KAEL_FLIRT := [
@@ -107,8 +119,20 @@ const ELARA_TALK := [
 const ELARA_FIGHT := [
 	{"who": A, "text": "¿Te apetece pelear?"},
 	{"who": "elara", "text": "...No."},
-	{"who": "elara", "text": "Si buscas pelea, has elegido mal sitio, mal momento y, sobre todo, mal rival. Tengo un libro de tapa dura y no dudaría en usarlo."},
-	{"who": N, "text": "(El sistema de combate todavía no está disponible.)"},
+	{"who": "elara", "text": "Aunque, pensándolo bien, llevo toda la mañana queriendo comprobar cuánto pesa de verdad una edición de tapa dura de 1987."},
+	{"who": "elara", "text": "De acuerdo. Cinco minutos. Y no me pises los apuntes."},
+]
+
+const ELARA_FIGHT_WIN := [
+	{"who": "elara", "text": "...Me has ganado. Anotado. No pienso repetirlo en voz alta."},
+	{"who": A, "text": "¿Estás bien?"},
+	{"who": "elara", "text": "Perfectamente. Solo herida en el orgullo, que es un órgano que no aparece en ningún libro de anatomía. Debería escribir sobre eso."},
+]
+
+const ELARA_FIGHT_LOSE := [
+	{"who": "elara", "text": "Novecientas páginas. Encuadernación cosida. Lo sospechaba: es un arma excelente."},
+	{"who": A, "text": "Me has dado con un libro."},
+	{"who": "elara", "text": "Te he dado con conocimiento. Hay una diferencia sutil. ...Ponte hielo."},
 ]
 
 const ELARA_FLIRT := [
@@ -154,9 +178,21 @@ const MISAKI_TALK := [
 
 const MISAKI_FIGHT := [
 	{"who": A, "text": "¿Un combate?"},
-	{"who": "misaki", "text": "Ja. Me gusta la actitud. Te iba a caer la del pulpo, pero me gusta."},
-	{"who": "misaki", "text": "Hoy no. Tengo ensayo con la banda y no quiero romperme una uña con tu cara."},
-	{"who": N, "text": "(El sistema de combate todavía no está disponible.)"},
+	{"who": "misaki", "text": "Ja. Me gusta la actitud. Te va a caer la del pulpo, pero me gusta."},
+	{"who": "misaki", "text": "Venga. Calentamiento antes del ensayo. Intenta durar más de una canción."},
+]
+
+const MISAKI_FIGHT_WIN := [
+	{"who": "misaki", "text": "...Vale. Eso no me lo esperaba."},
+	{"who": "misaki", "text": "Tienes mejor juego de pies del que pensaba. Para alguien que se pasa la vida mirando las máquinas sin jugar, digo."},
+	{"who": A, "text": "Mirar también cuenta."},
+	{"who": "misaki", "text": "Ya veo que sí. La próxima vez no me contengo. Y la próxima vez invitas tú."},
+]
+
+const MISAKI_FIGHT_LOSE := [
+	{"who": "misaki", "text": "Y se acabó la canción. Dos minutos cuarenta. No está mal para un novato."},
+	{"who": A, "text": "Creo que he visto a toda tu banda girando a mi alrededor."},
+	{"who": "misaki", "text": "Eso es que te he dado bien. Anda, toma, que te he visto la cara de necesitar una Pochicola."},
 ]
 
 const MISAKI_FLIRT := [
@@ -166,10 +202,15 @@ const MISAKI_FLIRT := [
 	{"who": "misaki", "text": "...Vale, me he reído un poco. No se lo cuentes a nadie."},
 ]
 
+## "fight" es el reto antes del combate; "fight_win"/"fight_lose", el comentario
+## posterior según quién haya ganado (desde el punto de vista de Aiden).
 const SCRIPTS := {
-	"kael": {"talk": KAEL_TALK, "fight": KAEL_FIGHT, "flirt": KAEL_FLIRT},
-	"elara": {"talk": ELARA_TALK, "fight": ELARA_FIGHT, "flirt": ELARA_FLIRT},
-	"misaki": {"talk": MISAKI_TALK, "fight": MISAKI_FIGHT, "flirt": MISAKI_FLIRT},
+	"kael": {"talk": KAEL_TALK, "fight": KAEL_FIGHT, "flirt": KAEL_FLIRT,
+		"fight_win": KAEL_FIGHT_WIN, "fight_lose": KAEL_FIGHT_LOSE},
+	"elara": {"talk": ELARA_TALK, "fight": ELARA_FIGHT, "flirt": ELARA_FLIRT,
+		"fight_win": ELARA_FIGHT_WIN, "fight_lose": ELARA_FIGHT_LOSE},
+	"misaki": {"talk": MISAKI_TALK, "fight": MISAKI_FIGHT, "flirt": MISAKI_FLIRT,
+		"fight_win": MISAKI_FIGHT_WIN, "fight_lose": MISAKI_FIGHT_LOSE},
 }
 
 
@@ -177,7 +218,11 @@ static func intro() -> Array:
 	return INTRO
 
 
-## `action`: "talk", "fight" o "flirt".
+## `action`: "talk", "fight", "flirt", "fight_win" o "fight_lose".
+static func after_fight(character_id: String, player_won: bool) -> Array:
+	return for_interaction(character_id, "fight_win" if player_won else "fight_lose")
+
+
 static func for_interaction(character_id: String, action: String) -> Array:
 	var by_action: Dictionary = SCRIPTS.get(character_id, {})
 	return by_action.get(action, [

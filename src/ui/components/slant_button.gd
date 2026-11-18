@@ -175,9 +175,10 @@ func _draw() -> void:
 		x += font_size + INDEX_GAP
 
 	draw_string(font, Vector2(x, baseline), label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, text_color)
+	var text_end := x + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 
-	# Marca «///» al final cuando está seleccionado.
-	if h > 0.01:
+	# Marca «///» al final cuando está seleccionado (solo si cabe sin pisar el texto).
+	if h > 0.01 and text_end < size.x - slant - 66.0 - 12.0:
 		var stripe_color := Color(UIStyle.INK, h * alpha)
 		var origin := Vector2(size.x - slant - 66.0, size.y * 0.5 + 8.0)
 		UIStyle.draw_stripes(self, origin, 3, Vector2(9, 16), 5, stripe_color)

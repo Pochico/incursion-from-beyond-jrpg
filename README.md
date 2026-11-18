@@ -31,7 +31,7 @@ godot --path .
 
 El ratón también funciona: pasar por encima selecciona y el clic confirma (también para avanzar el diálogo).
 
-## Qué se puede jugar (v0.2.0)
+## Qué se puede jugar (v0.3.0)
 
 1. **Menú de inicio** → «Nueva partida».
 2. **Introducción en negro**: «Despiertas un día más...».
@@ -40,8 +40,25 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 5. **Escenario**: Kael, Elara y Misaki aparecen con una silueta brillante de su color. Al pasar el ratón o seleccionarlos con flechas se resaltan y muestran su nombre.
 6. **Menú de interacción**: *Hablar*, *Luchar* o *Ligar*.
    - *Hablar*: conversación larga con opciones de diálogo que cambian la respuesta y la afinidad.
-   - *Luchar* / *Ligar*: respuestas cortas y distintas para cada personaje (el combate todavía no existe).
+   - *Luchar*: el personaje acepta el reto → transición → **combate** → comentario de la pelea (distinto si ganas o pierdes).
+   - *Ligar*: respuestas cortas y distintas para cada personaje.
 7. **Conversación**: el protagonista (Aiden) siempre a la izquierda, el interlocutor a la derecha, sobre el mismo fondo de la ubicación. Botones *Saltar* y *Auto*.
+8. **Combate** (1 contra 1, prototipo):
+   - **Atacar** → *Corte rápido* (daño ~42).
+   - **Habilidad** → bloqueada (aún no hay habilidades).
+   - **Objeto** → *Pochicola* (empiezas con 3): restaura 80 PV a quien la bebe. El rival lleva una y la usa cuando va bajo de vida.
+   - **Defender** → el próximo golpe hace la mitad de daño.
+   - **Analizar** → revela PV y ataque del rival; no gasta el turno.
+   - **Huir** → te rindes (cuenta como derrota).
+   - El rival tiene un ataque propio con daño fijo (Kael 34, Elara 30, Misaki 38).
+   - La *Tensión* es solo visual por ahora. Valores provisionales en `CharacterDB.combat`.
+
+![Combate](docs/capturas/combate.webp)
+
+| | |
+|---|---|
+| ![Transición](docs/capturas/combate_transicion.webp) | ![Objeto](docs/capturas/combate_objeto.webp) |
+| ![Victoria](docs/capturas/combate_victoria.webp) | ![Derrota](docs/capturas/combate_derrota.webp) |
 
 | | |
 |---|---|
@@ -51,7 +68,8 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 
 ### Pendiente
 
-- ⬜ Interfaz de combate.
+- ✅ Interfaz de combate (prototipo 1 contra 1).
+- ⬜ Habilidades, grupo de varios personajes y combate por naturalezas.
 - ⬜ Interfaz de estado de personaje.
 - ⬜ Mapa y fondos definitivos (los actuales son provisionales, generados por código).
 - ⬜ Guardado de partida y opciones.
@@ -61,6 +79,7 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 
 - **Diálogos**: `src/data/dialogue_db.gd`. Cada guion es una lista de líneas `{who, text}` con `id`, `goto`, `end` y `choices` opcionales (cada opción puede llevar `affinity`). El formato está documentado al principio del archivo.
 - **Personajes**: `src/data/character_db.gd` (nombre, color del brillo, retrato y posición en el escenario). Los retratos están en `assets/characters/` (PNG con transparencia).
+- **Combate**: estadísticas provisionales en `combat` de cada personaje (`character_db.gd`), objetos en `src/data/item_db.gd`, lógica en `src/systems/battle.gd` (sin interfaz: devuelve eventos que la vista anima).
 - **Ubicaciones**: `src/data/location_db.gd` (nombre, descripción, posición en el mapa y paleta del fondo provisional).
 - **Fondos reales**: deja `assets/backgrounds/<id>.png` (p. ej. `plaza.png`, 1920×1080) y sustituye automáticamente al fondo generado.
 
@@ -81,6 +100,9 @@ src/
     location_db.gd          Ubicaciones
     character_db.gd         Personajes
     dialogue_db.gd          Guiones de conversación
+    item_db.gd              Objetos (Pochicola)
+  systems/
+    battle.gd               Lógica de combate 1 contra 1 (eventos, sin interfaz)
   ui/
     ui_style.gd             Paleta, tipografías y utilidades de dibujo (UIStyle)
     ui_icons.gd             Iconos vectoriales (chevrons, play, calendario, bocadillo...)
@@ -108,6 +130,13 @@ src/
       map_overlay.gd          Mapa superpuesto (M)
       map_view.gd             Dibujo del mapa provisional
       location_banner.gd      Cartel de llegada a una ubicación
+      battle_transition.gd    Transición de combate (barrido diagonal + «¡COMBATE!»)
+      combat/                 Interfaz de combate
+        combat_view.gd          Composición, entrada (comando → opción) y animaciones
+        combatant_card.gd       Ficha del grupo (PV/PM)
+        enemy_plate.gd          Placa del rival
+        mini_map.gd             Minimapa
+        damage_popup.gd         Números de daño/curación
       talk_indicator.gd       Bocadillo «...» sobre los personajes interactuables
 docs/
   diseno/                 Documentos de diseño de mecánicas
