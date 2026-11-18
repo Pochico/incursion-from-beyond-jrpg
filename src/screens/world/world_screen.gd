@@ -16,7 +16,8 @@ const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 @onready var _backdrop: LocationBackdrop = %Backdrop
 @onready var _scenario: Control = %Scenario
 @onready var _hud: Control = %Hud
-@onready var _date_header: Control = %DateHeader
+@onready var _region_header: RegionHeader = %RegionHeader
+@onready var _date_header: DateHeader = %DateHeader
 @onready var _hint_bar: HintBar = %HintBar
 @onready var _banner: LocationBanner = %Banner
 @onready var _conversation: ConversationView = %Conversation
@@ -27,7 +28,9 @@ const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 var mode := Mode.INTRO
 var _sprites: Dictionary = {}     # id -> CharacterSprite
 var _tags: Dictionary = {}        # id -> NameTag
+var _bubbles: Dictionary = {}     # id -> TalkIndicator
 var _last_character := ""
+var _hint_toast: Toast
 
 
 func _ready() -> void:
@@ -48,8 +51,11 @@ func _ready() -> void:
 	GameState.affinity_changed.connect(_on_affinity_changed)
 
 	_backdrop.set_location(GameState.location_id)
+	_region_header.variant = RegionHeader.Variant.SCENARIO
+	_date_header.variant = DateHeader.Variant.SCENARIO
 	_hud.modulate.a = 0.0
 	_empty_hint.visible = false
+	_empty_hint.label_settings.font = UIStyle.FONT_LIGHT_ITALIC
 	_play_intro()
 
 
@@ -58,7 +64,7 @@ func _play_intro() -> void:
 	await get_tree().create_timer(0.8).timeout
 	await _conversation.play(DialogueDB.intro(), "", false)
 	_enter_explore()
-	Toast.show_in(self, "Pulsa  [M]  para abrir el mapa", UIStyle.LIME, 4.0)
+	_hint_toast = Toast.show_in(self, "Pulsa  [M]  para abrir el mapa", UIStyle.LIME, 4.0)
 
 
 func _enter_explore() -> void:
@@ -69,7 +75,10 @@ func _enter_explore() -> void:
 
 # --- HUD ---------------------------------------------------------------------------
 
+## `full` = interfaz de escenario completa; si no, la de conversación
+## (solo la región, en versión compacta).
 func _show_hud(full: bool) -> void:
+	_region_header.variant = RegionHeader.Variant.SCENARIO if full else RegionHeader.Variant.COMPACT
 	var t := create_tween().set_parallel(true)
 	t.tween_property(_hud, "modulate:a", 1.0, 0.3)
 	t.tween_property(_date_header, "modulate:a", 1.0 if full else 0.0, 0.3)
@@ -111,6 +120,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _open_map() -> void:
 	mode = Mode.MAP
+	if is_instance_valid(_hint_toast):
+		_hint_toast.queue_free()
 	_set_cast_interactive(false)
 	_empty_hint.visible = false
 	_map.open(GameState.location_id)
@@ -137,6 +148,7 @@ func _spawn_cast() -> void:
 		child.queue_free()
 	_sprites.clear()
 	_tags.clear()
+	_bubbles.clear()
 	if GameState.location_id == LocationDB.HOME:
 		return
 
@@ -147,7 +159,7 @@ func _spawn_cast() -> void:
 		sprite.texture = CharacterDB.portrait(id)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		sprite.glow_color = data.color
-		sprite.glow_idle = 0.4
+		sprite.glow_idle = 0.85
 		sprite.glow_active = 1.0
 		sprite.interactive = true
 		sprite.activated.connect(_on_character_activated.bind(id))
@@ -155,6 +167,11 @@ func _spawn_cast() -> void:
 		sprite.focus_exited.connect(_set_tag_visible.bind(id, false))
 		_scenario.add_child(sprite)
 		_sprites[id] = sprite
+
+		var bubble := TalkIndicator.new()
+		bubble.color = data.color
+		_scenario.add_child(bubble)
+		_bubbles[id] = bubble
 
 		var tag := NameTag.new()
 		tag.text = data.name
@@ -176,9 +193,11 @@ func _layout_cast() -> void:
 		var w := h * 0.75
 		sprite.size = Vector2(w, h)
 		sprite.position = Vector2(area.x * scene_data.x - w * 0.5, area.y - h)
-		var img := sprite.image_rect()
+		var head := sprite.position + sprite.head_point()
+		var bubble: TalkIndicator = _bubbles[id]
+		bubble.position = head + Vector2(-bubble.size.x * 0.5 + 8, -bubble.size.y + 4)
 		var tag: NameTag = _tags[id]
-		tag.position = sprite.position + Vector2(img.get_center().x - tag.size.x * 0.5, img.position.y + h * 0.02 - 30)
+		tag.position = head + Vector2(-bubble.size.x * 0.5 - tag.size.x - 4, -tag.size.y - 6)
 
 
 ## Los personajes solo responden en modo exploración (evita que roben el foco
@@ -200,6 +219,8 @@ func _focus_character(id: String) -> void:
 func _set_tag_visible(id: String, on: bool) -> void:
 	if _tags.has(id):
 		_tags[id].visible = on
+	if _bubbles.has(id):
+		_bubbles[id].highlighted = on
 
 
 func _on_character_activated(id: String) -> void:

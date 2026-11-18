@@ -2,6 +2,18 @@
 class_name RegionHeader
 extends Control
 ## Cabecera «REGIÓN / LEGANÉS» de la esquina superior izquierda.
+##
+## Variantes (según las referencias de docs/ui/referencias):
+##  - MAP:      grande, cursiva gruesa, barra lima y «///» (pantalla de mapa).
+##  - SCENARIO: «//» lima, nombre recto y fino, subrayado con remate violeta.
+##  - COMPACT:  pequeña, para la interfaz de conversación.
+
+enum Variant { MAP, SCENARIO, COMPACT }
+
+@export var variant: Variant = Variant.MAP:
+	set(value):
+		variant = value
+		queue_redraw()
 
 @export var caption: String = "REGIÓN":
 	set(value):
@@ -38,6 +50,16 @@ func _get_minimum_size() -> Vector2:
 
 
 func _draw() -> void:
+	match variant:
+		Variant.MAP:
+			_draw_map()
+		Variant.SCENARIO:
+			_draw_scenario()
+		Variant.COMPACT:
+			_draw_compact()
+
+
+func _draw_map() -> void:
 	var font_caption := UIStyle.FONT_BOLD_ITALIC
 	var font_name := UIStyle.FONT_HEAVY_ITALIC
 
@@ -58,3 +80,32 @@ func _draw() -> void:
 	draw_line(Vector2(0, y), Vector2(line_end, y), Color(UIStyle.WHITE, 0.9), 2.0, true)
 	draw_line(Vector2(line_end, y), Vector2(line_end + 24, y - 22), Color(UIStyle.WHITE, 0.9), 2.0, true)
 	UIStyle.draw_stripes(self, Vector2(line_end + 26, y - 6), 3, Vector2(14, 14), 6, UIStyle.WHITE)
+
+
+func _draw_scenario() -> void:
+	# «//» lima.
+	for i in 2:
+		var x := 4.0 + i * 16.0
+		draw_line(Vector2(x, 62), Vector2(x + 22, 12), accent, 5.0, true)
+	var x0 := 58.0
+	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(x0, 28), caption.to_upper(), 18, 1.5, Color(UIStyle.WHITE, 0.9))
+	var name_text := region_name.to_upper()
+	var name_w := UIStyle.draw_spaced(self, UIStyle.FONT_MEDIUM, Vector2(x0 - 1, 66), name_text, 34, 2.0, UIStyle.WHITE)
+	# Subrayado fino con remate violeta.
+	var y := 84.0
+	var end_x := x0 + maxf(name_w + 50.0, 240.0)
+	draw_line(Vector2(x0, y), Vector2(end_x, y), Color(UIStyle.WHITE, 0.9), 1.5, true)
+	draw_line(Vector2(end_x + 6, y), Vector2(end_x + 42, y), UIStyle.VIOLET, 4.0)
+
+
+func _draw_compact() -> void:
+	draw_colored_polygon(UIStyle.slanted_rect(Rect2(0, 8, 12, 42), 4), accent)
+	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR_ITALIC, Vector2(34, 22), caption.to_upper(), 16, 3.0, Color(UIStyle.WHITE, 0.85))
+	var name_text := region_name.to_upper()
+	draw_string(UIStyle.FONT_ITALIC, Vector2(30, 56), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, UIStyle.WHITE)
+	var name_w := UIStyle.FONT_ITALIC.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36).x
+	var y := 74.0
+	var line_end := 30.0 + name_w + 36.0
+	draw_line(Vector2(0, y), Vector2(line_end, y), Color(UIStyle.WHITE, 0.85), 1.5, true)
+	draw_line(Vector2(line_end, y), Vector2(line_end + 14, y - 12), Color(UIStyle.WHITE, 0.85), 1.5, true)
+	UIStyle.draw_stripes(self, Vector2(line_end + 16, y - 2), 3, Vector2(11, 9), 4, Color(UIStyle.WHITE, 0.9))

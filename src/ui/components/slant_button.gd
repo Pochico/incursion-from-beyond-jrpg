@@ -21,6 +21,13 @@ extends Button
 		update_minimum_size()
 		queue_redraw()
 
+## Icono de UIIcons a la izquierda del texto (p. ej. "speech", "swords", "heart").
+@export var icon_name: String = "":
+	set(value):
+		icon_name = value
+		update_minimum_size()
+		queue_redraw()
+
 ## Texto de ayuda que la pantalla puede mostrar al seleccionar el botón.
 @export_multiline var description: String = ""
 
@@ -33,6 +40,13 @@ extends Button
 @export var slant: float = 22.0:
 	set(value):
 		slant = value
+		queue_redraw()
+
+## Estilo fino: relleno azul noche, contorno de 1,5 px y cursiva más ligera
+## (opciones de diálogo). El estado seleccionado sigue siendo lima.
+@export var subtle: bool = false:
+	set(value):
+		subtle = value
 		queue_redraw()
 
 ## 0 = oculto (desplazado a la izquierda), 1 = visible. Útil para animar entradas.
@@ -103,6 +117,8 @@ func _get_minimum_size() -> Vector2:
 	var w := slant + PADDING * 2.0 + font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	if index_label != "":
 		w += font.get_string_size(index_label, HORIZONTAL_ALIGNMENT_LEFT, -1, _index_size()).x + INDEX_GAP
+	if icon_name != "":
+		w += font_size + INDEX_GAP
 	return Vector2(w + slant, font_size * 2.0)
 
 
@@ -125,7 +141,8 @@ func _draw() -> void:
 		draw_colored_polygon(shadow, Color(UIStyle.VIOLET, 0.85 * h * alpha))
 
 	var accent := UIStyle.GRAY if disabled else UIStyle.LIME
-	var fill := UIStyle.PANEL.lerp(accent, h)
+	var base := Color(UIStyle.NIGHT, 0.9) if subtle else UIStyle.PANEL
+	var fill := base.lerp(accent, h)
 	if get_draw_mode() == DRAW_PRESSED or get_draw_mode() == DRAW_HOVER_PRESSED:
 		fill = fill.darkened(0.2)
 	fill.a *= alpha
@@ -135,10 +152,10 @@ func _draw() -> void:
 	if disabled:
 		outline = Color(UIStyle.GRAY, lerpf(0.5, 1.0, h))
 	outline.a *= alpha
-	UIStyle.draw_outline(self, shape, outline, 2.0)
+	UIStyle.draw_outline(self, shape, outline, 1.5 if subtle else 2.0)
 
 	# Texto
-	var font := UIStyle.FONT_ITALIC
+	var font := UIStyle.FONT_MEDIUM_ITALIC if subtle else UIStyle.FONT_ITALIC
 	var text_color := UIStyle.WHITE.lerp(UIStyle.INK, h)
 	if disabled:
 		text_color = Color(UIStyle.GRAY, 1.0).lerp(UIStyle.INK, h)
@@ -152,6 +169,10 @@ func _draw() -> void:
 		index_color.a *= alpha
 		draw_string(font, Vector2(x, baseline), index_label, HORIZONTAL_ALIGNMENT_LEFT, -1, isz, index_color)
 		x += font.get_string_size(index_label, HORIZONTAL_ALIGNMENT_LEFT, -1, isz).x + INDEX_GAP
+
+	if icon_name != "":
+		UIIcons.draw_named(self, icon_name, Vector2(x + font_size * 0.5, size.y * 0.5), font_size * 1.0, text_color)
+		x += font_size + INDEX_GAP
 
 	draw_string(font, Vector2(x, baseline), label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, text_color)
 

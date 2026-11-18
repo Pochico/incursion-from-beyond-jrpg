@@ -7,6 +7,7 @@ uniform vec4 glow_color : source_color = vec4(0.776, 0.957, 0.196, 1.0);
 uniform float glow_strength = 0.0;   // 0 = sin brillo
 uniform float outline_px = 6.0;      // grosor del contorno, en píxeles de textura
 uniform float glow_px = 30.0;        // alcance del halo, en píxeles de textura
+uniform float halo_gain = 1.0;       // intensidad del halo respecto al contorno
 uniform float dim = 0.0;             // 0 = normal, 1 = negro
 
 varying vec4 vertex_modulate;
@@ -38,7 +39,7 @@ void fragment() {
 			}
 		}
 		halo /= 48.0;
-		ga = clamp(max(outline, halo * 1.6), 0.0, 1.0) * glow_strength;
+		ga = clamp(max(outline, halo * 1.4 * halo_gain), 0.0, 1.0) * glow_strength;
 	}
 
 	float a = tex.a + ga * (1.0 - tex.a);

@@ -5,7 +5,7 @@ extends Control
 
 var text := ""
 var color := UIStyle.LIME
-var _font := UIStyle.FONT_BOLD_ITALIC
+var _font := UIStyle.FONT_MEDIUM_ITALIC
 const FONT_SIZE := 26
 
 
@@ -30,8 +30,9 @@ static func show_in(parent: Control, message: String, accent: Color = UIStyle.LI
 
 
 func _draw() -> void:
-	var shape := UIStyle.slanted_rect(Rect2(Vector2.ZERO, size), 18)
-	draw_colored_polygon(shape, Color(UIStyle.INK, 0.9))
-	UIStyle.draw_outline(self, shape, Color(UIStyle.WHITE, 0.8), 2.0)
-	draw_colored_polygon(UIStyle.slanted_rect(Rect2(Vector2(30, 12), Vector2(14, 32)), 8), color)
+	var shape := UIStyle.chamfer_rect(Rect2(Vector2.ZERO, size), [16.0, 0.0, 16.0, 0.0])
+	draw_colored_polygon(shape, Color(UIStyle.NIGHT, 0.92))
+	UIStyle.draw_outline(self, shape, UIStyle.LINE, 1.5)
+	draw_colored_polygon(UIStyle.slanted_rect(Rect2(Vector2(30, 13), Vector2(12, 30)), 7), color)
 	draw_string(_font, Vector2(60, 37), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, UIStyle.WHITE)
+	draw_line(Vector2(size.x - 60, size.y + 6), Vector2(size.x, size.y + 6), Color(color, 0.9), 3.0)

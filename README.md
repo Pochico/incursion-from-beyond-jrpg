@@ -83,12 +83,14 @@ src/
     dialogue_db.gd          Guiones de conversación
   ui/
     ui_style.gd             Paleta, tipografías y utilidades de dibujo (UIStyle)
+    ui_icons.gd             Iconos vectoriales (chevrons, play, calendario, bocadillo...)
     components/             Piezas reutilizables de interfaz
       slant_button.gd         Botón inclinado (lima al seleccionarse)
-      region_header.gd        Cabecera «REGIÓN / LEGANÉS»
-      date_header.gd          Cabecera «MAR | 17 NOV 2026»
+      region_header.gd        Cabecera «REGIÓN / LEGANÉS» (variantes mapa/escenario/compacta)
+      date_header.gd          Cabecera de fecha (variantes mapa/escenario)
       info_bar.gd             Barra de descripción inferior
-      dialogue_box.gd         Caja de diálogo (nombre, texto, Saltar/Auto)
+      dialogue_box.gd         Caja de diálogo (marco continuo, nombre, texto, Saltar/Auto)
+      pill_button.gd          Botón píldora hexagonal con icono (Saltar / Auto)
       character_sprite.gd     Personaje con silueta brillante / atenuado
       hint_bar.gd             Atajos abajo a la derecha «(M) Mapa»
       key_hint_button.gd      Un atajo clicable
@@ -106,6 +108,7 @@ src/
       map_overlay.gd          Mapa superpuesto (M)
       map_view.gd             Dibujo del mapa provisional
       location_banner.gd      Cartel de llegada a una ubicación
+      talk_indicator.gd       Bocadillo «...» sobre los personajes interactuables
 docs/
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz

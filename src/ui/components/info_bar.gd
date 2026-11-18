@@ -22,8 +22,8 @@ func _ready() -> void:
 
 func _draw() -> void:
 	var shape := UIStyle.slanted_rect(Rect2(Vector2.ZERO, size), SLANT)
-	draw_colored_polygon(shape, Color(UIStyle.INK, 0.82))
-	UIStyle.draw_outline(self, shape, Color(UIStyle.WHITE, 0.85), 2.0)
+	draw_colored_polygon(shape, Color(UIStyle.NIGHT.darkened(0.3), 0.88))
+	UIStyle.draw_outline(self, shape, UIStyle.LINE, 1.5)
 
 	var font := UIStyle.FONT_MEDIUM
 	var cy := size.y * 0.5

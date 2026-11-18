@@ -83,11 +83,12 @@ func _draw_frame() -> void:
 		Vector2(s.x, s.y), Vector2(40, s.y), Vector2(0, s.y - 40),
 	])
 	_frame.draw_colored_polygon(body, Color(UIStyle.GRAPHITE, 0.97))
-	UIStyle.draw_outline(_frame, body, Color(UIStyle.WHITE, 0.9), 2.0)
-	_frame.draw_rect(Rect2(28, 52, 10, 34), UIStyle.LIME)
-	_frame.draw_string(UIStyle.FONT_HEAVY_ITALIC, Vector2(52, 82), "Mapa", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, UIStyle.WHITE)
-	_frame.draw_string(UIStyle.FONT_SEMIBOLD, Vector2(s.x - 560, 76),
-			"[← →] Elegir   /   [Enter] Ir   /   [M] Cerrar", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.7))
+	UIStyle.draw_outline(_frame, body, UIStyle.LINE, 1.5)
+	UIStyle.draw_stripes(_frame, Vector2(300, 30), 4, Vector2(14, 8), 4, Color(UIStyle.WHITE, 0.35))
+	_frame.draw_colored_polygon(UIStyle.slanted_rect(Rect2(28, 50, 14, 38), 6), UIStyle.LIME)
+	_frame.draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(56, 82), "Mapa", HORIZONTAL_ALIGNMENT_LEFT, -1, 38, UIStyle.WHITE)
+	_frame.draw_string(UIStyle.FONT_REGULAR, Vector2(s.x - 540, 76),
+			"[← →] Elegir   /   [Enter] Ir   /   [M] Cerrar", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.75))
 	# Brújula
 	var n := Vector2(s.x - 70, 60)
 	_frame.draw_colored_polygon(PackedVector2Array([n + Vector2(0, -22), n + Vector2(12, 10), n + Vector2(0, 2), n + Vector2(-12, 10)]), UIStyle.WHITE)

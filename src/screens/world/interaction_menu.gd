@@ -8,17 +8,19 @@ signal action_chosen(character_id: String, action: String)
 signal closed
 
 const ACTIONS := [
-	{"id": "talk", "label": "Hablar", "desc": "Conversar con calma."},
-	{"id": "fight", "label": "Luchar", "desc": "Proponer un combate."},
-	{"id": "flirt", "label": "Ligar", "desc": "Probar suerte."},
+	{"id": "talk", "label": "Hablar", "icon": "speech", "desc": "Conversar con calma."},
+	{"id": "fight", "label": "Luchar", "icon": "swords", "desc": "Proponer un combate."},
+	{"id": "flirt", "label": "Ligar", "icon": "heart", "desc": "Probar suerte."},
 ]
-const PANEL_SIZE := Vector2(360, 300)
+const PANEL_SIZE := Vector2(400, 372)
+const CUT := 26.0
 
 var _character_id := ""
 var _panel: Control
 var _list: VBoxContainer
 var _header_color := UIStyle.LIME
 var _header_name := ""
+var _desc := ""
 
 
 func _ready() -> void:
@@ -31,20 +33,23 @@ func _ready() -> void:
 	add_child(_panel)
 
 	_list = VBoxContainer.new()
-	_list.position = Vector2(20, 82)
-	_list.size = Vector2(PANEL_SIZE.x - 30, PANEL_SIZE.y - 100)
+	_list.position = Vector2(22, 96)
+	_list.size = Vector2(PANEL_SIZE.x - 40, 200)
 	_list.add_theme_constant_override("separation", 12)
 	_panel.add_child(_list)
 
 	for i in ACTIONS.size():
 		var b := SlantButton.new()
 		b.label = ACTIONS[i].label
-		b.index_label = "%02d" % (i + 1)
+		b.icon_name = ACTIONS[i].icon
 		b.description = ACTIONS[i].desc
 		b.font_size = 28
 		b.slant = 16
-		b.custom_minimum_size = Vector2(0, 56)
+		b.custom_minimum_size = Vector2(0, 58)
 		b.pressed.connect(_on_action.bind(ACTIONS[i].id))
+		b.focus_entered.connect(func() -> void:
+			_desc = b.description
+			_panel.queue_redraw())
 		_list.add_child(b)
 
 
@@ -103,10 +108,22 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _draw_panel() -> void:
 	var s := PANEL_SIZE
-	var shape := UIStyle.slanted_rect(Rect2(Vector2.ZERO, s), 24)
-	_panel.draw_colored_polygon(UIStyle.slanted_rect(Rect2(Vector2(8, 8), s), 24), Color(_header_color, 0.55))
-	_panel.draw_colored_polygon(shape, Color(UIStyle.INK, 0.94))
-	UIStyle.draw_outline(_panel, shape, Color(UIStyle.WHITE, 0.9), 2.0)
-	_panel.draw_rect(Rect2(34, 22, 10, 42), _header_color)
-	_panel.draw_string(UIStyle.FONT_HEAVY_ITALIC, Vector2(58, 58), _header_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 38, UIStyle.WHITE)
-	UIStyle.draw_stripes(_panel, Vector2(s.x - 92, 52), 3, Vector2(12, 14), 5, _header_color)
+	var shape := UIStyle.chamfer_rect(Rect2(Vector2.ZERO, s), [CUT, 0.0, CUT, 0.0])
+	# Sombra de color desplazada y cuerpo.
+	_panel.draw_colored_polygon(UIStyle.chamfer_rect(Rect2(Vector2(8, 8), s), [CUT, 0.0, CUT, 0.0]), Color(_header_color, 0.45))
+	_panel.draw_colored_polygon(shape, Color(UIStyle.NIGHT.darkened(0.35), 0.96))
+	UIStyle.draw_outline(_panel, shape, UIStyle.LINE, 2.0)
+
+	# Cabecera: «////» gris, barra de color, nombre y subtítulo.
+	UIStyle.draw_stripes(_panel, Vector2(CUT + 8, 18), 4, Vector2(14, 8), 4, Color(UIStyle.WHITE, 0.35))
+	_panel.draw_colored_polygon(UIStyle.slanted_rect(Rect2(28, 30, 12, 46), 6), _header_color)
+	_panel.draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(56, 70), _header_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 38, UIStyle.WHITE)
+	UIStyle.draw_spaced(_panel, UIStyle.FONT_REGULAR, Vector2(s.x - 150, 70), "INTERACTUAR", 13, 2.0, Color(UIStyle.WHITE, 0.55))
+	_panel.draw_line(Vector2(22, 86), Vector2(s.x - 22, 86), Color(UIStyle.WHITE, 0.3), 1.0)
+
+	# Descripción de la opción seleccionada.
+	var dy := s.y - 52
+	_panel.draw_line(Vector2(22, dy - 14), Vector2(s.x - 22, dy - 14), Color(UIStyle.WHITE, 0.3), 1.0)
+	_panel.draw_colored_polygon(UIStyle.slanted_rect(Rect2(28, dy, 8, 22), 5), UIStyle.LIME)
+	_panel.draw_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(46, dy + 19), _desc, HORIZONTAL_ALIGNMENT_LEFT, s.x - 70, 22, Color(UIStyle.WHITE, 0.85))
+	UIStyle.draw_stripes(_panel, Vector2(s.x - 70, s.y - 10), 3, Vector2(10, 8), 4, Color(UIStyle.WHITE, 0.35))

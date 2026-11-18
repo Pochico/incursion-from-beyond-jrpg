@@ -216,7 +216,9 @@ func _show_choices(choices: Array) -> void:
 		b.label = choices[idx].text
 		b.index_label = "%02d" % (idx + 1)
 		b.font_size = 28
-		b.custom_minimum_size = Vector2(0, 62)
+		b.subtle = true
+		b.slant = 18
+		b.custom_minimum_size = Vector2(0, 58)
 		b.pressed.connect(_on_choice_pressed.bind(idx))
 		_choices.add_child(b)
 		buttons.append(b)

@@ -17,6 +17,7 @@ const GLOW_MARGIN := 40.0
 	set(value):
 		texture = value
 		_image = null
+		_head_px = Vector2(-1, -1)
 		queue_redraw()
 
 @export var glow_color: Color = UIStyle.LIME:
@@ -32,8 +33,9 @@ const GLOW_MARGIN := 40.0
 		_update_shader()
 
 @export_range(0.0, 1.0) var glow_active: float = 1.0
-@export var outline_screen_px: float = 3.0
-@export var glow_screen_px: float = 18.0
+@export var outline_screen_px: float = 2.5
+## Alcance del halo en reposo; al seleccionarlo crece hasta `glow_screen_px * 1.8`.
+@export var glow_screen_px: float = 12.0
 
 @export_range(0.0, 1.0) var dim: float = 0.0:
 	set(value):
@@ -56,6 +58,7 @@ const GLOW_MARGIN := 40.0
 var _glow := 0.0
 var _time := 0.0
 var _image: Image
+var _head_px := Vector2(-1, -1)
 var _tween: Tween
 
 
@@ -140,18 +143,62 @@ func _draw() -> void:
 	draw_texture_rect_region(texture, draw_rect_big, src, Color.WHITE, false, false)
 
 
+## Punto aproximado de la coronilla (en coordenadas locales), calculado a partir
+## de los píxeles opacos de la parte superior de la imagen. Sirve para colocar
+## indicadores encima de la cabeza aunque no esté centrada en el retrato.
+func head_point() -> Vector2:
+	var rect := image_rect()
+	var img := _get_image()
+	if img == null:
+		return Vector2(rect.get_center().x, rect.position.y)
+	if _head_px == Vector2(-1, -1):
+		_head_px = _find_head(img)
+	return rect.position + _head_px * _scale()
+
+
+func _find_head(img: Image) -> Vector2:
+	var w := img.get_width()
+	var h := img.get_height()
+	var top := -1
+	# Primera fila con suficientes píxeles opacos.
+	for y in range(0, h, 4):
+		var count := 0
+		for x in range(0, w, 4):
+			if img.get_pixel(x, y).a > 0.5:
+				count += 1
+		if count >= 4:
+			top = y
+			break
+	if top < 0:
+		return Vector2(w * 0.5, 0)
+	# Centro horizontal de la masa opaca en una franja bajo esa fila.
+	var band := int(h * 0.08)
+	var sum := 0.0
+	var n := 0
+	for y in range(top, mini(top + band, h), 6):
+		for x in range(0, w, 6):
+			if img.get_pixel(x, y).a > 0.5:
+				sum += x
+				n += 1
+	return Vector2(sum / maxf(n, 1), top)
+
+
+func _get_image() -> Image:
+	if _image == null and texture != null:
+		_image = texture.get_image()
+		if _image != null and _image.is_compressed():
+			_image.decompress()
+	return _image
+
+
 func _has_point(point: Vector2) -> bool:
 	if not interactive or texture == null:
 		return false
 	var rect := image_rect()
 	if not rect.has_point(point):
 		return false
-	if _image == null:
-		_image = texture.get_image()
-		if _image == null:
-			return true
-		if _image.is_compressed():
-			_image.decompress()
+	if _get_image() == null:
+		return true
 	var px := Vector2i((point - rect.position) / _scale())
 	px = px.clamp(Vector2i.ZERO, _image.get_size() - Vector2i.ONE)
 	return _image.get_pixelv(px).a > 0.3
@@ -164,8 +211,16 @@ func _update_shader() -> void:
 	_set_shader("glow_color", glow_color)
 	_set_shader("glow_strength", _glow)
 	_set_shader("outline_px", outline_screen_px / s)
-	_set_shader("glow_px", glow_screen_px / s)
+	_set_shader("glow_px", glow_screen_px * (1.0 + 0.8 * _focus_amount()) / s)
+	_set_shader("halo_gain", 0.8 + 0.4 * _focus_amount())
 	_set_shader("dim", dim)
+
+
+## 0 en reposo, 1 con el brillo activo al máximo.
+func _focus_amount() -> float:
+	if glow_active <= glow_idle:
+		return 0.0
+	return clampf((_glow - glow_idle) / (glow_active - glow_idle), 0.0, 1.0)
 
 
 func _set_shader(param: String, value: Variant) -> void:

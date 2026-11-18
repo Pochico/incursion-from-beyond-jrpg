@@ -3,6 +3,17 @@ class_name DateHeader
 extends Control
 ## Cabecera de fecha «/ MAR | 17 NOV 2026» de la esquina superior derecha.
 ## Se dibuja alineada a la derecha del control.
+##
+## Variantes:
+##  - MAP:      día grande en cursiva, separador lima y «///» (pantalla de mapa).
+##  - SCENARIO: icono de calendario, «MAR | 17», «NOV 2026» y «/» violeta.
+
+enum Variant { MAP, SCENARIO }
+
+@export var variant: Variant = Variant.MAP:
+	set(value):
+		variant = value
+		queue_redraw()
 
 @export var weekday: String = "MAR":
 	set(value):
@@ -47,6 +58,37 @@ func _get_minimum_size() -> Vector2:
 
 
 func _draw() -> void:
+	if variant == Variant.SCENARIO:
+		_draw_scenario()
+	else:
+		_draw_map()
+
+
+func _draw_scenario() -> void:
+	var right := size.x
+	# «/» violeta al final.
+	draw_line(Vector2(right - 26, 74), Vector2(right, 18), UIStyle.VIOLET, 2.5, true)
+	var text_r := right - 44.0
+	# Fila 1: «MAR | 17»
+	var f := UIStyle.FONT_MEDIUM
+	var day_text := str(day)
+	var day_w := f.get_string_size(day_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+	var wd_w := f.get_string_size(weekday, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+	var day_x := text_r - day_w
+	draw_string(f, Vector2(day_x, 44), day_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIStyle.WHITE)
+	var sep_x := day_x - 16.0
+	draw_line(Vector2(sep_x, 20), Vector2(sep_x, 46), UIStyle.LIME, 2.0)
+	var wd_x := sep_x - 16.0 - wd_w
+	draw_string(f, Vector2(wd_x, 44), weekday, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIStyle.WHITE)
+	# Fila 2: «NOV 2026» espaciado.
+	var row2 := "%s %d" % [month, year]
+	var r2w := UIStyle.spaced_width(UIStyle.FONT_REGULAR, row2, 20, 2.5)
+	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(text_r - r2w, 78), row2, 20, 2.5, Color(UIStyle.WHITE, 0.9))
+	# Icono de calendario lima.
+	UIIcons.calendar(self, Vector2(wd_x - 34, 32), 28, UIStyle.LIME)
+
+
+func _draw_map() -> void:
 	var f_small := UIStyle.FONT_BOLD
 	var f_day := UIStyle.FONT_HEAVY_ITALIC
 	var right := size.x

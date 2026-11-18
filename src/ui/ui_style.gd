@@ -19,11 +19,17 @@ const GRAPHITE := Color("3e3e44")       ## Fondo grafito (pantalla de mapa).
 const WHITE := Color("f2f2f4")
 const GRAY := Color("8d8d96")
 const GRAY_DARK := Color("2a2a30")
+const NIGHT := Color("16152a")           ## Relleno de paneles de diálogo (azul noche).
+const LINE := Color(0.95, 0.95, 0.97, 0.85)  ## Líneas finas de marco.
 
 # --- Tipografía --------------------------------------------------------------
+const FONT_REGULAR := preload("res://assets/fonts/inter/InterDisplay-Regular.otf")
 const FONT_MEDIUM := preload("res://assets/fonts/inter/InterDisplay-Medium.otf")
 const FONT_SEMIBOLD := preload("res://assets/fonts/inter/InterDisplay-SemiBold.otf")
 const FONT_BOLD := preload("res://assets/fonts/inter/InterDisplay-Bold.otf")
+const FONT_LIGHT_ITALIC := preload("res://assets/fonts/inter/InterDisplay-LightItalic.otf")
+const FONT_REGULAR_ITALIC := preload("res://assets/fonts/inter/InterDisplay-Italic.otf")
+const FONT_MEDIUM_ITALIC := preload("res://assets/fonts/inter/InterDisplay-MediumItalic.otf")
 const FONT_ITALIC := preload("res://assets/fonts/inter/InterDisplay-SemiBoldItalic.otf")
 const FONT_BOLD_ITALIC := preload("res://assets/fonts/inter/InterDisplay-BoldItalic.otf")
 const FONT_HEAVY_ITALIC := preload("res://assets/fonts/inter/InterDisplay-ExtraBoldItalic.otf")
@@ -72,6 +78,40 @@ static func draw_stripes(ci: CanvasItem, origin: Vector2, count := 3, bar_size :
 		var rect := Rect2(Vector2(x, origin.y - bar_size.y), bar_size)
 		var c: Color = colors[i] if i < colors.size() else color
 		ci.draw_colored_polygon(slanted_rect(rect, slant), c)
+
+
+## Polígono a partir de un rectángulo con esquinas achaflanadas.
+## `cuts` = [arriba-izq, arriba-der, abajo-der, abajo-izq] (0 = esquina recta).
+static func chamfer_rect(rect: Rect2, cuts: Array) -> PackedVector2Array:
+	var p := rect.position
+	var e := rect.end
+	var corners := [
+		[Vector2(p.x, p.y), Vector2(0, 1), Vector2(1, 0)],    # arriba-izq
+		[Vector2(e.x, p.y), Vector2(-1, 0), Vector2(0, 1)],   # arriba-der
+		[Vector2(e.x, e.y), Vector2(0, -1), Vector2(-1, 0)],  # abajo-der
+		[Vector2(p.x, e.y), Vector2(1, 0), Vector2(0, -1)],   # abajo-izq
+	]
+	var pts := PackedVector2Array()
+	for i in 4:
+		var c: float = cuts[i]
+		var corner: Vector2 = corners[i][0]
+		if c <= 0.0:
+			pts.append(corner)
+		else:
+			pts.append(corner + corners[i][1] * c)
+			pts.append(corner + corners[i][2] * c)
+	return pts
+
+
+## Píldora hexagonal «< >» (extremos en punta), como los botones Saltar/Auto.
+static func hex_pill(rect: Rect2, tip: float) -> PackedVector2Array:
+	var p := rect.position
+	var e := rect.end
+	var cy := p.y + rect.size.y * 0.5
+	return PackedVector2Array([
+		Vector2(p.x + tip, p.y), Vector2(e.x - tip, p.y), Vector2(e.x, cy),
+		Vector2(e.x - tip, e.y), Vector2(p.x + tip, e.y), Vector2(p.x, cy),
+	])
 
 
 ## Texto con espaciado entre letras (para rótulos tipo «R E G I Ó N»).
