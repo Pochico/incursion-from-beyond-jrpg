@@ -1,22 +1,12 @@
 class_name MapView
 extends Control
-## Mapa PROVISIONAL de la zona. Se sustituirá por el mapa definitivo.
+## Mapa PROVISIONAL de la zona (lista de ubicaciones en LocationDB). Se sustituirá por el mapa definitivo.
 ##
 ## Dibuja calles, un río y distritos de forma procedural, y una lista de
 ## localizaciones seleccionables con teclado, mando o ratón.
 
 signal location_focused(location: Dictionary)
 signal location_selected(location: Dictionary)
-
-## Posiciones normalizadas (0..1) dentro del área del mapa.
-const LOCATIONS: Array[Dictionary] = [
-	{"id": "plaza", "name": "Plaza Mayor", "desc": "Centro del distrito. Siempre hay alguien con quien hablar.", "pos": Vector2(0.46, 0.46)},
-	{"id": "estacion", "name": "Estación Central", "desc": "Cercanías y metro. Los paneles parpadean más de la cuenta.", "pos": Vector2(0.24, 0.30)},
-	{"id": "parque", "name": "Parque de la Ribera", "desc": "Zona verde junto al río. Tranquila... casi siempre.", "pos": Vector2(0.20, 0.72)},
-	{"id": "campus", "name": "Campus", "desc": "Facultades y laboratorios. Rumores de un servidor que nadie administra.", "pos": Vector2(0.70, 0.24)},
-	{"id": "galeria", "name": "Galería comercial", "desc": "Tiendas, recreativas y un café abierto 24 horas.", "pos": Vector2(0.66, 0.66)},
-	{"id": "torre", "name": "La Torre", "desc": "Mazmorra. El acceso al Corredor de la Torre está aquí.", "pos": Vector2(0.86, 0.48), "dungeon": true},
-]
 
 const ROADS := [
 	[Vector2(0.0, 0.40), Vector2(0.30, 0.38), Vector2(0.55, 0.48), Vector2(1.0, 0.50)],
@@ -29,18 +19,43 @@ const ROADS := [
 
 const RIVER := [Vector2(0.0, 0.86), Vector2(0.18, 0.80), Vector2(0.36, 0.88), Vector2(0.58, 0.84), Vector2(0.80, 0.92), Vector2(1.0, 0.88)]
 
+## Ubicaciones del mapa (Dictionary de LocationDB + "id"), en orden de navegación.
+var locations: Array[Dictionary] = []
+
+## Ubicación donde está el jugador (se marca con «AQUÍ»).
+var current_id := "":
+	set(value):
+		current_id = value
+		queue_redraw()
+
 var selected := 0:
 	set(value):
-		selected = wrapi(value, 0, LOCATIONS.size())
+		selected = wrapi(value, 0, locations.size())
 		queue_redraw()
-		location_focused.emit(LOCATIONS[selected])
+		location_focused.emit(locations[selected])
 
 var _time := 0.0
+
+
+func _init() -> void:
+	for id in LocationDB.map_ids():
+		var loc := LocationDB.get_location(id).duplicate()
+		loc["id"] = id
+		locations.append(loc)
 
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+## Selecciona la ubicación con ese id (si está en el mapa).
+func select_id(id: String) -> void:
+	for i in locations.size():
+		if locations[i].id == id:
+			selected = i
+			return
+	selected = 0
 
 
 func _process(delta: float) -> void:
@@ -56,7 +71,7 @@ func _gui_input(event: InputEvent) -> void:
 		selected -= 1
 		accept_event()
 	elif event.is_action_pressed("ui_accept"):
-		location_selected.emit(LOCATIONS[selected])
+		location_selected.emit(locations[selected])
 		accept_event()
 	elif event is InputEventMouseMotion:
 		var hit := _location_at(event.position)
@@ -66,13 +81,13 @@ func _gui_input(event: InputEvent) -> void:
 		var hit := _location_at(event.position)
 		if hit >= 0:
 			selected = hit
-			location_selected.emit(LOCATIONS[selected])
+			location_selected.emit(locations[selected])
 			accept_event()
 
 
 func _location_at(point: Vector2) -> int:
-	for i in LOCATIONS.size():
-		if point.distance_to(_to_local(LOCATIONS[i].pos)) < 34.0:
+	for i in locations.size():
+		if point.distance_to(_to_local(locations[i].pos)) < 34.0:
 			return i
 	return -1
 
@@ -103,8 +118,8 @@ func _draw() -> void:
 
 	# Localizaciones.
 	var font := UIStyle.FONT_BOLD_ITALIC
-	for i in LOCATIONS.size():
-		var loc: Dictionary = LOCATIONS[i]
+	for i in locations.size():
+		var loc: Dictionary = locations[i]
 		var p := _to_local(loc.pos)
 		var is_sel := i == selected
 		var accent: Color = UIStyle.MAGENTA if loc.get("dungeon", false) else UIStyle.LIME
@@ -129,6 +144,12 @@ func _draw() -> void:
 			UIStyle.draw_outline(self, box, Color(UIStyle.WHITE, 0.5), 1.0)
 		draw_string(font, lp + Vector2(8, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				UIStyle.INK if is_sel else UIStyle.WHITE)
+
+		# Marca de posición actual.
+		if loc.id == current_id:
+			var tri := PackedVector2Array([p + Vector2(0, 22), p + Vector2(-14, 46), p + Vector2(14, 46)])
+			draw_colored_polygon(tri, UIStyle.LIME)
+			draw_string(UIStyle.FONT_BOLD, p + Vector2(-26, 70), "AQUÍ", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, UIStyle.LIME)
 
 	# Aviso de marcador de posición.
 	draw_string(UIStyle.FONT_MEDIUM, Vector2(12, size.y - 12), "MAPA PROVISIONAL", HORIZONTAL_ALIGNMENT_LEFT,

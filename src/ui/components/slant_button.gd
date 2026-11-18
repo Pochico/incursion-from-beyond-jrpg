@@ -64,17 +64,29 @@ func _ready() -> void:
 	focus_entered.connect(_animate_highlight)
 	focus_exited.connect(_animate_highlight)
 	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_animate_highlight)
 	button_down.connect(queue_redraw)
 	button_up.connect(queue_redraw)
+	toggled.connect(func(_on: bool) -> void: _animate_highlight())
 
 
 func _on_mouse_entered() -> void:
-	if not Engine.is_editor_hint() and not has_focus():
+	if not Engine.is_editor_hint() and focus_mode != Control.FOCUS_NONE and not has_focus():
 		grab_focus()
+	else:
+		_animate_highlight()
+
+
+func _is_highlighted() -> bool:
+	if toggle_mode and button_pressed:
+		return true
+	if focus_mode == Control.FOCUS_NONE:
+		return is_hovered()
+	return has_focus()
 
 
 func _animate_highlight() -> void:
-	var target := 1.0 if has_focus() else 0.0
+	var target := 1.0 if _is_highlighted() else 0.0
 	if _tween:
 		_tween.kill()
 	_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

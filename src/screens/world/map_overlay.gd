@@ -1,0 +1,93 @@
+class_name MapOverlay
+extends Control
+## Mapa superpuesto (tecla M). Al elegir una ubicación emite `travel_requested`.
+
+signal travel_requested(location_id: String)
+signal closed
+
+var _map: MapView
+var _info: InfoBar
+var _frame: Control
+
+
+func _ready() -> void:
+	visible = false
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+	_frame = Control.new()
+	_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_frame.offset_left = 120
+	_frame.offset_top = 150
+	_frame.offset_right = -120
+	_frame.offset_bottom = -150
+	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_frame.draw.connect(_draw_frame)
+	add_child(_frame)
+
+	_map = MapView.new()
+	_map.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map.offset_left = 30
+	_map.offset_top = 90
+	_map.offset_right = -30
+	_map.offset_bottom = -110
+	_frame.add_child(_map)
+	_map.location_focused.connect(func(loc: Dictionary) -> void:
+		_info.text = "%s  —  %s" % [loc.name, loc.desc])
+	_map.location_selected.connect(func(loc: Dictionary) -> void:
+		travel_requested.emit(loc.id))
+
+	_info = InfoBar.new()
+	_info.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_info.offset_left = 30
+	_info.offset_right = -30
+	_info.offset_top = -88
+	_info.offset_bottom = -26
+	_frame.add_child(_info)
+
+
+func is_open() -> bool:
+	return visible
+
+
+func open(current_id: String) -> void:
+	_map.current_id = current_id
+	visible = true
+	modulate.a = 0.0
+	_frame.pivot_offset = _frame.size * 0.5
+	_frame.scale = Vector2(0.97, 0.97)
+	var t := create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	t.tween_property(self, "modulate:a", 1.0, 0.18)
+	t.tween_property(_frame, "scale", Vector2.ONE, 0.22)
+	_map.grab_focus()
+	_map.select_id(current_id)
+
+
+func close() -> void:
+	if not visible:
+		return
+	var t := create_tween()
+	t.tween_property(self, "modulate:a", 0.0, 0.14)
+	await t.finished
+	visible = false
+	closed.emit()
+
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(UIStyle.INK, 0.72))
+
+
+func _draw_frame() -> void:
+	var s := _frame.size
+	var body := PackedVector2Array([
+		Vector2(0, 40), Vector2(260, 40), Vector2(290, 0), Vector2(s.x - 40, 0), Vector2(s.x, 40),
+		Vector2(s.x, s.y), Vector2(40, s.y), Vector2(0, s.y - 40),
+	])
+	_frame.draw_colored_polygon(body, Color(UIStyle.GRAPHITE, 0.97))
+	UIStyle.draw_outline(_frame, body, Color(UIStyle.WHITE, 0.9), 2.0)
+	_frame.draw_rect(Rect2(28, 52, 10, 34), UIStyle.LIME)
+	_frame.draw_string(UIStyle.FONT_HEAVY_ITALIC, Vector2(52, 82), "Mapa", HORIZONTAL_ALIGNMENT_LEFT, -1, 40, UIStyle.WHITE)
+	_frame.draw_string(UIStyle.FONT_SEMIBOLD, Vector2(s.x - 560, 76),
+			"[← →] Elegir   /   [Enter] Ir   /   [M] Cerrar", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.7))
+	# Brújula
+	var n := Vector2(s.x - 70, 60)
+	_frame.draw_colored_polygon(PackedVector2Array([n + Vector2(0, -22), n + Vector2(12, 10), n + Vector2(0, 2), n + Vector2(-12, 10)]), UIStyle.WHITE)

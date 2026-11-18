@@ -1,0 +1,223 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://src/screens/world/world_screen.gd" id="1_world"]
+[ext_resource type="Script" path="res://src/screens/world/location_backdrop.gd" id="2_backdrop"]
+[ext_resource type="Script" path="res://src/ui/components/region_header.gd" id="3_region"]
+[ext_resource type="Script" path="res://src/ui/components/date_header.gd" id="4_date"]
+[ext_resource type="Script" path="res://src/ui/components/hint_bar.gd" id="5_hints"]
+[ext_resource type="Script" path="res://src/screens/world/location_banner.gd" id="6_banner"]
+[ext_resource type="Script" path="res://src/screens/world/conversation_view.gd" id="7_conv"]
+[ext_resource type="Script" path="res://src/ui/components/character_sprite.gd" id="8_sprite"]
+[ext_resource type="Script" path="res://src/ui/components/dialogue_box.gd" id="9_box"]
+[ext_resource type="Script" path="res://src/screens/world/interaction_menu.gd" id="10_menu"]
+[ext_resource type="Script" path="res://src/screens/world/map_overlay.gd" id="11_map"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_hint"]
+font_size = 28
+font_color = Color(0.553, 0.553, 0.588, 1)
+
+[node name="WorldScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_world")
+
+[node name="Backdrop" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_backdrop")
+
+[node name="EmptyHint" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -30.0
+offset_right = 500.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Tu habitación. No hay nada que hacer aquí."
+label_settings = SubResource("LabelSettings_hint")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Scenario" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Hud" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RegionHeader" type="Control" parent="Hud"]
+layout_mode = 1
+offset_left = 48.0
+offset_top = 34.0
+offset_right = 548.0
+offset_bottom = 146.0
+mouse_filter = 2
+script = ExtResource("3_region")
+
+[node name="DateHeader" type="Control" parent="Hud"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -460.0
+offset_top = 34.0
+offset_right = -48.0
+offset_bottom = 146.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("4_date")
+
+[node name="HintBar" type="HBoxContainer" parent="Hud"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -760.0
+offset_top = -112.0
+offset_right = -60.0
+offset_bottom = -60.0
+grow_horizontal = 0
+grow_vertical = 0
+alignment = 2
+script = ExtResource("5_hints")
+
+[node name="Banner" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_banner")
+
+[node name="Conversation" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_conv")
+
+[node name="LeftPortrait" type="Control" parent="Conversation"]
+unique_name_in_owner = true
+texture_filter = 5
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -1000.0
+offset_right = 900.0
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("8_sprite")
+
+[node name="RightPortrait" type="Control" parent="Conversation"]
+unique_name_in_owner = true
+texture_filter = 5
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -900.0
+offset_top = -1060.0
+offset_right = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("8_sprite")
+
+[node name="Choices" type="VBoxContainer" parent="Conversation"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -860.0
+offset_top = -720.0
+offset_right = -110.0
+offset_bottom = -400.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 14
+alignment = 2
+
+[node name="Box" type="Control" parent="Conversation"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 50.0
+offset_top = -390.0
+offset_right = -50.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("9_box")
+speaker_name = ""
+text = ""
+
+[node name="Interaction" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_menu")
+
+[node name="MapOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("11_map")

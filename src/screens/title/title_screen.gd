@@ -1,7 +1,7 @@
 extends Control
 ## Menú de inicio.
 
-const MAP_SCREEN := "res://src/screens/map/map_screen.tscn"
+const WORLD_SCREEN := "res://src/screens/world/world_screen.tscn"
 
 @onready var _logo: Control = %Logo
 @onready var _menu: VBoxContainer = %Menu
@@ -55,7 +55,7 @@ func _on_button_focused(button: SlantButton) -> void:
 
 func _on_new_game() -> void:
 	GameState.new_game()
-	SceneRouter.go_to(MAP_SCREEN)
+	SceneRouter.go_to(WORLD_SCREEN)
 
 
 func _on_continue() -> void:

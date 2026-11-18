@@ -1,11 +1,11 @@
 extends Node
 ## Estado global de la partida en curso.
 ##
-## Por ahora solo guarda lo que muestran las cabeceras de interfaz
-## (región, fecha y dinero). Las mecánicas de naturalezas/asimilación
-## (ver docs/diseno) vivirán en sistemas propios más adelante.
+## Región, fecha, dinero, ubicación actual y afinidades. Las mecánicas de
+## naturalezas/asimilación (ver docs/diseno) vivirán en sistemas propios.
 
 signal changed
+signal affinity_changed(character_id: String, value: int, delta: int)
 
 const WEEKDAYS_SHORT := ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"]
 const MONTHS_SHORT := ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
@@ -17,13 +17,35 @@ const START_MONEY := 12460
 var region_name: String = START_REGION
 var date: Dictionary = START_DATE.duplicate()
 var money: int = START_MONEY
+## Ubicación actual (ver LocationDB). Empieza en casa.
+var location_id: String = LocationDB.HOME
+## Afinidad del protagonista con cada personaje. Sin umbrales ni efectos automáticos.
+var affinity: Dictionary = {}
 
 
 func new_game() -> void:
 	region_name = START_REGION
 	date = START_DATE.duplicate()
 	money = START_MONEY
+	location_id = LocationDB.HOME
+	affinity = {}
 	changed.emit()
+
+
+func set_location(id: String) -> void:
+	location_id = id
+	changed.emit()
+
+
+func get_affinity(character_id: String) -> int:
+	return affinity.get(character_id, 0)
+
+
+func add_affinity(character_id: String, delta: int) -> void:
+	if delta == 0:
+		return
+	affinity[character_id] = get_affinity(character_id) + delta
+	affinity_changed.emit(character_id, affinity[character_id], delta)
 
 
 func has_save() -> bool:

@@ -24,6 +24,21 @@ func is_busy() -> bool:
 	return _busy
 
 
+## Fundido a negro sin cambiar de escena (p. ej. para viajar entre ubicaciones).
+func fade_out(fade_time: float = FADE_TIME) -> void:
+	_curtain.mouse_filter = Control.MOUSE_FILTER_STOP
+	var tween := create_tween()
+	tween.tween_property(_curtain, "modulate:a", 1.0, fade_time)
+	await tween.finished
+
+
+func fade_in(fade_time: float = FADE_TIME) -> void:
+	var tween := create_tween()
+	tween.tween_property(_curtain, "modulate:a", 0.0, fade_time)
+	await tween.finished
+	_curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 func go_to(path: String, fade_time: float = FADE_TIME) -> void:
 	if _busy:
 		return
