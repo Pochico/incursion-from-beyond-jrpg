@@ -2,6 +2,7 @@ extends Control
 ## Menú de inicio.
 
 const WORLD_SCREEN := "res://src/screens/world/world_screen.tscn"
+const TEXTURE_STUDIO := "res://src/tools/texture_studio/texture_studio.tscn"
 
 @onready var _logo: Control = %Logo
 @onready var _menu: VBoxContainer = %Menu
@@ -25,7 +26,29 @@ func _ready() -> void:
 	_options.pressed.connect(_on_options)
 	_quit.pressed.connect(_on_quit)
 
+	_add_tools_button()
 	_play_intro()
+
+
+## Acceso a herramientas internas: solo al ejecutar desde el editor de Godot
+## (las herramientas guardan archivos dentro del proyecto).
+func _add_tools_button() -> void:
+	if not OS.has_feature("editor"):
+		return
+	var b := PillButton.new()
+	b.label = "Estudio de texturas"
+	b.icon_name = "sparkle"
+	b.font_size = 22
+	b.pressed.connect(func() -> void: SceneRouter.go_to(TEXTURE_STUDIO))
+	add_child(b)
+	# Arriba a la derecha (anclado al borde derecho).
+	var w := b.get_combined_minimum_size().x
+	b.anchor_left = 1.0
+	b.anchor_right = 1.0
+	b.offset_right = -48.0
+	b.offset_left = -48.0 - w
+	b.offset_top = 40.0
+	b.offset_bottom = 90.0
 
 
 func _buttons() -> Array[SlantButton]:

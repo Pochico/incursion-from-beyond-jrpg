@@ -153,6 +153,36 @@ El mapa del juego (tecla **M**) es un modelo 3D de Leganés generado por código
 - El minimapa del combate sigue usando el mapa provisional.
 - Los datos son © colaboradores de OpenStreetMap (licencia ODbL). El crédito sale en la esquina del mapa.
 
+## Herramientas
+
+### Estudio de texturas (`src/tools/texture_studio/`)
+
+Prepara imágenes como texturas de **suelo**, **techo** y **pared** para el dungeon crawler ([documento de diseño](docs/diseno/Diseno_Dungeon_Crawler_Godot.md)).
+
+**Abrirlo:** ejecuta el juego desde el editor de Godot y pulsa **«Estudio de texturas»** arriba a la derecha del menú de inicio, o abre `src/tools/texture_studio/texture_studio.tscn` y pulsa **F6**. Solo funciona desde el editor, porque guarda archivos dentro del proyecto.
+
+| Control | Qué hace |
+|---|---|
+| **Superficie** | Suelo / Techo (2 × 2 m, cuadrada) o Pared (2 × 2,5 m). Recorta la imagen a esa proporción. |
+| **Resolución** | 256 / 512 / 1024 px por metro (suelo a 512 → 1024 × 1024 px). |
+| **Repetible** | Mezcla los bordes para que la textura se repita sin costuras: en ambos ejes (suelo, techo) o solo en horizontal (pared). |
+| **Zoom del recorte** | Arrastra la vista previa para elegir qué parte de la imagen usar; rueda para acercar. |
+| **Simplificar** | Desenfoque previo que funde el ruido fino en manchas, para que el posterizado y las líneas sigan las formas grandes. |
+| **Aplanado ← → Resalte** | Quita (−) o añade (+) saturación y contraste. |
+| **Posterizado** | 0 = desactivado … 10 = 2 tonos por canal. |
+| **Entintado** | 1 = sin líneas … 10 = todas las formas repasadas, estilo anime. Con grosor y color de línea (oscuro de cada forma o tinta). |
+
+- **Comparar [C]** (mantener) muestra la imagen original. **Mosaico [T]** muestra la textura repetida en 3×3 para revisar costuras.
+- **Guardar** escribe `assets/textures/<tema>/<superficie>/<nombre>.png` y, a su lado, un `.estilo.json` con los ajustes usados, para repetir el mismo estilo en otras texturas. **Guardar como…** permite elegir cualquier ruta.
+- Puedes abrir imágenes con el botón o arrastrándolas a la ventana.
+- Las medidas (casilla de 2 m, pared de 2,5 m, densidades) están en `src/data/texture_formats.gd` y las compartirá el editor de mapas.
+
+![Estudio de texturas](docs/capturas/estudio_texturas.webp)
+
+![Entintado](docs/capturas/texturas_entintado.webp)
+![Posterizado](docs/capturas/texturas_posterizado.webp)
+![Aplanado y resalte](docs/capturas/texturas_aplanado_resalte.webp)
+
 ## Cómo añadir contenido
 
 - **Diálogos**: `src/dialogue/*.dialogue` (plugin [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager), en `addons/`). Uno por personaje más `general.dialogue`. Cada conversación lleva una regla `# cuando:` que decide cuándo sale; ver [el documento de diseño](docs/diseno/personajes_y_relaciones.md).
@@ -180,6 +210,7 @@ src/
     location_db.gd          Ubicaciones
     character_db.gd         Personajes
     item_db.gd              Objetos (Pochicola)
+    texture_formats.gd      Medidas y formatos de textura del dungeon crawler
   systems/
     battle.gd               Lógica de combate del grupo contra un rival (eventos, sin interfaz)
     event_log.gd            Registro de acontecimientos: qué pasó y quién lo sabe
@@ -221,6 +252,8 @@ src/
         damage_popup.gd         Números de daño/curación
       talk_indicator.gd       Bocadillo «...» sobre los personajes interactuables
   dialogue/               Diálogos (.dialogue), uno por personaje + general
+  tools/
+    texture_studio/         Estudio de texturas (suelo, techo, pared)
 docs/
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz
