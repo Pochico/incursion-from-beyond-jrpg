@@ -1,0 +1,35 @@
+# YUNA — novia de Kenji, de su misma clase. Tranquila; muy cariñosa con Kenji.
+# Ficha: src/data/characters/yuna.json
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ yuna_movil
+# cuando: movil
+%
+	Ren: Hola, Yuna.
+	Yuna: Hola, Ren. ¿Buscas a Kenji? Está en la ducha cantando. Mal.
+%
+	Ren: ¿Qué tal?
+	Yuna: Bien. Intentando que Kenji entienda las derivadas. Vamos por la página uno.
+%
+	Ren: Ey.
+	Yuna: Ey. Gracias por aguantar a mi osito. Sé que a veces es mucho.
+=> END
+
+~ yuna_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Ey, otra vez yo.
+	Yuna: ¿Todo bien? Si es algo de Kenji, dímelo, que lo arreglo yo.
+%
+	Ren: ¿Sigues por ahí?
+	Yuna: Sí, sí. Te leo.
+=> END
+
+~ yuna_movil_fria
+# cuando: movil, tramo <= fria
+Ren: Hola.
+Yuna: Hola.
+=> END

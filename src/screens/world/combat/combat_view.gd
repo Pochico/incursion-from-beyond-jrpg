@@ -9,26 +9,27 @@ extends Control
 ##  - Columna derecha: minimapa y fichas del grupo.
 ##  - Fila de comandos (Atacar, Habilidad, Objeto, Defender, Analizar, Huir).
 ##  - Fila de opciones del comando seleccionado + descripción / registro.
+##  - Pantalla de estado (StatusPanel): clic en una ficha del grupo o Tab.
 ##
 ## La lógica está en Battle; esta vista solo traduce sus eventos en animaciones.
 ##
 ## Uso:
-##   combat.setup("kael")         # mientras la transición tapa la pantalla
+##   combat.setup("kenji")         # mientras la transición tapa la pantalla
 ##   combat.begin()               # tras descubrirla
 ##   var won: bool = await combat.finished
 
 signal finished(player_won: bool)
 
-enum State { IDLE, COMMAND, OPTION, ANIMATING, RESULT }
+enum State { IDLE, COMMAND, OPTION, ANIMATING, RESULT, STATUS }
 
-const VIEWPORT_RECT := Rect2(10, 96, 1418, 622)
-const COMMAND_Y := 738.0
-const OPTION_ROW := Rect2(30, 830, 1864, 70)
+const VIEWPORT_RECT := Rect2(10, 96, 1418, 782)
+const COMMAND_Y := 898.0
+const OPTION_ROW := Rect2(30, 990, 1864, 70)
 const RIGHT_X := 1440.0
 
 const COMMANDS := [
 	{"id": "attack", "label": "Atacar", "icon": "swords", "desc": "Ataque básico con lo que tengas a mano."},
-	{"id": "skill", "label": "Habilidad", "icon": "sparkle", "desc": "Habilidades bloqueadas: todavía no has aprendido ninguna."},
+	{"id": "skill", "label": "Habilidad", "icon": "sparkle", "desc": "Técnicas de quien actúa. Gastan PM."},
 	{"id": "item", "label": "Objeto", "icon": "flask", "desc": "Usar un objeto del inventario."},
 	{"id": "defend", "label": "Defender", "icon": "shield", "desc": "Cubrirte para reducir el próximo golpe."},
 	{"id": "analyze", "label": "Analizar", "icon": "antenna", "desc": "Estudiar al rival. No gasta el turno."},
@@ -36,12 +37,14 @@ const COMMANDS := [
 ]
 
 var _battle: Battle
+var _actor := Battle.PLAYER       # miembro del grupo al que le toca elegir
 var _state := State.IDLE
 var _enemy_id := ""
 var _current_command := 0
 var _info_text := ""
 var _log_text := ""             # última acción del combate (registro)
 var _result_text := ""
+var _result_sub := ""       ## Línea bajo VICTORIA (dinero ganado)
 var _result_color := UIStyle.LIME
 var _result_t := 0.0
 
@@ -55,8 +58,12 @@ var _cards: Array[CombatantCard] = []
 var _commands: Array[SlantButton] = []
 var _options: HBoxContainer
 var _info: Control
+var _status: StatusPanel
 var _tension_shown := 0.0
 var _slash_t := -1.0             # animación del tajo (−1 = inactiva)
+var _banner_text := ""           # nombre de la habilidad en curso
+var _banner_color := UIStyle.WHITE
+var _banner_t := 0.0
 
 
 func _ready() -> void:
@@ -112,6 +119,7 @@ func _build() -> void:
 		var card := CombatantCard.new()
 		card.position = Vector2(RIGHT_X, 310 + i * 102)
 		card.size = Vector2(1908 - RIGHT_X, 94)
+		card.pressed.connect(_open_status.bind(i))
 		add_child(card)
 		_cards.append(card)
 
@@ -123,6 +131,7 @@ func _build() -> void:
 		b.label = COMMANDS[i].label
 		b.icon_name = COMMANDS[i].icon
 		b.description = COMMANDS[i].desc
+		b.hover_focus = false   # El comando se elige con clic; el hover solo afecta a las opciones.
 		b.font_size = 30
 		b.slant = 26
 		b.position = Vector2(x + i * (w + 8), COMMAND_Y)
@@ -132,7 +141,6 @@ func _build() -> void:
 		b.pressed.connect(_on_command_pressed.bind(i))
 		add_child(b)
 		_commands.append(b)
-	_commands[1].disabled = true   # Habilidad: bloqueada de momento.
 
 	# Fila de opciones + descripción
 	_info = Control.new()
@@ -148,24 +156,44 @@ func _build() -> void:
 	_options.add_theme_constant_override("separation", 18)
 	add_child(_options)
 
+	# Pantalla de estado, por encima de todo.
+	_status = StatusPanel.new()
+	_status.size = Vector2(1920, 1080)
+	_status.closed.connect(_on_status_closed)
+	add_child(_status)
+
 
 # --- API ---------------------------------------------------------------------------------
 
+const DEFAULT_ENEMY_SIZE := Vector2(560, 600)
+
+
 ## Prepara el combate contra `enemy_id` y lo hace visible (sin dar el control).
-func setup(enemy_id: String) -> void:
+## Con `ally_id`, un compañero lucha junto al protagonista; `ally_skills`
+## sustituye sus habilidades.
+func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = []) -> void:
 	_enemy_id = enemy_id
-	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id)
+	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id, ally_id, ally_skills)
+	_actor = Battle.PLAYER
 	_state = State.IDLE
 	_tension_shown = 0.0
 	_result_text = ""
+	_result_sub = ""
 	_result_t = 0.0
 	_slash_t = -1.0
+	_banner_text = ""
 	_log_text = ""
 
 	_backdrop.set_location(GameState.location_id)
 	_minimap.location_id = GameState.location_id
 	_minimap.queue_redraw()
 
+	var vs := _viewport.size
+	var default_rect := Rect2(Vector2(vs.x * 0.56 - DEFAULT_ENEMY_SIZE.x * 0.5, vs.y - DEFAULT_ENEMY_SIZE.y), DEFAULT_ENEMY_SIZE)
+	var rect: Rect2 = CharacterDB.get_character(enemy_id).get("battle_rect", default_rect)
+	_enemy.position = rect.position
+	_enemy.size = rect.size
+	_enemy.pivot_offset = Vector2(rect.size.x * 0.5, rect.size.y)
 	_enemy.texture = CharacterDB.portrait(enemy_id)
 	_enemy.glow_color = CharacterDB.color(enemy_id)
 	_enemy.glow_idle = 0.9
@@ -174,13 +202,23 @@ func setup(enemy_id: String) -> void:
 	_plate.setup(_battle.enemy())
 	_plate.analyzed = false
 
-	_cards[0].setup(CharacterDB.PROTAGONIST, 1, _battle.player())
-	_cards[0].guarding = false
-	for i in range(1, _cards.size()):
-		_cards[i].setup("", i + 1)
+	for i in _cards.size():
+		_cards[i].guarding = false
+		_cards[i].status_text = ""
+		_cards[i].active = false
+		if i < _battle.party.size():
+			var f := _battle.fighter(_battle.party[i])
+			_cards[i].setup(f.id, i + 1, f)
+		else:
+			_cards[i].setup("", i + 1)
 
 	_build_options(0)
-	_log("¡%s acepta el duelo!" % _battle.enemy().name)
+	if ally_id != "":
+		_log("¡%s te cierra el paso! %s lucha a tu lado." % [_battle.enemy().name, CharacterDB.display_name(ally_id)])
+	elif CharacterDB.is_enemy(enemy_id):
+		_log("¡%s te cierra el paso!" % _battle.enemy().name)
+	else:
+		_log("¡%s acepta el duelo!" % _battle.enemy().name)
 	visible = true
 	queue_redraw()
 	_fx.queue_redraw()
@@ -197,6 +235,8 @@ func begin() -> void:
 # --- Estados y entrada ---------------------------------------------------------------------
 
 func _enter_command_state(index: int) -> void:
+	for i in _battle.party.size():
+		_cards[i].active = _battle.party.size() > 1 and _battle.party[i] == _actor
 	_state = State.COMMAND
 	_set_commands_enabled(true)
 	_commands[index].grab_focus()
@@ -217,6 +257,8 @@ func _on_command_focused(index: int) -> void:
 	# Volver a la fila de comandos (con ↑ o el ratón) sale de la de opciones.
 	_state = State.COMMAND
 	_current_command = index
+	for i in _commands.size():
+		_commands[i].active = i == index
 	_build_options(index)
 	_set_info(COMMANDS[index].desc)
 
@@ -240,17 +282,19 @@ func _first_enabled_option() -> PillButton:
 
 ## Opciones de cada comando.
 func _options_for(command_id: String) -> Array:
-	var p := _battle.player()
+	var p := _battle.fighter(_actor)
 	match command_id:
 		"attack":
 			return [{"label": p.attack, "icon": "slash", "action": "attack",
-				"desc": "Un rápido corte que inflige daño físico al rival. Daño: %d ± %d." % [p.damage, p.variance]}]
+				"desc": "Ataque básico que inflige daño físico al rival. Daño: %d ± %d." % [p.damage, p.variance]}]
 		"skill":
-			var locked := []
-			for i in 3:
-				locked.append({"label": "Bloqueado", "icon": "lock", "disabled": true,
-					"desc": "Todavía no tienes habilidades. Se desbloquearán más adelante."})
-			return locked
+			var opts := []
+			for id: String in p.skills:
+				opts.append(_skill_option(id))
+			if opts.is_empty():
+				opts.append({"label": "Ninguna", "icon": "lock", "disabled": true,
+					"desc": "%s no tiene habilidades." % p.name})
+			return opts
 		"item":
 			var n := GameState.item_count("pochicola")
 			return [{"label": "Pochicola  ×%d" % n, "icon": "can", "action": "item:pochicola",
@@ -262,9 +306,32 @@ func _options_for(command_id: String) -> Array:
 			return [{"label": "Escanear", "icon": "antenna", "action": "analyze",
 				"desc": "Revela los PV y el ataque del rival. No gasta el turno."}]
 		"flee":
+			if CharacterDB.is_enemy(_enemy_id):
+				return [{"label": "Huir", "icon": "run", "action": "flee",
+					"desc": "Intentas escapar de la criatura. Cuenta como derrota."}]
 			return [{"label": "Rendirse", "icon": "run", "action": "flee",
 				"desc": "Abandonas el duelo. Cuenta como derrota."}]
 	return []
+
+
+func _skill_option(id: String) -> Dictionary:
+	var skill := SkillDB.get_skill(id)
+	var cost := _battle.skill_cost(_actor, id)
+	var cd := _battle.skill_cooldown(_actor, id)
+	var preview := _battle.skill_preview(_actor, id)
+	var result := ("Restaura ~%d PV." if skill.target == "self" else "Daño estimado: ~%d.") % preview
+	var desc := "%s %s Coste: %d PM." % [skill.desc, result, cost]
+	if skill.cd > 0:
+		desc += " Recarga: %d turnos." % skill.cd
+	var disabled := false
+	if cd > 0:
+		disabled = true
+		desc = "Recargando: disponible en %d turno%s. %s" % [cd, "" if cd == 1 else "s", desc]
+	elif _battle.fighter(_actor).pm < cost:
+		disabled = true
+		desc = "No tienes PM suficientes. %s" % desc
+	return {"label": "%s  %d PM" % [skill.name, cost], "icon": skill.get("icon", "sparkle"),
+		"action": "skill:" + id, "disabled": disabled, "desc": desc}
 
 
 func _build_options(index: int) -> void:
@@ -279,10 +346,37 @@ func _build_options(index: int) -> void:
 		b.disabled = opt.get("disabled", false)
 		b.font_size = 24
 		b.custom_minimum_size = Vector2(250, 50)
+		if b.disabled:
+			b.modulate.a = 0.45
 		b.focus_entered.connect(func() -> void: _set_info(b.description))
 		if opt.has("action"):
 			b.pressed.connect(_execute.bind(opt.action))
 		_options.add_child(b)
+
+
+## Abre la pantalla de estado del miembro del grupo de la ficha `slot`.
+## Solo mientras el jugador está eligiendo acción.
+func _open_status(slot: int) -> void:
+	if _state != State.COMMAND and _state != State.OPTION:
+		return
+	if slot >= _battle.party.size():
+		return
+	_state = State.STATUS
+	get_viewport().gui_release_focus()
+	_set_commands_enabled(false)
+	_status.open(_battle, _battle.party[slot])
+
+
+func _on_status_closed() -> void:
+	_enter_command_state(_current_command)
+
+
+func _input(event: InputEvent) -> void:
+	# Tab: estado de quien está eligiendo. En _input porque, si no, Tab lo
+	# gasta antes el sistema de foco de los botones.
+	if visible and (_state == State.COMMAND or _state == State.OPTION) and event.is_action_pressed("ui_focus_next"):
+		_open_status(_battle.party.find(_actor))
+		get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -318,9 +412,9 @@ func _execute(action: String) -> void:
 	var uses_turn := true
 	match action:
 		"attack":
-			events = _battle.player_attack()
+			events = _battle.attack(_actor)
 		"defend":
-			events = _battle.player_defend()
+			events = _battle.defend(_actor)
 		"analyze":
 			events = _battle.analyze()
 			uses_turn = false
@@ -328,17 +422,42 @@ func _execute(action: String) -> void:
 			events = _battle.surrender()
 		_:
 			if action.begins_with("item:"):
-				events = _battle.player_item(action.substr(5))
+				events = _battle.use_item(_actor, action.substr(5))
+			elif action.begins_with("skill:"):
+				events = _battle.use_skill(_actor, action.substr(6))
 	await _play_events(events)
 
 	if not _battle.is_over() and uses_turn:
-		await get_tree().create_timer(0.35).timeout
-		await _play_events(_battle.enemy_turn())
+		# Le toca al siguiente del grupo en pie; si no queda nadie, al rival.
+		var next := _next_actor(_actor)
+		if next != "":
+			_actor = next
+		else:
+			await get_tree().create_timer(0.35).timeout
+			await _play_events(_battle.enemy_turn())
+			var alive := _battle.alive_party()
+			if not alive.is_empty():
+				_actor = alive[0]
 
 	if _battle.is_over():
 		await _show_result()
 	else:
+		if _battle.party.size() > 1:
+			_log("Turno de %s." % _fighter_name(_actor))
 		_enter_command_state(_current_command)
+
+
+## Siguiente miembro del grupo en pie después de `who` en esta ronda ("" si no hay).
+func _next_actor(who: String) -> String:
+	var i := _battle.party.find(who)
+	for j in range(i + 1, _battle.party.size()):
+		if _battle.is_alive(_battle.party[j]):
+			return _battle.party[j]
+	return ""
+
+
+func _card(who: String) -> CombatantCard:
+	return _cards[maxi(_battle.party.find(who), 0)]
 
 
 func _play_events(events: Array) -> void:
@@ -351,25 +470,46 @@ func _play_events(events: Array) -> void:
 					await _anim_enemy_hits(ev)
 			"heal":
 				await _anim_heal(ev)
+			"skill":
+				await _anim_skill(ev)
+			"restore":
+				await _anim_restore(ev)
+			"status":
+				await _anim_status(ev)
+			"tick":
+				await _anim_tick(ev)
+			"status_end":
+				_log("%s: %s se disipa." % [_fighter_name(ev.target), SkillDB.STATUS_NAMES.get(ev.status, ev.status)])
+				_update_status_tags()
+				await get_tree().create_timer(0.6).timeout
 			"defend":
-				_cards[0].guarding = true
-				_log("Aiden se pone en guardia.")
+				_card(ev.target).guarding = true
+				_log("%s se pone en guardia." % _fighter_name(ev.target))
 				await get_tree().create_timer(0.6).timeout
 			"analyze":
 				_plate.analyzed = true
 				var e := _battle.enemy()
-				_log("Analizas a %s: %d / %d PV. Ataque: %s (%d de daño)." % [e.name, e.pv, e.pv_max, e.attack, e.damage])
+				var text := "Analizas a %s: %d / %d PV. Ataque: %s (%d de daño)." % [e.name, e.pv, e.pv_max, e.attack, e.damage]
+				if e.nature != "":
+					text += " Naturaleza: %s." % SkillDB.NATURE_NAMES.get(e.nature, e.nature)
+				if not e.skills.is_empty():
+					text += " Técnicas: %s." % ", ".join(e.skills.map(SkillDB.display_name))
+				_log(text)
 				await get_tree().create_timer(0.8).timeout
 			"surrender":
-				_log("Aiden levanta las manos. Se acabó el duelo.")
+				_log("%s levanta las manos. Se acabó el duelo." % _pname())
 				await get_tree().create_timer(0.8).timeout
-		_cards[0].guarding = _battle.player().defending
+		for who in _battle.party:
+			_card(who).guarding = _battle.fighter(who).defending
 		_tween_tension()
 
 
 func _anim_player_hits(ev: Dictionary) -> void:
 	var e := _battle.enemy()
-	_log("Aiden usa %s. %s recibe %d de daño." % [ev.move, e.name, ev.amount])
+	if ev.skill != "":
+		_log("%s recibe %d de daño." % [e.name, ev.amount])
+	else:
+		_log("%s usa %s. %s recibe %d de daño." % [_fighter_name(ev.source), ev.move, e.name, ev.amount])
 	# Tajo lima que cruza al rival.
 	var t := create_tween()
 	t.tween_method(func(v: float) -> void:
@@ -388,26 +528,29 @@ func _anim_player_hits(ev: Dictionary) -> void:
 func _anim_enemy_hits(ev: Dictionary) -> void:
 	var e := _battle.enemy()
 	var extra := " (guardia)" if ev.get("guarded", false) else ""
-	_log("%s usa %s. Aiden recibe %d de daño%s." % [e.name, ev.move, ev.amount, extra])
+	if ev.skill != "":
+		_log("%s recibe %d de daño%s." % [_fighter_name(ev.target), ev.amount, extra])
+	else:
+		_log("%s usa %s. %s recibe %d de daño%s." % [e.name, ev.move, _fighter_name(ev.target), ev.amount, extra])
 	# El rival se abalanza hacia la cámara.
 	var t := create_tween()
 	t.tween_property(_enemy, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD)
 	t.tween_property(_enemy, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_QUAD)
 	await get_tree().create_timer(0.12).timeout
 	_shake(self, 10.0)
-	_cards[0].flash(UIStyle.RED)
-	_cards[0].animate_pv(_battle.player().pv)
-	DamagePopup.spawn(self, _cards[0].position + Vector2(_cards[0].size.x * 0.55, 30), str(ev.amount), Color("ff6b7d"), false)
+	_card(ev.target).flash(UIStyle.RED)
+	_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
+	DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), str(ev.amount), Color("ff6b7d"), false)
 	await get_tree().create_timer(0.75).timeout
 
 
 func _anim_heal(ev: Dictionary) -> void:
 	var item_name: String = ItemDB.get_item(ev.item).get("name", "objeto")
-	if ev.target == Battle.PLAYER:
-		_log("Aiden bebe una %s. Recupera %d PV." % [item_name, ev.amount])
-		_cards[0].flash(UIStyle.LIME)
-		_cards[0].animate_pv(_battle.player().pv)
-		DamagePopup.spawn(self, _cards[0].position + Vector2(_cards[0].size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
+	if ev.target != Battle.ENEMY:
+		_log("%s bebe una %s. Recupera %d PV." % [_fighter_name(ev.target), item_name, ev.amount])
+		_card(ev.target).flash(UIStyle.LIME)
+		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
+		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
 	else:
 		var e := _battle.enemy()
 		_log("%s bebe una %s. Recupera %d PV." % [e.name, item_name, ev.amount])
@@ -416,10 +559,105 @@ func _anim_heal(ev: Dictionary) -> void:
 	await get_tree().create_timer(0.8).timeout
 
 
+## Anuncio de una habilidad: nombre, gasto de PM y destello del color de su naturaleza.
+func _anim_skill(ev: Dictionary) -> void:
+	var skill := SkillDB.get_skill(ev.skill)
+	var color := SkillDB.nature_color(skill.nature)
+	_log("%s usa %s." % [_fighter_name(ev.source), skill.name])
+	if ev.source != Battle.ENEMY:
+		_card(ev.source).animate_pm(_battle.fighter(ev.source).pm)
+		_card(ev.source).flash(color)
+		DamagePopup.spawn(self, _card(ev.source).position + Vector2(_card(ev.source).size.x * 0.3, 60), "−%d PM" % ev.cost, CombatantCard.PM_COLOR, false)
+	else:
+		var t := create_tween()
+		_enemy.modulate = Color(color.r * 1.8, color.g * 1.8, color.b * 1.8)
+		t.tween_property(_enemy, "modulate", Color.WHITE, 0.45)
+	_skill_banner(skill.name, color)
+	await get_tree().create_timer(0.6).timeout
+
+
+func _anim_restore(ev: Dictionary) -> void:
+	var skill_name := SkillDB.display_name(ev.skill)
+	if ev.target != Battle.ENEMY:
+		_log("%s: %s recupera %d PV." % [skill_name, _fighter_name(ev.target), ev.amount])
+		_card(ev.target).flash(UIStyle.LIME)
+		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
+		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
+	else:
+		var e := _battle.enemy()
+		_log("%s: %s recupera %d PV." % [skill_name, e.name, ev.amount])
+		_plate.animate_pv(e.pv)
+		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), "+%d" % ev.amount, UIStyle.LIME)
+	await get_tree().create_timer(0.8).timeout
+
+
+func _anim_status(ev: Dictionary) -> void:
+	var status_name: String = SkillDB.STATUS_NAMES.get(ev.status, ev.status)
+	var who := _fighter_name(ev.target)
+	if ev.applied:
+		_log("¡%s sufre %s durante %d turnos! (%d %%)" % [who, status_name.to_lower(), ev.turns, roundi(ev.chance)])
+		if ev.target != Battle.ENEMY:
+			_card(ev.target).flash(UIStyle.VIOLET)
+	else:
+		_log("%s resiste la %s. (%d %%)" % [who, status_name.to_lower(), roundi(ev.chance)])
+	_update_status_tags()
+	await get_tree().create_timer(0.8).timeout
+
+
+func _anim_tick(ev: Dictionary) -> void:
+	var status_name: String = SkillDB.STATUS_NAMES.get(ev.status, ev.status)
+	_log("La %s consume a %s: %d de daño." % [status_name.to_lower(), _fighter_name(ev.target), ev.amount])
+	if ev.target != Battle.ENEMY:
+		_card(ev.target).flash(UIStyle.VIOLET)
+		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
+		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), str(ev.amount), UIStyle.VIOLET, false)
+	else:
+		_plate.animate_pv(_battle.enemy().pv)
+		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.VIOLET)
+	_update_status_tags()
+	await get_tree().create_timer(0.7).timeout
+
+
+func _update_status_tags() -> void:
+	for who in _battle.party:
+		var parts := []
+		var statuses: Dictionary = _battle.fighter(who).statuses
+		for status: String in statuses:
+			parts.append("%s %d" % [SkillDB.STATUS_NAMES.get(status, status).to_upper(), statuses[status].turns])
+		_card(who).status_text = " · ".join(parts)
+
+
+func _pname() -> String:
+	return _battle.player().name
+
+
+func _fighter_name(who: String) -> String:
+	return _battle.fighters[who].name
+
+
+## Nombre de la habilidad en grande sobre el visor durante un momento.
+func _skill_banner(text: String, color: Color) -> void:
+	_banner_text = text
+	_banner_color = color
+	var t := create_tween()
+	t.tween_method(func(v: float) -> void:
+		_banner_t = v
+		_fx.queue_redraw(), 0.0, 1.0, 1.1)
+	t.tween_callback(func() -> void:
+		_banner_text = ""
+		_fx.queue_redraw())
+
+
 func _show_result() -> void:
 	var won := _battle.player_won()
 	_result_text = "VICTORIA" if won else "DERROTA"
 	_result_color = UIStyle.LIME if won else UIStyle.RED
+	_result_sub = ""
+	var money := _battle.reward()
+	if money > 0:
+		GameState.add_money(money)
+		_result_sub = "+ ¥ %s" % UIStyle.format_money(money)
+		queue_redraw()   # La cabecera muestra el dinero.
 	if won:
 		var t := create_tween()
 		t.tween_property(_enemy, "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
@@ -493,7 +731,7 @@ func _draw() -> void:
 	UIIcons.calendar(self, Vector2(1490, 26), 26, UIStyle.WHITE)
 	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
 	draw_line(Vector2(1592, 14), Vector2(1592, 40), UIStyle.WHITE, 1.5)
-	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608, 36), "¥ %s" % _format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608, 36), "¥ %s" % UIStyle.format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
 	for i in 7:
 		var sx := w - 120 + i * 14
 		draw_line(Vector2(sx, 40), Vector2(sx + 16, 6), UIStyle.WHITE, 2.5, true)
@@ -505,9 +743,6 @@ func _draw() -> void:
 	# Línea de guía a la izquierda de los comandos.
 	draw_line(Vector2(0, COMMAND_Y + 40), Vector2(70, COMMAND_Y + 40), UIStyle.LINE, 1.5)
 
-	# Pie con controles.
-	draw_string(UIStyle.FONT_REGULAR, Vector2(48, 980), "[← →] Elegir    /    [Enter] Confirmar    /    [Esc] Volver",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.45))
 
 
 func _draw_info() -> void:
@@ -557,6 +792,17 @@ func _draw_fx() -> void:
 		var tail := a.lerp(b, maxf(_slash_t * 1.4 - 0.5, 0.0))
 		_fx.draw_line(tail, head, Color(UIStyle.LIME, 0.9), 18.0, true)
 		_fx.draw_line(tail, head, UIStyle.WHITE, 6.0, true)
+	# Nombre de la habilidad: entra deslizándose, se mantiene y se desvanece.
+	if _banner_text != "":
+		var bt := _banner_t
+		var a := clampf(bt * 6.0, 0.0, 1.0) * clampf((1.0 - bt) * 4.0, 0.0, 1.0)
+		var bf := UIStyle.FONT_HEAVY_ITALIC
+		var bw := bf.get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 54).x
+		var bx := vs.x - bw - 60 + (1.0 - clampf(bt * 6.0, 0.0, 1.0)) * 80
+		var by := 190.0
+		_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(bx - 40, by - 50, bw + 80, 66), 22), Color(UIStyle.INK, 0.85 * a))
+		_fx.draw_rect(Rect2(bx - 30, by + 16, bw + 60, 4), Color(_banner_color, a))
+		_fx.draw_string(bf, Vector2(bx, by), _banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 54, Color(UIStyle.WHITE, a))
 	# Banda de resultado.
 	if _result_text != "":
 		var p := _result_t
@@ -569,12 +815,8 @@ func _draw_fx() -> void:
 		var tw := f.get_string_size(_result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 110).x
 		_fx.draw_string(f, Vector2((vs.x - tw) * 0.5 + (1.0 - p) * 200, y + 40), _result_text,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 110, Color(_result_color, p))
-
-
-func _format_money(value: int) -> String:
-	var s := str(value)
-	var out := ""
-	while s.length() > 3:
-		out = "," + s.substr(s.length() - 3) + out
-		s = s.substr(0, s.length() - 3)
-	return s + out
+		if _result_sub != "":
+			var sf := UIStyle.FONT_SEMIBOLD
+			var sw := sf.get_string_size(_result_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 34).x
+			_fx.draw_string(sf, Vector2((vs.x - sw) * 0.5, y + band_h * 0.5 * p + 52), _result_sub,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(UIStyle.WHITE, p))

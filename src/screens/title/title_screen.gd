@@ -61,7 +61,8 @@ func _on_new_game() -> void:
 func _on_continue() -> void:
 	if _continue.disabled:
 		return
-	# TODO: cargar partida cuando exista el sistema de guardado.
+	if GameState.load_game():
+		SceneRouter.go_to(WORLD_SCREEN)
 
 
 func _on_options() -> void:

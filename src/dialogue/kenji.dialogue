@@ -1,0 +1,322 @@
+# KENJI — mejor amigo de Ren desde siempre, de otra clase. Músico, bromista, cálido.
+# Ficha: src/data/characters/kenji.json
+
+# =====================================================================================
+# HABLAR — antes de la incursión
+# =====================================================================================
+
+~ kenji_hablar_primera
+# cuando: hablar, una vez, fase = rutina
+Kenji: ¡Ren! ¿Qué tal las piernas después de las camas elásticas? Yo no siento los gemelos. ¿Sigues vivo o eres un holograma con muy buena resolución?
+- Más o menos vivo. [#franco]
+	Kenji: «Más o menos». Me vale. Es más de lo que dice la mitad del barrio un martes.
+- Holograma. Bájame el brillo, que deslumbro. [#bromista, #desenfadado]
+	Kenji: ¡Ja! Ese es mi Ren. Sabía que seguías ahí dentro, debajo de tanta capucha.
+- (Encogerte de hombros.) [#reservado]
+	Kenji: Vale, vale. Modo ahorro de energía. Lo respeto.
+Kenji: Oye, ya que estás aquí... ¿Te puedo contar una cosa rara sin que me mires como si estuviera mal de la cabeza?
+Ren: Depende de lo rara que sea.
+Kenji: Llevo semanas grabando de noche. Bases, samples, lo de siempre. Y a las 3\:33 los cascos pillan algo.
+Kenji: No es ruido. No es una radio. Es como... una voz metida entre los datos. Comprimida. Como si alguien hablara desde dentro del archivo.
+- Será una interferencia. [#pragmático]
+	Kenji: Eso pensé yo. Cambié de cables, de portátil, hasta de enchufe. Sigue ahí. Misma hora. Mismo segundo.
+- ¿Y qué dice esa voz? [#curioso]
+	Kenji: Al principio nada. Ahora la limpio un poco y se entiende una palabra. Solo una.
+	Kenji: «Abre».
+	$> Story.set_flag("kenji_voz_abre")
+- Duerme más, Kenji. [#sarcástico]
+	Kenji: Ya, ya... Tú también estás a una mala noche de oír cosas, no te creas.
+Kenji: En fin. Si un día te da por aburrirte un poco menos, pásate por el estudio y lo escuchas tú mismo.
+Kenji: Y tráete algo de comer. El genio creativo no se alimenta del aire.
+=> END
+
+~ kenji_hablar_rutina
+# cuando: hablar, fase = rutina
+%
+	Kenji: Tío, he encontrado un vinilo de funk japonés de los setenta en un contenedor. Un contenedor, Ren. La gente no sabe lo que tira.
+	- ¿Suena bien? [#curioso]
+		Kenji: Cruje como una tostada. Es perfecto. Te lo pongo un día y lloras.
+	- ¿Y lo has lavado? [#pragmático, #bromista]
+		Kenji: ...Lo he soplado. Con cariño. Cuenta.
+%
+	Kenji: ¿Tekken esta noche? Te dejo elegir personaje. Vas a perder igual, pero te dejo elegir.
+	- Esta vez te gano. [#decidido, #provocador]
+		Kenji: Eso dijiste en 2019. Y en 2021. Y la semana pasada. Te quiero, tío, pero no.
+	- Hoy no me apetece. [#reservado]
+		Kenji: Vale... Pero si cambias de idea, mi sofá sigue teniendo tu forma.
+	- Solo si invitas a pizza. [#desenfadado]
+		Kenji: Hecho. Mitad barbacoa, mitad lo que tú quieras que no sea piña. Tengo principios.
+%
+	Kenji: ¿Sabes qué echo de menos? Cuando éramos críos y bajábamos al parque sin mirar el móvil. Ahora todo el mundo va con la cabeza metida en una pantalla.
+	Kenji: Incluido yo, vale. No me mires así.
+	- Podríamos volver a hacerlo. [#idealista, #cariñoso]
+		Kenji: ¿Bajar al parque sin móvil? Me da un poco de miedo, pero me apunto. El sábado.
+	- Eras igual de pesado entonces. [#bromista]
+		Kenji: Más. Era más pesado. He madurado mucho, gracias.
+=> END
+
+~ kenji_hablar_otra_vez_hoy
+# cuando: hablar, hoy >= 2
+% Kenji: ¿Otra vez? Si me echas tanto de menos, vente a vivir conmigo y ya está.
+% Kenji: Tío, que nos hemos visto hace nada. ¿Te has olvidado algo o es que me quieres?
+% Kenji: Lo que sea que vengas a contarme, que sea bueno. Me estás cortando la inspiración.
+=> END
+
+~ kenji_hablar_con_rika
+# cuando: hablar, presente rika, una vez, visto kenji_hablar_primera, fase = rutina
+Kenji: Psst. Ren. ¿Esa es Rika? ¿La de tu clase? Lleva un rato mirándome raro.
+Rika: Te estoy oyendo, ¿eh? Y no te miro raro. Te miro con curiosidad científica.
+Kenji: ¿Científica?
+Rika: ¿Esas rastas son de verdad o es un gorro?
+Kenji: ...Ren, dile algo.
+- Son de verdad. Las lava una vez al mes. [#bromista, #provocador]
+	Kenji: ¡Una vez a la semana! ¡Tío!
+	Rika: Jajaja, me caéis bien los dos.
+- Déjale en paz, que es buena gente. [#protector]
+	Rika: Uy, qué protector. Vale, vale. Buena gente con rastas. Anotado.
+	$> Story.change("kenji", "confianza", 2)
+=> END
+
+# --- Ánimo y relación ----------------------------------------------------------------
+
+~ kenji_hablar_triste
+# cuando: hablar, ánimo = triste, no hoy >= 2
+Kenji: Ey. Ren.
+Kenji: No es nada. Una canción que no me sale. Llevo tres días con ella y suena a cartón.
+- Seguro que es mejor de lo que crees. [#cariñoso, #idealista]
+	Kenji: Eso lo dices porque eres mi amigo. ...Pero gracias. Lo necesitaba.
+	$> Story.set_mood("kenji", "tranquilo", 40)
+- Déjala reposar unos días. [#pragmático, #prudente]
+	Kenji: Ya... Puede que tengas razón. A veces las canciones son como el pan. Hay que dejarlas.
+- Ponmela. [#curioso, #empático]
+	Kenji: ¿Ahora? ...Vale. Pero no te rías.
+	Kenji: ...
+	Kenji: No te has reído. Eso es buena señal.
+	$> Story.set_mood("kenji", "alegre", 45)
+=> END
+
+~ kenji_hablar_ansioso
+# cuando: hablar, ánimo = ansioso, no hoy >= 2
+Kenji: Tío, no he pegado ojo. A las 3\:33 he vuelto a oírla. Más clara que nunca.
+Kenji: Y esta vez no ha dicho «abre». Ha dicho tu nombre.
+- ¿Mi nombre? [#curioso]
+	Kenji: «Ren». Clarísimo. Como si te estuviera buscando.
+- Te estás sugestionando. [#pragmático, #franco]
+	Kenji: Ojalá. Te juro que ojalá.
+- Esta noche me quedo contigo a escucharla. [#protector, #decidido]
+	Kenji: ...¿De verdad? Vale. Vale. Eso me deja más tranquilo. Trae algo de cenar.
+	$> Story.set_flag("ren_escuchara_la_voz")
+	$> Story.change("kenji", "confianza", 3)
+=> END
+
+~ kenji_hablar_frio
+# cuando: hablar, tramo <= fria, no hoy >= 2
+Kenji: Ah. Ren.
+Kenji: Mira, no sé qué te pasa últimamente, pero así no se trata a un amigo. Cuando quieras hablar de verdad, ya sabes dónde estoy.
+- Tienes razón. Lo siento. [#conciliador, #franco]
+	Kenji: ...Vale. Gracias por decirlo. Vamos a dar una vuelta y lo hablamos.
+	$> Story.change("kenji", "resentimiento", -5)
+- No me pasa nada. [#evasivo]
+	Kenji: Ya. Eso dices siempre.
+=> END
+
+# =====================================================================================
+# HABLAR — después de la incursión
+# =====================================================================================
+
+~ kenji_hablar_tras_incursion
+# cuando: hablar, fase >= incursion_1, sabe incursion_1, una vez
+Kenji: Tío. Llevo toda la noche dándole vueltas.
+Kenji: La voz de los cascos, el temblor, esa cosa... Todo encaja. Lo que hablaba desde dentro de los archivos quería salir.
+Kenji: «Abre». Ren, ¿y si alguien le ha abierto?
+- No es culpa tuya. [#empático, #protector]
+	Kenji: Eso no lo sabes. Yo tampoco. Pero gracias.
+	$> Story.change("kenji", "confianza", 2)
+- Tenemos que averiguar qué son. [#curioso, #criaturas=acoger]
+	Kenji: Sí... Eso. Si sabemos qué quieren, igual dejan de dar tanto miedo.
+- Si vuelven, nos las cargamos. [#decidido, #criaturas=rechazar]
+	Kenji: Lo dices como si fuera un jefe de Tekken. ...Pero vale. Me alegra que alguien tenga las cosas claras.
+- Igual te estás montando una película. [#sarcástico]
+	Kenji: ¿Una película? Ren, había un monstruo en la plaza.
+Kenji: Esta noche voy a grabar otra vez. Si la voz vuelve, quiero que estés ahí.
+- Allí estaré. [#decidido, #cariñoso]
+	Kenji: Eres el mejor. Te debo una pizza. Entera.
+	$> Story.set_flag("ren_escuchara_la_voz")
+- No sé si es buena idea. [#prudente]
+	Kenji: Ya... Probablemente no lo es. Por eso no quiero estar solo.
+=> END
+
+~ kenji_hablar_rumores
+# cuando: hablar, fase >= incursion_1, no sabe incursion_1, una vez
+Kenji: ¿Has visto los vídeos de la plaza? Todo el grupo de la clase los está pasando.
+Kenji: La gente dice que es un montaje. Pero en uno de ellos se oye un sonido de fondo... Ren, es el mismo de mis grabaciones.
+- Yo estaba allí. No es un montaje. [#franco]
+	$> Story.tell("kenji", "incursion_1")
+	Kenji: ...¿Qué? ¿Y no me lo has contado hasta ahora? Tío.
+	Kenji: Vale. Vamos a mi casa. Me lo cuentas todo y luego escuchamos las grabaciones juntos.
+	$> Story.change("kenji", "confianza", -1)
+- Será casualidad. [#evasivo]
+	Kenji: Puede. Pero yo ya no me creo las casualidades.
+=> END
+
+~ kenji_hablar_post
+# cuando: hablar, fase >= incursion_1
+% Kenji: He subido el volumen de todo lo que grabo. Por si la voz vuelve a decir algo. Me estoy quedando sordo, pero por la ciencia.
+% Kenji: Mi madre ha puesto una estampita en la puerta. Dice que por si acaso. Yo ya no me río.
+% Kenji: Tío, ¿tú también notas que la ciudad suena distinta? Más grave. Como si estuviera conteniendo la respiración.
+=> END
+
+# =====================================================================================
+# LIGAR
+# =====================================================================================
+
+~ kenji_ligar
+# cuando: ligar
+%
+	Ren: Hoy estás especialmente guapo, Kenji.
+	Kenji: Tío, me halagas. De verdad. Pero mi corazón pertenece a Yuna. Y un poquito a mis vinilos.
+	Kenji: ...Aunque gracias. Necesitaba oírlo. Las rastas no se mantienen solas.
+%
+	Ren: ¿Te han dicho alguna vez que tienes unos ojos preciosos?
+	Kenji: Mi abuela. Cada domingo. Te ha quedado un pelín menos convincente que a ella, pero se agradece.
+=> END
+
+~ kenji_ligar_otra_vez
+# cuando: ligar, veces >= 2
+Ren: Kenji, de verdad, hoy estás guapísimo.
+Kenji: Dos veces en un día. ¿Me vas a pedir dinero? Porque no tengo.
+=> END
+
+~ kenji_ligar_triste
+# cuando: ligar, ánimo = triste
+Ren: Oye, tú siempre has sido el guapo del barrio.
+Kenji: ...Ja. Gracias, tío. Hoy me hacía falta una tontería así.
+=> END
+
+# =====================================================================================
+# LUCHAR
+# =====================================================================================
+
+~ kenji_luchar
+# cuando: luchar
+Ren: ¿Echamos un combate?
+Kenji: ¿Tú y yo? ¿Aquí? Venga, hombre... Normalmente te reto al Tekken y pierdes. Como siempre.
+Kenji: ...Pero vale. Un duelo amistoso, en la vida real. Sin trampas y sin llorar luego.
+=> END
+
+~ kenji_luchar_tras_incursion
+# cuando: luchar, fase >= incursion_1
+Ren: Entrena conmigo.
+Kenji: ¿Para la próxima vez que salga un bicho de una grieta? ...Vale. Pero si me rompes los dedos, no puedo tocar.
+=> END
+
+~ kenji_luchar_gana
+# cuando: luchar_fin, resultado = gana
+Kenji: Vale, vale, me rindo. ¿Desde cuándo sabes moverte así? Pensaba que tu único deporte era hacer scroll.
+Ren: Desde hoy, parece.
+Kenji: Pues que no se entere nadie del barrio. Tengo una reputación de tipo duro que mantener. ...Bueno, no la tengo. Pero podría.
+=> END
+
+~ kenji_luchar_pierde
+# cuando: luchar_fin, resultado = pierde
+Kenji: ¡Y ese es el combo final! Te lo dije: no se puede ganar al rey del ritmo.
+Ren: Me has dado con el bajo. Literalmente.
+Kenji: Detalles técnicos. Anda, levanta. Te invito a una Pochicola, que me siento un poco culpable.
+=> END
+
+# =====================================================================================
+# CANSANCIO Y MALOS DÍAS
+# =====================================================================================
+
+~ kenji_harto_hablar
+# cuando: harto_hablar
+Kenji: Tío, te quiero, pero hoy necesito un rato para mí. Mañana te escribo, ¿vale? Y esta vez contestas.
+=> END
+
+~ kenji_harto_ligar
+# cuando: harto_ligar
+Kenji: Vale, Ren, la broma ya ha durado bastante. Empieza a ser raro.
+=> END
+
+~ kenji_harto_luchar
+# cuando: harto_luchar
+Kenji: Otra vez no. Me duelen hasta las rastas.
+=> END
+
+~ kenji_no_quiere
+# cuando: no_quiere
+Kenji: Hoy no, tío. De verdad. Mañana te cuento.
+=> END
+
+# =====================================================================================
+# PRIMERA INCURSIÓN
+# =====================================================================================
+
+~ kenji_alarma
+# cuando: alarma
+Kenji: ¿Lo has notado? Eso no ha sido un camión, tío. Eso ha sonado... como un archivo rompiéndose.
+if Story.flag("kenji_voz_abre")
+	Kenji: Es el mismo ruido. El de las 3\:33. Ren, es el mismo.
+Ren: Algo viene.
+=> END
+
+~ kenji_tras_incursion_gana
+# cuando: tras_incursion, resultado = gana
+Kenji: Tío. Tío. ¿Qué era eso? ¿Y desde cuándo peleas así? No, espera, no me lo digas. Primero respiro.
+Ren: No tengo ni idea de ninguna de las dos cosas.
+$> Story.set_mood("kenji", "ansioso", 60)
+=> END
+
+~ kenji_tras_incursion_pierde
+# cuando: tras_incursion, resultado = pierde
+Kenji: ¡Ren! ¿Estás bien? Se ha ido sin más, como si alguien le hubiera dado a «cerrar sesión».
+Ren: Va a volver. Lo sé.
+$> Story.set_mood("kenji", "ansioso", 60)
+=> END
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ kenji_movil
+# cuando: movil
+%
+	Ren: Ey.
+	Kenji: ¡¿Ren escribiendo primero?! Voy a hacer captura. Esto va al museo.
+	Kenji: ¿Qué pasa, tío?
+%
+	Ren: ¿Qué haces?
+	Kenji: Aquí, cortando un sample de una puerta que chirría. Suena a gato triste. Me encanta.
+%
+	Ren: Hola.
+	Kenji: Holaaa. ¿Has cenado? Dime que has cenado algo que no sea de bolsa.
+=> END
+
+~ kenji_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Ey, otra vez yo.
+	Kenji: Dos mensajes en un día. ¿Estás bien? ¿Te han cambiado por un clon simpático?
+%
+	Ren: ¿Sigues por ahí?
+	Kenji: Jajaja vale, vale, ya te he leído. Sigo aquí.
+=> END
+
+~ kenji_movil_bajon
+# cuando: movil, ánimo = triste|ansioso
+Ren: Ey, ¿todo bien?
+Kenji: Más o menos. Luego te cuento, ¿vale? Gracias por escribir, de verdad.
+=> END
+
+~ kenji_movil_fria
+# cuando: movil, tramo <= fria
+Ren: Hola.
+Kenji: Hola.
+=> END
+
+~ kenji_movil_tras_incursion
+# cuando: movil, fase >= incursion_1, sabe incursion_1
+Ren: ¿Cómo estás?
+Kenji: Vivo. Que no es poco después de lo de la estación.
+Kenji: No dejo de oír ese ruido al dormirme. Si te pasa a ti también, dímelo y no me sentiré tan loco.
+=> END

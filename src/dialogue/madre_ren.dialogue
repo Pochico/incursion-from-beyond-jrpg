@@ -1,0 +1,35 @@
+# MAMÁ — la madre de Ren. Alegre, ruidosa, turnos largos; pregunta si ha comido.
+# Ficha: src/data/characters/madre_ren.json
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ madre_ren_movil
+# cuando: movil
+%
+	Ren: Hola, mamá.
+	Mamá: ¡Hola, cariño! ¿Has comido? Hay croquetas en el congelador.
+%
+	Ren: ¿Qué tal el turno?
+	Mamá: Largo, pero bien. ¡Qué raro que me escribas tú! ¿Estás bien? ¿Necesitas dinero?
+%
+	Ren: Ey.
+	Mamá: «Ey». Te he parido yo, ¿sabes? Un «hola, mamá» no cuesta tanto. Te quiero.
+=> END
+
+~ madre_ren_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Hola otra vez.
+	Mamá: Dos mensajes en un día. Me voy a emocionar. ¿Seguro que estás bien?
+%
+	Ren: ¿Sigues ahí?
+	Mamá: Siempre, cariño. Estoy en el trabajo, luego te llamo.
+=> END
+
+~ madre_ren_movil_tras_incursion
+# cuando: movil, fase >= incursion_1
+Ren: Hola, mamá. ¿Estás bien?
+Mamá: Sí, cariño. Han dicho en la radio que ha habido un problema en Leganés. ¿Tú estás bien? Ven a casa pronto, por favor.
+=> END

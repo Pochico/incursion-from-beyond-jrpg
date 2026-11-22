@@ -16,10 +16,11 @@ func _ready() -> void:
 
 	_frame = Control.new()
 	_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_frame.offset_left = 120
-	_frame.offset_top = 150
-	_frame.offset_right = -120
-	_frame.offset_bottom = -150
+	# Medidas para que el mapa salga de MapConfig.VIEW_SIZE (1720 × 700).
+	_frame.offset_left = 70
+	_frame.offset_top = 110
+	_frame.offset_right = -70
+	_frame.offset_bottom = -110
 	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.draw.connect(_draw_frame)
 	add_child(_frame)
@@ -29,7 +30,7 @@ func _ready() -> void:
 	_map.offset_left = 30
 	_map.offset_top = 90
 	_map.offset_right = -30
-	_map.offset_bottom = -110
+	_map.offset_bottom = -70
 	_frame.add_child(_map)
 	_map.location_focused.connect(func(loc: Dictionary) -> void:
 		_info.text = "%s  —  %s" % [loc.name, loc.desc])
@@ -40,8 +41,8 @@ func _ready() -> void:
 	_info.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_info.offset_left = 30
 	_info.offset_right = -30
-	_info.offset_top = -88
-	_info.offset_bottom = -26
+	_info.offset_top = -66
+	_info.offset_bottom = -8
 	_frame.add_child(_info)
 
 
@@ -50,7 +51,9 @@ func is_open() -> bool:
 
 
 func open(current_id: String) -> void:
+	_map.refresh()
 	_map.current_id = current_id
+	_frame.queue_redraw()
 	visible = true
 	modulate.a = 0.0
 	_frame.pivot_offset = _frame.size * 0.5
@@ -87,8 +90,12 @@ func _draw_frame() -> void:
 	UIStyle.draw_stripes(_frame, Vector2(300, 30), 4, Vector2(14, 8), 4, Color(UIStyle.WHITE, 0.35))
 	_frame.draw_colored_polygon(UIStyle.slanted_rect(Rect2(28, 50, 14, 38), 6), UIStyle.LIME)
 	_frame.draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(56, 82), "Mapa", HORIZONTAL_ALIGNMENT_LEFT, -1, 38, UIStyle.WHITE)
-	_frame.draw_string(UIStyle.FONT_REGULAR, Vector2(s.x - 540, 76),
-			"[← →] Elegir   /   [Enter] Ir   /   [M] Cerrar", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.75))
-	# Brújula
+	# Día y franja (la luz del mapa la sigue).
+	_frame.draw_string(UIStyle.FONT_MEDIUM, Vector2(176, 80), "%s %d  ·  %s" % [GameState.weekday_long(), int(GameState.date.day), GameState.slot_name()],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.6))
+	var hint := "[← →] Elegir   /   [Enter] Ir   /   [Rueda, + −] Zoom   /   [M] Cerrar"
+	var hw := UIStyle.FONT_REGULAR.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+	_frame.draw_string(UIStyle.FONT_REGULAR, Vector2(s.x - 140 - hw, 76), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(UIStyle.WHITE, 0.75))
+	# Brújula (el mapa sale siempre con el norte arriba).
 	var n := Vector2(s.x - 70, 60)
 	_frame.draw_colored_polygon(PackedVector2Array([n + Vector2(0, -22), n + Vector2(12, 10), n + Vector2(0, 2), n + Vector2(-12, 10)]), UIStyle.WHITE)

@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=18
+type="Resource"
+uid="uid://d13e25wf35emb"
+path="res://.godot/imported/rika.dialogue-0cdc53b03e9b8e07e37edf2efcf3f8b2.tres"
+
+[deps]
+
+source_file="res://src/dialogue/rika.dialogue"
+dest_files=["res://.godot/imported/rika.dialogue-0cdc53b03e9b8e07e37edf2efcf3f8b2.tres"]
+
+[params]
+
+defaults=true

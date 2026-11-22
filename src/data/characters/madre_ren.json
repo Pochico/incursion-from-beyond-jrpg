@@ -1,0 +1,158 @@
+{
+	"schemaVersion": 1,
+	"id": "madre_ren",
+	"identity": {
+		"species": "humano",
+		"nature": "biological",
+		"tagline": "Tu madre",
+		"role": "Madre de Ren. Alegre, ruidosa y con turnos largos. Se preocupa por él más de lo que le dice; lo disimula preguntando si ha comido."
+	},
+	"traits": {
+		"extroversion": 80,
+		"humor": 75,
+		"impulsividad": 40,
+		"empatia": 80,
+		"orgullo": 40,
+		"paciencia": 65,
+		"sensibilidad": 60,
+		"franqueza": 70,
+		"curiosidad": 45
+	},
+	"values": {
+		"familia": 95,
+		"trabajo": 70,
+		"buen_humor": 80
+	},
+	"likes": [
+		"cocinar para más gente de la que hay",
+		"la radio por la mañana",
+		"que Ren salga de casa"
+	],
+	"dislikes": [
+		"la habitación de Ren",
+		"que no coja el teléfono"
+	],
+	"fears": [
+		"que Ren se encierre en sí mismo"
+	],
+	"speech": {
+		"register": "coloquial y cariñoso",
+		"style": "risueña, de diminutivos; mezcla regañinas con mimos",
+		"swearing": "alguno suelto"
+	},
+	"nuances": [
+		"Le llama «cariño» incluso cuando le está echando la bronca.",
+		"Si Ren le cuenta algo de verdad, deja todo lo que está haciendo."
+	],
+	"mood": {
+		"weights": {
+			"alegre": 45,
+			"tranquilo": 30,
+			"curioso": 5,
+			"irritado": 10,
+			"ansioso": 5,
+			"triste": 5
+		},
+		"initial": {
+			"id": "alegre",
+			"intensity": 45
+		}
+	},
+	"reactions": {
+		"styles": {
+			"decidido": {},
+			"impulsivo": {},
+			"prudente": {},
+			"cariñoso": {
+				"afecto": 2
+			},
+			"reservado": {
+				"confianza": -1
+			},
+			"formal": {},
+			"franco": {
+				"confianza": 2
+			},
+			"diplomático": {},
+			"evasivo": {
+				"confianza": -1
+			},
+			"bromista": {
+				"afecto": 1
+			},
+			"sarcástico": {
+				"default": {},
+				"irritado": {
+					"afecto": -1
+				}
+			},
+			"serio": {},
+			"tímido": {},
+			"atrevido": {},
+			"coqueto": {},
+			"protector": {},
+			"complaciente": {},
+			"dominante": {},
+			"independiente": {},
+			"conciliador": {},
+			"provocador": {},
+			"testarudo": {},
+			"empático": {
+				"afecto": 1,
+				"confianza": 1
+			},
+			"pragmático": {},
+			"idealista": {},
+			"curioso": {}
+		},
+		"stances": {
+			"criaturas": {
+				"acoger": {},
+				"rechazar": {}
+			},
+			"proteger_a_otros": {
+				"si": {
+					"respeto": 1
+				},
+				"no": {
+					"respeto": -1
+				}
+			}
+		},
+		"actions": {
+			"talk": {
+				"afecto": 1,
+				"confianza": 1
+			},
+			"flirt": {
+				"default": {}
+			},
+			"fight": {
+				"default": {}
+			}
+		},
+		"fed_up": {
+			"mood": "irritado",
+			"talk": {},
+			"flirt": {},
+			"fight": {}
+		}
+	},
+	"relationships": {
+		"ren": {
+			"afecto": 85,
+			"confianza": 45,
+			"respeto": 35
+		},
+		"kenji": {
+			"afecto": 60,
+			"confianza": 50,
+			"respeto": 30
+		},
+		"madre_kenji": {
+			"afecto": 70,
+			"confianza": 65,
+			"respeto": 50
+		}
+	}
+}

@@ -1,0 +1,328 @@
+# AKANE — de otra clase. Turno de noche en las recreativas, banda punk. Dura por fuera.
+# Ficha: src/data/characters/akane.json
+
+# =====================================================================================
+# HABLAR — antes de la incursión
+# =====================================================================================
+
+~ akane_hablar_primera
+# cuando: hablar, una vez, fase = rutina
+Akane: Anda. El de las recreativas. El que nunca juega, solo mira.
+Ren: Mirar también cuenta.
+Akane: No para la máquina. La máquina solo entiende monedas y gente con ritmo.
+Akane: Hablando de eso. Ayer pasó algo raro en el turno de noche, y tú eres el único cliente que no me parece un pirado. Así que te lo cuento a ti.
+- Soy todo oídos. [#empático]
+- ¿Gracias... supongo? [#dubitativo, #bromista]
+	Akane: Era un cumplido. No te acostumbres.
+- Tengo prisa. [#reservado]
+	Akane: Nadie en este barrio tiene prisa. Escucha, que es corto.
+Akane: La máquina de baile del fondo. Esa que lleva dos años con la pantalla de récords congelada.
+Akane: A las tres de la mañana se encendió sola, puso una canción que no está en su lista y marcó una puntuación perfecta. Sin nadie encima.
+Akane: Y en la tabla, arriba del todo, apareció un nombre.
+Akane: REN.
+$> Story.set_flag("akane_maquina_ren")
+- Será una broma de alguien. [#pragmático]
+	Akane: Eso dije yo. Luego revisé las cámaras. La sala estaba vacía. Bueno... casi. Había algo en la imagen. Como estática con forma.
+- Yo no estaba allí. [#franco]
+	Akane: Ya lo sé. Si hubieras estado, te habría visto. Nadie entra en mi turno sin que me entere.
+- ¿Sigue ahí el nombre? [#curioso, #decidido]
+	Akane: Esta mañana he desenchufado la máquina. Al volver, la tabla seguía encendida. Sin cable.
+Akane: No sé qué es. Pero si alguien quiere jugar con tu nombre, a lo mejor te interesa averiguarlo antes que yo.
+Akane: Esta noche cierro yo. Si te pasas, igual te dejo echar una partida gratis. Igual.
+=> END
+
+~ akane_hablar_rutina
+# cuando: hablar, fase = rutina
+%
+	Akane: Ensayo a las nueve. El batería se ha vuelto a ir a vivir con su novia y ahora hay que ir a buscarle a Fuenlabrada. Odio Fuenlabrada.
+	- ¿Qué tiene de malo Fuenlabrada? [#curioso, #provocador]
+		Akane: Que está lejos, Ren. Ese es todo su pecado. Lejos.
+	- Me encantaría veros tocar. [#cariñoso]
+		Akane: ¿Sí? El jueves en el bar de la esquina. Si vienes, ponte atrás. En el pogo no hay amigos.
+		$> Story.set_flag("akane_invita_concierto")
+	- Busca otro batería. [#pragmático, #franco]
+		Akane: Ya. Si encontrara uno que no fuera un desastre, lo haría. No hay. Están todos en Fuenlabrada.
+%
+	Akane: Hoy ha venido un crío a jugar con el dinero de la merienda. Le he dejado tres partidas gratis. Si se lo cuentas a alguien, te mato.
+	- Tu secreto está a salvo. [#cariñoso, #bromista]
+		Akane: Más te vale. Tengo una reputación.
+	- Eres más blanda de lo que pareces. [#provocador, #franco]
+		Akane: Repite eso y te enseño lo blanda que soy.
+		Akane: ...Bueno. Un poco. Solo con críos y gatos.
+%
+	Akane: ¿Sabes lo que más odio de este trabajo? La gente que dice «yo de pequeño era buenísimo en esto». Nadie era buenísimo de pequeño. Todos perdíais.
+	- Yo era malísimo. [#franco, #tímido]
+		Akane: ¿Ves? Eso me gusta. Sinceridad. Te dejaría jugar gratis si jugaras.
+	- Yo sí era buenísimo. [#provocador, #atrevido]
+		Akane: Demuéstralo. Moneda en la máquina, ahora. ...¿No? Ya me parecía.
+=> END
+
+~ akane_hablar_otra_vez_hoy
+# cuando: hablar, hoy >= 2
+% Akane: ¿Tú otra vez? Esto no es una biblioteca, aquí se viene a jugar.
+% Akane: Si vas a venir tanto, por lo menos echa una moneda. Me pagan por cliente.
+% Akane: Hoy ya te he visto. Mi cupo de gente simpática está cubierto.
+=> END
+
+~ akane_hablar_maquina
+# cuando: hablar, flag akane_maquina_ren, visto akane_hablar_primera, una vez, fase = rutina
+Akane: Lo de la máquina ha vuelto a pasar. Tres de la mañana. Misma canción.
+Akane: Pero esta vez la puntuación no era perfecta. Había fallado una nota. Como si estuviera... aprendiendo.
+- Esta noche me quedo contigo a mirar. [#decidido, #protector]
+	Akane: ¿Para protegerme? No me hace falta.
+	Akane: ...Pero vale. Tráete café. Del bueno, no de máquina.
+	$> Story.set_flag("ren_vigila_maquina")
+- Déjala desenchufada y olvídalo. [#prudente]
+	Akane: Ya estaba desenchufada, Ren. Por eso me preocupa.
+- Grábalo con el móvil. [#pragmático]
+	Akane: Ya lo hice. En el vídeo solo se ve la pantalla en negro. Pero la canción se oye. La tengo aquí, por si quieres escucharla.
+=> END
+
+# --- Ánimo y relación ----------------------------------------------------------------
+
+~ akane_hablar_irritada
+# cuando: hablar, ánimo = irritado, no hoy >= 2
+Akane: Hoy no estoy de humor. Un imbécil ha roto la palanca de la máquina de lucha y encima me ha echado la culpa a mí.
+- ¿Quieres que le busque? [#protector, #impulsivo]
+	Akane: No necesito que nadie me defienda. ...Pero es bonito que lo digas. Un poco.
+- Qué imbécil. [#franco, #empático]
+	Akane: ¿Verdad? Gracias. Por fin alguien con sentido común.
+	$> Story.set_mood("akane", "tranquilo", 35)
+- Igual sí fue culpa tuya. [#provocador]
+	Akane: ¿Perdona? Ren, hoy no es el día. Lárgate.
+	$> Story.change("akane", "resentimiento", 2)
+=> END
+
+~ akane_hablar_triste
+# cuando: hablar, ánimo = triste, no hoy >= 2
+Akane: ...
+Akane: La banda se ha separado. Bueno, «pausa indefinida». Que es lo mismo, pero con menos vergüenza.
+- Lo siento mucho. [#empático, #cariñoso]
+	Akane: Ya. Yo también. No me mires con pena, que se me corre el rímel.
+	$> Story.change("akane", "confianza", 2)
+- Montarás otra mejor. [#idealista, #decidido]
+	Akane: Ja. Eso dicen todos. ...Pero igual tienes razón. Igual.
+- ¿Te apetece una partida? Invito yo. [#desenfadado]
+	Akane: ¿Tú vas a jugar? ¿Por fin? Vale. Esto lo tengo que ver.
+	$> Story.set_mood("akane", "alegre", 40)
+=> END
+
+~ akane_hablar_fria
+# cuando: hablar, tramo <= fria, no hoy >= 2
+Akane: Mira quién viene. ¿Qué quieres?
+- Nada. [#reservado]
+	Akane: Pues eso.
+- Pedirte perdón. [#conciliador, #franco]
+	Akane: ...Vale. Eso no me lo esperaba. Sigo enfadada, pero vale.
+	$> Story.change("akane", "resentimiento", -4)
+=> END
+
+~ akane_hablar_cercana
+# cuando: hablar, tramo >= cercana, no hoy >= 2, fase = rutina
+Akane: Eh, Ren. Te he guardado una ficha. Es de las antiguas, de las que ya no se fabrican. Para que algún día juegues de verdad.
+- Me la quedo. Gracias. [#cariñoso]
+	Akane: No es un regalo. Es una inversión. Espero ver resultados.
+- ¿Y si nunca juego? [#provocador]
+	Akane: Entonces la tendrás en el bolsillo para siempre y te acordarás de mí cada vez que la toques. Tú eliges.
+=> END
+
+# =====================================================================================
+# HABLAR — después de la incursión
+# =====================================================================================
+
+~ akane_hablar_tras_incursion
+# cuando: hablar, fase >= incursion_1, sabe incursion_1, una vez
+Akane: Bueno. Ahora ya sabemos que no estoy loca. La máquina, la estática con forma... era eso. O algo parecido.
+Akane: No me gusta no saber contra qué me pego.
+- Tenemos que entender qué son. [#curioso, #criaturas=acoger]
+	Akane: Entender. Claro. Mientras lo entiendes, que no te coma. Yo prefiero tenerlas lejos.
+- Si vuelven, las echamos a patadas. [#decidido, #criaturas=rechazar]
+	Akane: Así me gusta. Directo. Yo voy delante, tú detrás.
+- Lo que sea, no vamos a dejar que hagan daño a nadie. [#protector, #proteger_a_otros=si]
+	Akane: ...Vale. Eso me ha gustado. Cuenta conmigo.
+Akane: Y Ren. Esa cosa iba a por ti. Lo he visto en cómo te miraba. Ten cuidado.
+=> END
+
+~ akane_hablar_rumores
+# cuando: hablar, fase >= incursion_1, no sabe incursion_1, una vez
+Akane: Esta noche todas las máquinas de la sala se han encendido a la vez. Todas. Y en todas las pantallas había el mismo dibujo. Una grieta.
+Akane: Y dicen que en la plaza ha pasado algo. ¿Tú sabes algo?
+- Estaba allí. Salió algo de una grieta. [#franco]
+	$> Story.tell("akane", "incursion_1")
+	Akane: ...Joder. Vale. Siéntate. Me lo cuentas todo y luego decidimos a quién le partimos la cara.
+	$> Story.change("akane", "confianza", 2)
+- No tengo ni idea. [#evasivo]
+	Akane: Ya. Tienes cara de saber algo, pero vale.
+	$> Story.change("akane", "confianza", -1)
+=> END
+
+~ akane_hablar_post
+# cuando: hablar, fase >= incursion_1
+% Akane: He pegado cinta americana en la pantalla de la máquina del fondo. No sé por qué. Me hace sentir mejor.
+% Akane: Mi jefe quiere cerrar antes por la noche. Por primera vez en la vida, estoy de acuerdo con él.
+% Akane: Ahora llevo una barra de hierro en la mochila. Para la moto. Ya. Para la moto.
+=> END
+
+# =====================================================================================
+# LIGAR
+# =====================================================================================
+
+~ akane_ligar
+# cuando: ligar
+%
+	Ren: Ese tatuaje es casi tan bonito como tú.
+	Akane: ...
+	Akane: Ese ha sido malo. Muy malo. Probablemente el peor intento de esta semana, y eso que es martes.
+	Akane: ...Vale, me he reído un poco. No se lo cuentes a nadie.
+%
+	Ren: Me gusta cómo te queda el pelo así.
+	Akane: Me lo he cortado yo con las tijeras de la cocina. Pero gracias. Supongo.
+=> END
+
+~ akane_ligar_cercana
+# cuando: ligar, tramo >= cercana
+Ren: Cuando sonríes de verdad, se te olvida hacerte la dura.
+Akane: ...
+Akane: Cállate. Y no me mires así.
+Akane: ...Bueno. Míralo un poco más. Pero cállate.
+=> END
+
+~ akane_ligar_otra_vez
+# cuando: ligar, veces >= 2
+Ren: Te lo vuelvo a decir. Estás genial.
+Akane: Y yo te vuelvo a decir que eres un pesado. Pero uno majo.
+=> END
+
+~ akane_ligar_irritada
+# cuando: ligar, ánimo = irritado
+Ren: Te queda bien el enfado.
+Akane: ¿Te parece gracioso? Porque a mí no. Lárgate un rato.
+=> END
+
+# =====================================================================================
+# LUCHAR
+# =====================================================================================
+
+~ akane_luchar
+# cuando: luchar
+Ren: ¿Un combate?
+Akane: Ja. Me gusta la actitud. Te va a caer la del pulpo, pero me gusta.
+Akane: Venga. Calentamiento antes del ensayo. Intenta durar más de una canción.
+=> END
+
+~ akane_luchar_tras_incursion
+# cuando: luchar, fase >= incursion_1
+Ren: Entrena conmigo.
+Akane: Por fin dices algo sensato. Si vuelven esas cosas, quiero que sepas dar una patada. Venga.
+=> END
+
+~ akane_luchar_gana
+# cuando: luchar_fin, resultado = gana
+Akane: ...Vale. Eso no me lo esperaba.
+Akane: Tienes mejor juego de pies del que pensaba. Para alguien que se pasa la vida mirando las máquinas sin jugar, digo.
+Ren: Mirar también cuenta.
+Akane: Ya veo que sí. La próxima vez no me contengo. Y la próxima vez invitas tú.
+=> END
+
+~ akane_luchar_pierde
+# cuando: luchar_fin, resultado = pierde
+Akane: Y se acabó la canción. Dos minutos cuarenta. No está mal para un novato.
+Ren: Creo que he visto a toda tu banda girando a mi alrededor.
+Akane: Eso es que te he dado bien. Anda, toma, que te he visto la cara de necesitar una Pochicola.
+=> END
+
+# =====================================================================================
+# CANSANCIO Y MALOS DÍAS
+# =====================================================================================
+
+~ akane_harto_hablar
+# cuando: harto_hablar
+Akane: Ren, tengo trabajo. Si no vas a jugar, déjame currar.
+=> END
+
+~ akane_harto_ligar
+# cuando: harto_ligar
+Akane: Vale, ya está. La primera vez tuvo gracia. Ahora das un poco de grima. Para.
+=> END
+
+~ akane_harto_luchar
+# cuando: harto_luchar
+Akane: ¿Otra? No. Si sigo pegándote voy a acabar cogiéndote cariño, y eso no puede ser.
+=> END
+
+~ akane_no_quiere
+# cuando: no_quiere
+Akane: Hoy no. No me hagas repetirlo.
+=> END
+
+# =====================================================================================
+# PRIMERA INCURSIÓN
+# =====================================================================================
+
+~ akane_alarma
+# cuando: alarma
+Akane: ¡¿Qué ha sido eso?! Ha sonado igual que la máquina del fondo la otra noche. Pero mucho más fuerte.
+Ren: Algo viene.
+=> END
+
+~ akane_tras_incursion_gana
+# cuando: tras_incursion, resultado = gana
+Akane: Vale. Eso ha sido... lo más raro que he visto nunca. Y trabajo en unas recreativas de noche.
+Ren: ¿Estás bien?
+Akane: Gracias a ti. Supongo. No te acostumbres a que lo diga.
+$> Story.set_mood("akane", "irritado", 50)
+=> END
+
+~ akane_tras_incursion_pierde
+# cuando: tras_incursion, resultado = pierde
+Akane: ¡Eh! ¡Ren! Abre los ojos... Vale, vale, estás vivo. Esa cosa se ha largado sin más.
+Ren: Va a volver.
+$> Story.set_mood("akane", "irritado", 50)
+=> END
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ akane_movil
+# cuando: movil
+%
+	Ren: Hola, Akane.
+	Akane: Qué.
+	Akane: Digo... hola. Estoy en el turno. Rápido.
+%
+	Ren: ¿Qué tal?
+	Akane: Ensayando. El batería ha vuelto a romper un parche. Lo voy a matar.
+%
+	Ren: Ey.
+	Akane: Ey. Si es para que te cuele gratis en las recreativas, la respuesta es quizá.
+=> END
+
+~ akane_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Ey, otra vez yo.
+	Akane: Ya te he contestado. No soy un contestador.
+%
+	Ren: ¿Sigues por ahí?
+	Akane: ¿Otra vez? Vale. Hola. Otra vez.
+=> END
+
+~ akane_movil_bajon
+# cuando: movil, ánimo = triste|ansioso|irritado
+Ren: ¿Todo bien?
+Akane: No es el día. Hablamos otro rato.
+=> END
+
+~ akane_movil_fria
+# cuando: movil, tramo <= fria
+Ren: Hola.
+Akane: Vale.
+=> END
+
+~ akane_movil_tras_incursion
+# cuando: movil, fase >= incursion_1, sabe incursion_1
+Ren: ¿Cómo estás?
+Akane: Cabreada. Si eso vuelve a aparecer, que me pille con algo más que las botas.
+Akane: ...Y tú cuídate. No hagas el idiota.
+=> END

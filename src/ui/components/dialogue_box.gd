@@ -18,7 +18,7 @@ const HEADER := 74.0      ## Alto de la franja superior.
 const STEP := 14.0        ## Rebaje del tramo central del borde superior.
 const CUT := 30.0         ## Tamaño de los chaflanes.
 
-@export var speaker_name: String = "Aiden":
+@export var speaker_name: String = "Ren":
 	set(value):
 		speaker_name = value
 		queue_redraw()

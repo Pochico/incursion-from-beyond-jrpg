@@ -28,6 +28,14 @@ enum Variant { MAP, SCENARIO, COMPACT }
 ## Si está activo, muestra la región de GameState y se actualiza sola.
 @export var follow_game_state: bool = true
 
+## Con `follow_game_state`: muestra la ubicación actual como nombre y la región
+## como rótulo pequeño (escenarios y conversación), en vez de «REGIÓN / LEGANÉS».
+@export var show_location: bool = false:
+	set(value):
+		show_location = value
+		if follow_game_state and is_inside_tree() and not Engine.is_editor_hint():
+			_sync()
+
 @export var accent: Color = UIStyle.LIME:
 	set(value):
 		accent = value
@@ -42,7 +50,12 @@ func _ready() -> void:
 
 
 func _sync() -> void:
-	region_name = GameState.region_name
+	if show_location:
+		caption = GameState.region_name
+		region_name = LocationDB.display_name(GameState.location_id)
+	else:
+		caption = "REGIÓN"
+		region_name = GameState.region_name
 
 
 func _get_minimum_size() -> Vector2:

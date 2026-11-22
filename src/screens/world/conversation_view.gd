@@ -5,10 +5,21 @@ extends Control
 ## El protagonista siempre aparece a la izquierda y el interlocutor a la derecha.
 ## El fondo NO es parte de esta vista: se ve el de la ubicación actual por detrás.
 ##
-## Uso:  await conversation.play(DialogueDB.for_interaction("kael", "talk"), "kael")
+## Los diálogos vienen de Dialogue Manager (src/dialogue/*.dialogue):
+##   await conversation.play(Story.pick("kenji", "hablar"), "kenji")
+## Las etiquetas de las opciones son los estilos de Ren ([#franco, #bromista]) y,
+## con «=», posturas ([#criaturas=acoger]). Cada personaje presente reacciona por
+## detrás (Social.on_choice); no se muestra nada.
+##
+## Si habla alguien que no está en el retrato de la derecha (escenas con varios
+## personajes), su retrato pasa a ocupar ese lugar.
+##
+## Para encadenar guiones sin cerrar la vista (p. ej. un evento que interrumpe
+## la charla), usar `keep_open`; `stop_after` corta el guion de golpe.
 
 signal finished
 signal _line_done
+signal _typed
 signal _choice_made(index: int)
 
 enum State { IDLE, TYPING, WAITING, CHOOSING }
@@ -29,8 +40,10 @@ var _auto := false
 var _skipping := false
 var _line_token := 0
 var _npc_id := ""
+var _right_id := ""
 var _has_protagonist := false
 var _pending_choices: Array = []
+var _open := false
 
 
 func _ready() -> void:
@@ -47,46 +60,86 @@ func is_active() -> bool:
 	return _state != State.IDLE
 
 
-## Reproduce un guion. `npc_id` vacío = sin interlocutor (p. ej. narración).
-## `with_protagonist` muestra a Aiden a la izquierda.
-func play(lines: Array, npc_id: String = "", with_protagonist: bool = true) -> void:
-	_npc_id = npc_id
-	_has_protagonist = with_protagonist
+## Reproduce un diálogo. `entry` = {resource, cue} (ver Story.pick / Story.cue).
+## `npc_id` vacío = sin interlocutor (p. ej. narración).
+## `with_protagonist` muestra a Ren a la izquierda.
+## `keep_open`: al terminar, la vista sigue en pantalla para el siguiente diálogo.
+## `stop_after`: si es > 0, el diálogo se interrumpe solo, sin esperar al jugador,
+## en cuanto termina de escribirse la primera línea sin opciones a partir de
+## esa cantidad de líneas mostradas.
+func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
+		keep_open: bool = false, stop_after: int = -1) -> void:
 	_skipping = false
 	_choices.visible = false
-	_setup_portraits()
-	await _animate_in()
+	if _open:
+		await _swap_portraits(npc_id, with_protagonist)
+	else:
+		_npc_id = npc_id
+		_has_protagonist = with_protagonist
+		_setup_portraits()
+		await _animate_in()
 
-	var i := 0
-	while i < lines.size():
-		var line: Dictionary = lines[i]
-		_show_line(line)
-		if line.has("choices"):
-			var picked: int = await _choice_made
-			var choice: Dictionary = line.choices[picked]
-			var delta: int = choice.get("affinity", 0)
-			if delta != 0 and _npc_id != "":
-				GameState.add_affinity(_npc_id, delta)
-			i = _index_of(lines, choice.get("goto", ""), i + 1)
-			continue
-		await _line_done
-		if line.get("end", false):
+	var line: DialogueLine = null
+	if entry.has("resource"):
+		Story.mark_seen(entry.cue)
+		line = await DialogueManager.get_next_dialogue_line(entry.resource, entry.cue)
+	var shown := 0
+	while line != null:
+		var choices := _choices_from(line)
+		_show_line({"who": _speaker_id(line.character), "text": line.text, "choices": choices})
+		shown += 1
+		if stop_after > 0 and shown >= stop_after and choices.is_empty():
+			if _state == State.TYPING:
+				await _typed
+			_state = State.IDLE
+			_box.show_continue = false
+			await get_tree().create_timer(0.5).timeout
 			break
-		i = _index_of(lines, line.get("goto", ""), i + 1)
+		var next_id := line.next_id
+		if not choices.is_empty():
+			var picked: int = await _choice_made
+			var choice: Dictionary = choices[picked]
+			# Las reacciones van por detrás: no se muestra nada.
+			if _npc_id != "":
+				Social.on_choice(_npc_id, choice)
+			next_id = choice.next_id
+		else:
+			await _line_done
+		line = await DialogueManager.get_next_dialogue_line(entry.resource, next_id)
 
 	_state = State.IDLE
+	if keep_open:
+		finished.emit()
+		return
 	await _animate_out()
 	finished.emit()
 
 
-func _index_of(lines: Array, label: String, fallback: int) -> int:
-	if label == "":
-		return fallback
-	for j in lines.size():
-		if lines[j].get("id", "") == label:
-			return j
-	push_warning("ConversationView: etiqueta '%s' no encontrada" % label)
-	return fallback
+## Opciones disponibles de una línea: {text, next_id, styles, stance}.
+func _choices_from(line: DialogueLine) -> Array:
+	var out := []
+	for r: DialogueResponse in line.responses:
+		if not r.is_allowed:
+			continue
+		var styles: Array[String] = []
+		var stance := {}
+		for tag: String in r.tags:
+			if "=" in tag:
+				stance[tag.get_slice("=", 0)] = tag.get_slice("=", 1)
+			else:
+				styles.append(tag)
+		out.append({"text": r.text, "next_id": r.next_id, "styles": styles, "stance": stance})
+	return out
+
+
+func _speaker_id(character_name: String) -> String:
+	if character_name == "":
+		return CharacterDB.NARRATOR
+	var id := CharacterDB.id_from_name(character_name)
+	if id == "":
+		push_warning("ConversationView: personaje desconocido '%s'" % character_name)
+		return CharacterDB.NARRATOR
+	return id
 
 
 # --- Retratos -------------------------------------------------------------------
@@ -94,6 +147,7 @@ func _index_of(lines: Array, label: String, fallback: int) -> int:
 func _setup_portraits() -> void:
 	_left.texture = CharacterDB.portrait(CharacterDB.PROTAGONIST) if _has_protagonist else null
 	_left.visible = _has_protagonist
+	_right_id = _npc_id
 	_right.texture = CharacterDB.portrait(_npc_id) if _npc_id != "" else null
 	_right.visible = _npc_id != ""
 
@@ -103,14 +157,32 @@ func _focus_speaker(who: String) -> void:
 	var right_dim := LISTENING_DIM
 	if who == CharacterDB.PROTAGONIST:
 		left_dim = SPEAKING_DIM
-	elif who == _npc_id:
+	elif who == _right_id:
 		right_dim = SPEAKING_DIM
 	var t := create_tween().set_parallel(true)
 	t.tween_property(_left, "dim", left_dim, 0.2)
 	t.tween_property(_right, "dim", right_dim, 0.2)
 
 
+## Cambia de interlocutor con la vista ya abierta: el anterior sale por la
+## derecha y entra el nuevo.
+func _swap_portraits(npc_id: String, with_protagonist: bool) -> void:
+	if npc_id != _right_id:
+		var t := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		t.tween_property(_right, "slide", 220.0, 0.2)
+		await t.finished
+	var changed := npc_id != _right_id
+	_npc_id = npc_id
+	_has_protagonist = with_protagonist
+	_setup_portraits()
+	if changed:
+		var t := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		t.tween_property(_right, "slide", 0.0, 0.35)
+		await t.finished
+
+
 func _animate_in() -> void:
+	_open = true
 	visible = true
 	modulate.a = 0.0
 	_left.slide = -160.0
@@ -130,6 +202,7 @@ func _animate_out() -> void:
 	t.tween_property(_right, "slide", 160.0, 0.25)
 	await t.finished
 	visible = false
+	_open = false
 
 
 # --- Líneas ----------------------------------------------------------------------
@@ -141,6 +214,12 @@ func _show_line(line: Dictionary) -> void:
 	_box.speaker_color = CharacterDB.color(who) if who != CharacterDB.NARRATOR else UIStyle.GRAY
 	_box.text = line.get("text", "")
 	_box.show_continue = false
+	if who != CharacterDB.NARRATOR and who != CharacterDB.PROTAGONIST and who != _right_id \
+			and CharacterDB.portrait(who) != null:
+		# Interviene otro personaje de la escena: ocupa el retrato de la derecha.
+		_right_id = who
+		_right.texture = CharacterDB.portrait(who)
+		_right.visible = true
 	_focus_speaker(who)
 
 	var label := _box.get_text_label()
@@ -174,6 +253,8 @@ func _finish_typing() -> void:
 	else:
 		_skipping = false
 		_show_choices(_pending_choices)
+	# Al final: quien espere esta señal puede cambiar el estado sin que se pise.
+	_typed.emit()
 
 
 func _schedule_auto() -> void:

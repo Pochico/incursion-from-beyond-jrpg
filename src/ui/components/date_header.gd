@@ -6,7 +6,7 @@ extends Control
 ##
 ## Variantes:
 ##  - MAP:      día grande en cursiva, separador lima y «///» (pantalla de mapa).
-##  - SCENARIO: icono de calendario, «MAR | 17», «NOV 2026» y «/» violeta.
+##  - SCENARIO: icono de calendario, «MAR | ¥ 12,460», «17 NOV 2026» y «/» violeta.
 
 enum Variant { MAP, SCENARIO }
 
@@ -35,6 +35,17 @@ enum Variant { MAP, SCENARIO }
 		year = value
 		queue_redraw()
 
+## Franja del día («MAÑANA», «TARDE»...). Vacío = no se muestra.
+@export var slot: String = "":
+	set(value):
+		slot = value
+		queue_redraw()
+
+@export var money: int = 12460:
+	set(value):
+		money = value
+		queue_redraw()
+
 ## Si está activo, muestra la fecha de GameState y se actualiza sola.
 @export var follow_game_state: bool = true
 
@@ -51,6 +62,8 @@ func _sync() -> void:
 	day = int(GameState.date.day)
 	month = GameState.month_short()
 	year = int(GameState.date.year)
+	money = GameState.money
+	slot = GameState.slot_name().to_upper()
 
 
 func _get_minimum_size() -> Vector2:
@@ -69,23 +82,25 @@ func _draw_scenario() -> void:
 	# «/» violeta al final.
 	draw_line(Vector2(right - 26, 74), Vector2(right, 18), UIStyle.VIOLET, 2.5, true)
 	var text_r := right - 44.0
-	# Fila 1: «MAR | 17»
+	# Fila 1: «MAR | ¥ 12,460»
 	var f := UIStyle.FONT_MEDIUM
-	var day_text := str(day)
-	var day_w := f.get_string_size(day_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+	var money_text := "¥ " + UIStyle.format_money(money)
+	var money_w := f.get_string_size(money_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
 	var wd_w := f.get_string_size(weekday, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
-	var day_x := text_r - day_w
-	draw_string(f, Vector2(day_x, 44), day_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIStyle.WHITE)
-	var sep_x := day_x - 16.0
+	var money_x := text_r - money_w
+	draw_string(f, Vector2(money_x, 44), money_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIStyle.WHITE)
+	var sep_x := money_x - 16.0
 	draw_line(Vector2(sep_x, 20), Vector2(sep_x, 46), UIStyle.LIME, 2.0)
 	var wd_x := sep_x - 16.0 - wd_w
 	draw_string(f, Vector2(wd_x, 44), weekday, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, UIStyle.WHITE)
-	# Fila 2: «NOV 2026» espaciado.
-	var row2 := "%s %d" % [month, year]
+	# Fila 2: «17 NOV 2026» espaciado.
+	var row2 := "%d %s %d" % [day, month, year]
+	if slot != "":
+		row2 = "%s  ·  %s" % [slot, row2]
 	var r2w := UIStyle.spaced_width(UIStyle.FONT_REGULAR, row2, 20, 2.5)
 	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(text_r - r2w, 78), row2, 20, 2.5, Color(UIStyle.WHITE, 0.9))
 	# Icono de calendario lima.
-	UIIcons.calendar(self, Vector2(wd_x - 34, 32), 28, UIStyle.LIME)
+	UIIcons.calendar(self, Vector2(wd_x - 40, 32), 28, UIStyle.LIME)
 
 
 func _draw_map() -> void:

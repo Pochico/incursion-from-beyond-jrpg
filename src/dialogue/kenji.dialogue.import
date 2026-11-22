@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=18
+type="Resource"
+uid="uid://dkgfhmrdk6cya"
+path="res://.godot/imported/kenji.dialogue-a1d686c84baffe71a7562580b58c5312.tres"
+
+[deps]
+
+source_file="res://src/dialogue/kenji.dialogue"
+dest_files=["res://.godot/imported/kenji.dialogue-a1d686c84baffe71a7562580b58c5312.tres"]
+
+[params]
+
+defaults=true

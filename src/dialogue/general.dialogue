@@ -1,0 +1,151 @@
+# Escenas fijas y frases de respaldo.
+#
+# Formato: Dialogue Manager (ver docs/diseno/personajes_y_relaciones.md).
+# Las líneas sin «Nombre: » son del narrador. Si una línea de narración
+# necesita «: », hay que escribirlo «\: ».
+#
+# Las reglas «# cuando:» de este archivo valen para cualquier personaje y solo
+# se usan si el personaje no tiene una propia que encaje.
+
+~ intro
+Despiertas un día más.
+El mismo techo. La misma grieta junto a la lámpara. El mismo zumbido del frigorífico al otro lado de la pared.
+Anodino. Sin interés. Rutinario.
+Sigue con tu vida.
+=> END
+
+# --- Casa -------------------------------------------------------------------------
+
+~ examinar_pantalla
+if Story.phase("incursion_1")
+	Ren: Busqué «criatura plaza Leganés» y solo salen vídeos borrosos y gente diciendo que es marketing de una película.
+	Ren: Ojalá tuvieran razón.
+else
+	Ren: Aquí se me van las noches. Partidas a medias, vídeos que no recuerdo haber puesto, pestañas abiertas desde hace semanas.
+	Ren: Tendría que apagarla más a menudo. Mañana. Seguro que mañana.
+=> END
+
+~ examinar_cama
+if Story.phase("incursion_1")
+	Ren: Sigo notando el temblor en las piernas. No sé si voy a poder dormir esta noche.
+else
+	Ren: Nunca la hago. Total, por la noche se va a deshacer igual.
+	Ren: Es el único sitio de la casa donde el día deja de pedirme cosas.
+=> END
+
+# Cama: siesta (pasa una franja del día) y dormir (hasta la mañana siguiente).
+~ siesta
+%
+	Te tumbas encima de la colcha, sin quitarte las zapatillas. Solo un rato.
+	Cuando abres los ojos, la luz de la ventana es otra.
+%
+	Cierras los ojos «cinco minutos».
+	No han sido cinco minutos.
+=> END
+
+~ dormir
+%
+	Apagas la luz. El móvil sigue brillando un rato encima de la mesilla.
+	Luego, nada.
+%
+	Te metes en la cama. El zumbido del frigorífico, la grieta del techo, el sueño.
+=> END
+
+~ examinar_estanteria
+Ren: Lo que no me atrevo a tirar: cómics de cuando era crío, cables «por si acaso» y cajas que no he abierto desde la mudanza.
+% Ren: Y la planta sigue viva. No sé cómo; yo siempre me olvido de regarla.
+% Ren: Hay una foto de Kenji y yo con diez años, disfrazados de robots con cajas de cartón. Él sigue diciendo que ganamos el concurso.
+=> END
+
+# --- Primera incursión --------------------------------------------------------------
+
+~ temblor
+Un crujido sordo recorre el suelo. Las farolas parpadean. Los cristales de los escaparates vibran a la vez.
+=> END
+
+~ aparece_tiranosaurio
+El aire se rasga como una pantalla rota. De la grieta brota un amasijo de músculo violeta, cables y dientes.
+Un tiranosaurio. O lo que queda de uno. Sus visores escupen datos que nadie debería poder leer.
+Tiranosaurio mutante: KRRRZZT... PROCESO... HAMBRE...
+Ren: ¡Atrás! ¡Ponte a cubierto!
+=> END
+
+~ aparece_oni
+La temperatura cae de golpe. Entre la gente aparece una figura altísima, descalza, que nadie ha visto llegar.
+Melena azul, un cuerno, una sonrisa que no le cabe en la cara. Las cuentas de su cintura tintinean sin que se mueva.
+Oni: Qué ciudad tan ruidosa... y tan llena de gente que ya no cree en nada. Hacía siglos que no cenaba tan bien.
+Ren: No vas a tocar a nadie.
+=> END
+
+~ derrota_tiranosaurio_gana
+La criatura se desploma y se deshace en píxeles y chispas. Durante un segundo, todas las pantallas de la calle muestran el mismo error.
+=> END
+
+~ derrota_tiranosaurio_pierde
+Un latigazo de estática te tira al suelo. Cuando consigues abrir los ojos, la criatura ya no está. Solo queda olor a ozono y cables quemados.
+=> END
+
+~ derrota_oni_gana
+El oni se ríe mientras se deshace en humo. Sus cuentas caen al suelo, ruedan... y desaparecen antes de tocar la acera.
+=> END
+
+~ derrota_oni_pierde
+Todo se vuelve negro. Cuando abres los ojos, la figura ya no está. Solo queda un rastro de incienso y una risa que no termina de irse.
+=> END
+
+# --- Respaldo (cualquier personaje) ---------------------------------------------------
+
+~ generico_hablar
+# cuando: hablar
+{{Story.speaker}}: ¿Qué tal, Ren?
+Ren: Tirando.
+=> END
+
+~ generico_ligar
+# cuando: ligar
+Ren: Hoy estás muy bien.
+{{Story.speaker}}: ...Gracias, supongo.
+=> END
+
+~ generico_luchar
+# cuando: luchar
+Ren: ¿Echamos un combate?
+{{Story.speaker}}: Venga, va.
+=> END
+
+~ generico_luchar_fin
+# cuando: luchar_fin
+{{Story.speaker}}: Buen combate.
+=> END
+
+~ generico_harto
+# cuando: harto_hablar
+{{Story.speaker}}: Ya está bien por hoy, ¿no?
+=> END
+
+~ generico_harto_ligar
+# cuando: harto_ligar
+{{Story.speaker}}: Ya está bien por hoy, ¿no?
+=> END
+
+~ generico_harto_luchar
+# cuando: harto_luchar
+{{Story.speaker}}: Hoy no. Ya hemos peleado bastante.
+=> END
+
+~ generico_no_quiere
+# cuando: no_quiere
+{{Story.speaker}}: Ahora no me apetece hablar.
+=> END
+
+~ generico_alarma
+# cuando: alarma
+{{Story.speaker}}: ¡¿Qué ha sido eso?!
+Ren: Algo viene.
+=> END
+
+~ generico_tras_incursion
+# cuando: tras_incursion
+{{Story.speaker}}: ¿Qué... qué era eso?
+Ren: No lo sé.
+=> END

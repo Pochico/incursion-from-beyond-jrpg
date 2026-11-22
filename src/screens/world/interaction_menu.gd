@@ -1,8 +1,8 @@
 class_name InteractionMenu
 extends Control
-## Menú contextual que aparece al seleccionar a un personaje del escenario.
-## Ocupa toda la pantalla (para cerrar al hacer clic fuera); el panel se coloca
-## junto al personaje.
+## Menú contextual que aparece al seleccionar a un personaje o un objeto del
+## escenario. Ocupa toda la pantalla (para cerrar al hacer clic fuera); el panel
+## se coloca junto a lo seleccionado.
 
 signal action_chosen(character_id: String, action: String)
 signal closed
@@ -12,7 +12,11 @@ const ACTIONS := [
 	{"id": "fight", "label": "Luchar", "icon": "swords", "desc": "Proponer un combate."},
 	{"id": "flirt", "label": "Ligar", "icon": "heart", "desc": "Probar suerte."},
 ]
-const PANEL_SIZE := Vector2(400, 372)
+const OBJECT_ACTIONS := [
+	{"id": "examine", "label": "Examinar", "icon": "antenna", "desc": "Fijarte en ello un momento."},
+]
+const PANEL_WIDTH := 400.0
+const BUTTON_STEP := 70.0   ## Altura de cada opción más la separación.
 const CUT := 26.0
 
 var _character_id := ""
@@ -27,30 +31,35 @@ func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel = Control.new()
-	_panel.size = PANEL_SIZE
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.draw.connect(_draw_panel)
 	add_child(_panel)
 
 	_list = VBoxContainer.new()
 	_list.position = Vector2(22, 96)
-	_list.size = Vector2(PANEL_SIZE.x - 40, 200)
+	_list.size = Vector2(PANEL_WIDTH - 40, 200)
 	_list.add_theme_constant_override("separation", 12)
 	_panel.add_child(_list)
 
-	for i in ACTIONS.size():
+
+func _build_actions(actions: Array) -> void:
+	for c in _list.get_children():
+		_list.remove_child(c)
+		c.queue_free()
+	for action: Dictionary in actions:
 		var b := SlantButton.new()
-		b.label = ACTIONS[i].label
-		b.icon_name = ACTIONS[i].icon
-		b.description = ACTIONS[i].desc
+		b.label = action.label
+		b.icon_name = action.icon
+		b.description = action.desc
 		b.font_size = 28
 		b.slant = 16
 		b.custom_minimum_size = Vector2(0, 58)
-		b.pressed.connect(_on_action.bind(ACTIONS[i].id))
+		b.pressed.connect(_on_action.bind(action.id))
 		b.focus_entered.connect(func() -> void:
 			_desc = b.description
 			_panel.queue_redraw())
 		_list.add_child(b)
+	_panel.size = Vector2(PANEL_WIDTH, 96 + actions.size() * BUTTON_STEP + 66)
 
 
 func is_open() -> bool:
@@ -58,16 +67,20 @@ func is_open() -> bool:
 
 
 ## Abre el menú para `character_id`, colocándolo junto a `anchor` (rect en pantalla).
-func open(character_id: String, anchor: Rect2) -> void:
+## Para objetos: pasar `title`, `color` y `actions` (p. ej. OBJECT_ACTIONS).
+func open(character_id: String, anchor: Rect2, title: String = "", color: Color = Color(0, 0, 0, 0),
+		actions: Array = ACTIONS) -> void:
 	_character_id = character_id
-	_header_name = CharacterDB.display_name(character_id)
-	_header_color = CharacterDB.color(character_id)
+	_header_name = title if title != "" else CharacterDB.display_name(character_id)
+	_header_color = color if color.a > 0.0 else CharacterDB.color(character_id)
+	_build_actions(actions)
+	var panel_size := _panel.size
 
 	var pos := Vector2(anchor.end.x - anchor.size.x * 0.2, anchor.position.y + anchor.size.y * 0.25)
-	if pos.x + PANEL_SIZE.x > size.x - 40:
-		pos.x = anchor.position.x + anchor.size.x * 0.2 - PANEL_SIZE.x
-	pos.x = clampf(pos.x, 40, size.x - PANEL_SIZE.x - 40)
-	pos.y = clampf(pos.y, 160, size.y - PANEL_SIZE.y - 120)
+	if pos.x + panel_size.x > size.x - 40:
+		pos.x = anchor.position.x + anchor.size.x * 0.2 - panel_size.x
+	pos.x = clampf(pos.x, 40, size.x - panel_size.x - 40)
+	pos.y = clampf(pos.y, 160, size.y - panel_size.y - 120)
 	_panel.position = pos
 	_panel.queue_redraw()
 
@@ -107,7 +120,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _draw_panel() -> void:
-	var s := PANEL_SIZE
+	var s := _panel.size
 	var shape := UIStyle.chamfer_rect(Rect2(Vector2.ZERO, s), [CUT, 0.0, CUT, 0.0])
 	# Sombra de color desplazada y cuerpo.
 	_panel.draw_colored_polygon(UIStyle.chamfer_rect(Rect2(Vector2(8, 8), s), [CUT, 0.0, CUT, 0.0]), Color(_header_color, 0.45))

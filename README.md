@@ -34,31 +34,70 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 ## Qué se puede jugar (v0.3.0)
 
 1. **Menú de inicio** → «Nueva partida».
-2. **Introducción en negro**: «Despiertas un día más...».
-3. **Tu habitación** (pantalla negra con la interfaz). Abajo a la derecha, el botón **(M) Mapa**.
-4. **Mapa**: elige cualquier ubicación y viajas a ella. Cada una tiene su propio fondo.
-5. **Escenario**: Kael, Elara y Misaki aparecen con una silueta brillante de su color. Al pasar el ratón o seleccionarlos con flechas se resaltan y muestran su nombre.
-6. **Menú de interacción**: *Hablar*, *Luchar* o *Ligar*.
-   - *Hablar*: conversación larga con opciones de diálogo que cambian la respuesta y la afinidad.
-   - *Luchar*: el personaje acepta el reto → transición → **combate** → comentario de la pelea (distinto si ganas o pierdes).
+2. **Capítulo 1, día 1 (lunes 16 de noviembre)**. Es un día guiado: un aviso dice el objetivo, en el mapa solo se puede ir a ese destino (los demás responden «Ahora no») y no hay combates ni gente suelta por el mapa.
+   - Despiertas con la alarma; Kenji te escribe al móvil. *Objetivo: ve al instituto*.
+   - *Instituto*: Kenji pregunta qué tal el finde; llega Yuna, su novia, le abraza por la espalda y se llaman «osito», «cariño», «cielo»; luego llegan Rika y Shiori y entra la profesora («Sentaos... toca aprender a derivar»). Kenji: «Qué coñazo». Shiori: «Espabila, que al final no llegas a selectividad». Fundido a negro, suena el timbre y quedan para ir a las camas elásticas. Mates II es la única asignatura en la que juntan las dos clases, por eso Kenji está en el aula.
+   - *Objetivo: ve a Westfield Parquesur con el grupo*. Camas elásticas, fundido y despedida.
+   - *Objetivo: vuelve a casa*. «Buah... Estoy hecho polvo.» Ren se duerme.
+   - Las escenas están en `src/dialogue/capitulo1.dialogue` y los pasos en `src/data/chapter_db.gd`.
+3. **Día 2 (martes)**: introducción en negro, «Despiertas un día más...», y a partir de aquí el juego libre de siempre.
+4. **Casa** (la habitación de Ren). La pantalla, la estantería y la cama tienen contorno: al pasar el ratón se resaltan y abren un menú con *Examinar*, que muestra lo que piensa Ren de cada cosa. Abajo a la derecha, el botón **(M) Mapa**. En el mapa aparece como *Casa*, y allí no hay nadie.
+5. **Mapa**: elige cualquier ubicación (con clic en el rombo o en su nombre) y viajas a ella. Cada una tiene su propio fondo.
+6. **Escenario**: cada ubicación tiene su gente, con una silueta brillante de su color. Al pasar el ratón o seleccionarlos con flechas se resaltan y muestran su nombre.
+   - *Plaza Mayor*: Kenji y Rika. *Campus*: Shiori. *Westfield Parquesur*: Akane.
+   - *Estación de Zarzaquemada*, *Parque de la Ribera* y *La Torre* están vacías: al llegar, temblor y combate contra un enemigo al azar.
+   - *Instituto*: el aula de Ren, Rika y Shiori. Fuera de horario está vacía, pero es un lugar seguro (no hay combate).
+7. **Menú de interacción**: *Hablar*, *Luchar* o *Ligar*.
+   - *Hablar*: conversación larga con opciones de diálogo. Cada opción tiene un estilo (franco, bromista, reservado...) y los presentes reaccionan por detrás según su personalidad.
+   - *Luchar*: el personaje acepta el reto → fundido → **combate** → comentario de la pelea (distinto si ganas o pierdes).
    - *Ligar*: respuestas cortas y distintas para cada personaje.
-7. **Conversación**: el protagonista (Aiden) siempre a la izquierda, el interlocutor a la derecha, sobre el mismo fondo de la ubicación. Botones *Saltar* y *Auto*.
-8. **Combate** (1 contra 1, prototipo):
+8. **Conversación**: el protagonista (Ren) siempre a la izquierda, el interlocutor a la derecha, sobre el mismo fondo de la ubicación. Botones *Saltar* y *Auto*.
+9. **Combate** (1 contra 1, prototipo):
    - **Atacar** → *Corte rápido* (daño ~42).
-   - **Habilidad** → bloqueada (aún no hay habilidades).
+   - **Habilidad** → *Impulso orgánico* (ataque) y *Regeneración celular* (curación), de la naturaleza Biológica. Gastan PM; la curación tiene 2 turnos de recarga. Fórmulas en `SkillDB` (ver `docs/diseno/habilidades_1.md`).
    - **Objeto** → *Pochicola* (empiezas con 3): restaura 80 PV a quien la bebe. El rival lleva una y la usa cuando va bajo de vida.
    - **Defender** → el próximo golpe hace la mitad de daño.
    - **Analizar** → revela PV y ataque del rival; no gasta el turno.
    - **Huir** → te rindes (cuenta como derrota).
-   - El rival tiene un ataque propio con daño fijo (Kael 34, Elara 30, Misaki 38).
+   - El rival tiene un ataque propio con daño fijo (Kenji 34, Shiori 30, Akane 38).
    - La *Tensión* es solo visual por ahora. Valores provisionales en `CharacterDB.combat`.
+   - **Ficha de estado**: en «Estado» solo salen los estados alterados que tienes (o «Normal» si no tienes ninguno). Al pasar el ratón por uno aparece un tooltip con qué hace, los PV que quita por turno y los turnos que le quedan. Los textos están en `SkillDB.STATUS_DESC`.
+   - **Recompensa**: al ganar, recibes ¥ = nivel de la criatura × 120, con un +15 % por cada nivel que la criatura te saque y un −15 % por cada nivel que tú le saques (mínimo, el 10 %). Ejemplos: misma altura, nivel 15: ¥ 1.800; criatura 10 niveles por encima: ¥ 4.500; 10 niveles por debajo: ¥ 180. Se ve bajo «VICTORIA» y se suma a la cabecera. Constantes en `Battle.REWARD_*`.
+10. **Primera incursión**: al hablar con el **segundo personaje distinto**, la conversación se corta con un temblor y aparece una criatura, elegida al azar en cada partida:
+   - **Tiranosaurio mutante** (Digital): *Corrupción de datos* y *Depuración*.
+   - **Oni** (ARQ): *Manifestación arcana* y *Marca funesta* (maldición que hace daño durante 3 turnos).
+11. **Enemigos aleatorios** (ubicaciones vacías): los dos anteriores y además
+   - **Engendro** (Biológico): *Impulso orgánico* y *Secreción cáustica* (corrosión: RES −8 % durante 2 turnos).
+   - **Turbina** (Mecánico): *Impacto cinético* y *Proyección de fragmentos*.
+   - **Crawler** (Mecánico): torreta cuadrúpeda. Mismas técnicas que la Turbina.
+   - **Imp** y **Querubín** (ARQ): *Manifestación arcana* y *Marca funesta*.
+   - **Troyano** (Digital): *Corrupción de datos* y *Depuración*.
+   - La naturaleza que antes se llamaba «Místico» se muestra ahora como **ARQ** (arquetípica: mitos, símbolos y leyendas encarnados). En el código sigue siendo `mystic`.
+12. **Primer combate contra una criatura**: luchas con un compañero (el personaje con el que hablabas en la incursión, o uno al azar) que lleva 2 habilidades al azar de todo el catálogo, sin importar su naturaleza. Cada miembro del grupo elige su acción en su turno (la ficha activa se resalta) y después actúa el rival.
+
+En combate, los comandos (*Atacar*, *Habilidad*, *Objeto*...) se eligen con clic o con el teclado; pasar el ratón por encima solo cambia la opción resaltada del submenú.
+
+**Franjas del día**: el día tiene cuatro franjas (*mañana*, *día*, *tarde* y *noche*), que se ven en la cabecera de la fecha (`GameState.TIME_SLOTS`). Las actividades pasan a la siguiente: la clase (mañana → día) y las camas elásticas (día → tarde), marcadas con `advance_time` en `ChapterDB`. La **cama** de casa tiene, además de Examinar:
+- **Siesta**: pasa una franja (de noche, equivale a dormir);
+- **Dormir**: hasta la mañana siguiente, desde cualquier franja.
+Durante un objetivo del guion la cama responde «Ahora no». Al pasar al día siguiente sale una animación (`DayTransition`): un reloj corre hasta las 7:00 y la hoja del calendario cambia de número y de día de la semana.
+
+**Móvil («Terminal»)**: botón *T Terminal* abajo a la derecha, junto a *Mapa* (o tecla T). Solo se abre explorando, nunca en combate ni en conversación. Oscurece la escena y muestra la hora, el clima y las apps sobre el fondo de pantalla (`assets/phone/fondo.png`, con un velo oscuro para que se lea la interfaz). Se navega con ratón o flechas + Enter; *Esc* o el botón «<» vuelven atrás y *T* o un clic fuera lo cierran.
+   - *Contactos*: Kenji, Rika, Shiori, Akane, Yuna y Mamá. Al elegir uno se abre el chat y puedes **saludar**: Ren escribe y el contacto responde tras un «escribiendo...». La respuesta sale del selector de diálogos (momento `movil` en el `.dialogue` de cada uno) y cambia según su ánimo, la relación, si ya le has escrito hoy y si pasó la incursión.
+   - *Mensajes*: solo aparecen las conversaciones que ya existen, de la más reciente a la más antigua. Se guardan en la partida.
+   - *Relaciones*: cómo está cada personaje con Ren: el tramo (Hostil, Fría, Neutral, Cercana o Íntima), su ánimo de hoy, barras de afecto, confianza y respeto, y además atracción, miedo, asco o resentimiento si destacan. Salen Kenji, Rika, Shiori, Akane, Yuna, Mamá y la madre de Kenji.
+   - *Inventario*: los objetos que llevas, con cantidad y descripción.
+   - *Equipo*: arma, accesorio y módulo de Ren y sus compañeros (de momento solo se muestran; no afectan al combate).
+   - *Misiones*, *Ajustes* y *Criaturas* aún no tienen contenido (referencias en `docs/ui/referencias/07_*`–`11_*`).
+
+**Pantalla de estado**: en combate, clic en una ficha del grupo (o *Tab*, para quien está eligiendo) abre la pantalla del personaje. Muestra la ilustración en grises, el nivel, la naturaleza, los PV y PM, los atributos, las habilidades con su detalle (potencia, objetivo, recarga) y los estados alterados. La pestaña *Historia* cuenta quién es. Se cambia de miembro con las miniaturas, las flechas o AvPág/RePág, y se cierra con la X, *Esc*, *Tab* o un clic fuera.
 
 ![Combate](docs/capturas/combate.webp)
 
 | | |
 |---|---|
-| ![Transición](docs/capturas/combate_transicion.webp) | ![Objeto](docs/capturas/combate_objeto.webp) |
-| ![Victoria](docs/capturas/combate_victoria.webp) | ![Derrota](docs/capturas/combate_derrota.webp) |
+| ![Objeto](docs/capturas/combate_objeto.webp) | ![Victoria](docs/capturas/combate_victoria.webp) |
+| ![Derrota](docs/capturas/combate_derrota.webp) | |
 
 | | |
 |---|---|
@@ -72,13 +111,52 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 - ⬜ Habilidades, grupo de varios personajes y combate por naturalezas.
 - ⬜ Interfaz de estado de personaje.
 - ⬜ Mapa y fondos definitivos (los actuales son provisionales, generados por código).
-- ⬜ Guardado de partida y opciones.
+- ✅ Guardado automático y «Continuar» (al llegar a una ubicación y tras cada interacción).
+- ⬜ Opciones.
+- ⬜ Relaciones, ánimo y cansancio de los personajes ([borrador](docs/diseno/personajes_y_relaciones.md)).
 - ⬜ Sistema de naturalezas y asimilación ([documento de diseño](docs/diseno/sistema_de_naturalezas_y_asimilacion_parte_1.md)).
+
+## Mapa 3D de Leganés
+
+El mapa del juego (tecla **M**) es un modelo 3D de Leganés generado por código a partir de OpenStreetMap. Es como una maqueta: va recortada en rectángulo y tiene base, así que no asoma nada por los lados. Lleva una capa gris por encima y los rombos de las ubicaciones en 2D. Arriba se ven el día y la franja (mañana, día, tarde o noche).
+
+- **Vista**: sale siempre recta (norte arriba) y con el mapa entero; la distancia se calcula sola.
+- **Zoom**: rueda, pellizco o las teclas **+ / −** acercan hacia el ratón, y arrastrando te mueves. Con el teclado, el mapa sigue a la ubicación elegida.
+- **Cambios del editor**: al abrir el mapa se relee `src/data/mapa3d.json` si ha cambiado, así que lo que guardas en el editor se ve aunque el juego ya esté abierto.
+
+- **Luz según la franja del día**: cada franja usa una hora (mañana 8:00, día 13:00, tarde 19:30, noche 23:00). La luz se mezcla poco a poco entre cuatro momentos:
+  - *Amanecer*: luz blanca y baja.
+  - *Día*: luz alta.
+  - *Atardecer*: luz anaranjada y rasante, con sombras largas.
+  - *Noche*: luz global azul oscura y ventanas encendidas en los edificios.
+- **Datos**: `assets/map/leganes.json` (edificios con altura, calles, zonas verdes, agua y vías, en metros). Cómo se regeneran: `tools/maps3d/README.md`.
+- **Código**: `src/map3d/`:
+  - `CityBuilder` construye las mallas (recorte, base y luces de las ventanas);
+  - `CityMap` monta cámara, luz y marcadores;
+  - `MapConfig` guarda los ajustes en `src/data/mapa3d.json` y calcula la luz de cada hora.
+- **Editor**: abre `src/tools/editor_mapa/editor_mapa.tscn` en Godot y pulsa **F6**. La vista tiene la misma proporción que el mapa del juego.
+  - **Ubicaciones**:
+    - elige una en la lista y haz clic en el mapa para colocarla; los marcadores también se pueden arrastrar;
+    - **Nombre** y **Descripción** cambian lo que se ve en el juego;
+    - **+ Nuevo punto** crea una ubicación nueva. Al ir allí se ve el fondo genérico y, como no hay nadie, salta un combate;
+    - **Quitar** borra solo la posición;
+    - **Borrar** la quita del mapa: un punto nuevo se elimina del todo, y una ubicación del juego pasa a «Borradas del mapa», desde donde se puede **Recuperar**;
+    - la casa y los destinos de la historia (instituto y Westfield Parquesur) no se pueden borrar;
+    - las ubicaciones sin colocar salen con «(?)» en una posición provisional.
+  - **Vista**: solo se guardan la **inclinación** y el **campo de visión**. Con el ratón puedes girar (clic derecho), hacer zoom (rueda o pellizco) y moverte (clic central, dos dedos o WASD) para trabajar, pero eso no se guarda. «Ver como en el juego» vuelve al encuadre del juego. También están aquí la intensidad y el color de la capa gris.
+  - **Iluminación según la hora**:
+    - «Ver a las» cambia la hora de la vista previa;
+    - con los botones Amanecer, Día, Atardecer y Noche eliges qué momento editas: su hora, la dirección, altura, intensidad y color de la luz, la luz ambiente y cuántas ventanas se encienden;
+    - las sombras se activan o desactivan para todo el día.
+  - **Colores del modelo**: suelo, edificios, calles, aceras, zonas verdes, agua, vías, base de la maqueta y ventanas.
+  - **Guardar** (o Cmd+S) escribe `src/data/mapa3d.json`.
+- El minimapa del combate sigue usando el mapa provisional.
+- Los datos son © colaboradores de OpenStreetMap (licencia ODbL). El crédito sale en la esquina del mapa.
 
 ## Cómo añadir contenido
 
-- **Diálogos**: `src/data/dialogue_db.gd`. Cada guion es una lista de líneas `{who, text}` con `id`, `goto`, `end` y `choices` opcionales (cada opción puede llevar `affinity`). El formato está documentado al principio del archivo.
-- **Personajes**: `src/data/character_db.gd` (nombre, color del brillo, retrato y posición en el escenario). Los retratos están en `assets/characters/` (PNG con transparencia).
+- **Diálogos**: `src/dialogue/*.dialogue` (plugin [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager), en `addons/`). Uno por personaje más `general.dialogue`. Cada conversación lleva una regla `# cuando:` que decide cuándo sale; ver [el documento de diseño](docs/diseno/personajes_y_relaciones.md).
+- **Personajes**: `src/data/character_db.gd` (nombre, color del brillo, retrato y posición en el escenario). La personalidad, las reacciones y las relaciones iniciales van en una ficha `src/data/characters/<id>.json` (Rika, Kenji, Shiori, Akane, Yuna, Mamá y la madre de Kenji). Yuna es la novia de Kenji y está en su clase. Mamá (`madre_ren`) y la madre de Kenji (`madre_kenji`) son amigas. Durante el guion del capítulo 1, los que reaccionan a las opciones de Ren son los del `cast` de cada paso (`chapter_db.gd`). Los retratos están en `assets/characters/` (PNG con transparencia).
 - **Combate**: estadísticas provisionales en `combat` de cada personaje (`character_db.gd`), objetos en `src/data/item_db.gd`, lógica en `src/systems/battle.gd` (sin interfaz: devuelve eventos que la vista anima).
 - **Ubicaciones**: `src/data/location_db.gd` (nombre, descripción, posición en el mapa y paleta del fondo provisional).
 - **Fondos reales**: deja `assets/backgrounds/<id>.png` (p. ej. `plaza.png`, 1920×1080) y sustituye automáticamente al fondo generado.
@@ -87,6 +165,7 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
 
 ```
 project.godot
+addons/dialogue_manager/  Plugin Dialogue Manager 4.2 (MIT)
 assets/
   fonts/inter/            Tipografía Inter Display (licencia OFL, ver LICENSE.txt)
   characters/             Retratos de personajes (PNG con transparencia)
@@ -94,15 +173,17 @@ assets/
 src/
   autoload/               Singletons globales
     app.gd                  Tema por defecto, pantalla completa, versión
-    game_state.gd           Estado de partida: región, fecha, ubicación, afinidad
+    game_state.gd           Estado de partida: región, fecha, ubicación, fase de la historia, indicadores, guardado
+    story.gd                Puente con los diálogos y selector de conversaciones
     scene_router.gd         Cambio de pantalla y fundidos
   data/                   Datos del juego (sin lógica)
     location_db.gd          Ubicaciones
     character_db.gd         Personajes
-    dialogue_db.gd          Guiones de conversación
     item_db.gd              Objetos (Pochicola)
   systems/
-    battle.gd               Lógica de combate 1 contra 1 (eventos, sin interfaz)
+    battle.gd               Lógica de combate del grupo contra un rival (eventos, sin interfaz)
+    event_log.gd            Registro de acontecimientos: qué pasó y quién lo sabe
+    social.gd               Relaciones, ánimo y cansancio: cómo reaccionan los personajes
   ui/
     ui_style.gd             Paleta, tipografías y utilidades de dibujo (UIStyle)
     ui_icons.gd             Iconos vectoriales (chevrons, play, calendario, bocadillo...)
@@ -126,18 +207,20 @@ src/
       world_screen.*          Orquesta los modos (intro, explorar, mapa, menú, hablar)
       location_backdrop.gd    Fondo de ubicación (imagen o generado)
       conversation_view.gd    Interfaz de conversación + intérprete de guiones
-      interaction_menu.gd     Menú Hablar / Luchar / Ligar
+      interaction_menu.gd     Menú Hablar / Luchar / Ligar (o Examinar, en objetos)
       map_overlay.gd          Mapa superpuesto (M)
       map_view.gd             Dibujo del mapa provisional
       location_banner.gd      Cartel de llegada a una ubicación
-      battle_transition.gd    Transición de combate (barrido diagonal + «¡COMBATE!»)
+      phone_overlay.gd        Móvil («Terminal»), superpuesto fuera de combate
       combat/                 Interfaz de combate
         combat_view.gd          Composición, entrada (comando → opción) y animaciones
         combatant_card.gd       Ficha del grupo (PV/PM)
         enemy_plate.gd          Placa del rival
+        status_panel.gd         Pantalla de estado de un miembro del grupo
         mini_map.gd             Minimapa
         damage_popup.gd         Números de daño/curación
       talk_indicator.gd       Bocadillo «...» sobre los personajes interactuables
+  dialogue/               Diálogos (.dialogue), uno por personaje + general
 docs/
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz

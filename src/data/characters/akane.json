@@ -1,0 +1,109 @@
+{
+	"schemaVersion": 1,
+	"id": "akane",
+	"identity": {
+		"species": "humano",
+		"nature": "biological",
+		"tagline": "Otra clase · recreativas",
+		"role": "De otra clase. Trabaja en el turno de noche de las recreativas de Parquesur y toca en una banda punk. Dura por fuera; protege a los suyos sin decirlo."
+	},
+
+	"traits": {
+		"extroversion": 60,
+		"humor": 65,
+		"impulsividad": 72,
+		"empatia": 55,
+		"orgullo": 80,
+		"paciencia": 30,
+		"sensibilidad": 40,
+		"franqueza": 90,
+		"curiosidad": 50
+	},
+	"values": {
+		"independencia": 85,
+		"honestidad": 85,
+		"lealtad": 75,
+		"justicia": 70
+	},
+	"likes": ["punk y conciertos pequeños", "las recreativas", "la gente sin postureo", "la comida grasienta de madrugada", "los retos"],
+	"dislikes": ["el postureo", "la condescendencia", "que la traten como si fuera frágil", "los chivatos"],
+	"fears": ["que la vean vulnerable", "perder su sitio en la banda"],
+	"speech": {
+		"register": "coloquial de España",
+		"style": "seca y cortante, con sarcasmo; reta a la gente",
+		"swearing": "frecuente"
+	},
+	"nuances": [
+		"Si te pica, es que le caes bien. Si te ignora, no.",
+		"Le cuesta pedir ayuda, pero cuando la acepta no lo olvida.",
+		"Le cae mejor quien le planta cara que quien le da la razón."
+	],
+
+	"mood": {
+		"weights": {"alegre": 20, "tranquilo": 25, "curioso": 10, "irritado": 28, "ansioso": 7, "triste": 10},
+		"initial": {"id": "curioso", "intensity": 45}
+	},
+
+	"reactions": {
+		"styles": {
+			"decidido": {"respeto": 2},
+			"dubitativo": {"respeto": -2},
+			"impulsivo": {"afecto": 1},
+			"cariñoso": {"default": {"afecto": 1}, "irritado": {"respeto": -1}},
+			"formal": {"afecto": -1},
+			"desenfadado": {"afecto": 1},
+			"franco": {"respeto": 3, "confianza": 1},
+			"diplomático": {"respeto": -1},
+			"evasivo": {"confianza": -2},
+			"bromista": {"default": {"afecto": 1}, "irritado": {"afecto": -1}},
+			"sarcástico": {"default": {"afecto": 1}, "triste": {"afecto": -2, "resentimiento": 2}},
+			"tímido": {"respeto": -1},
+			"atrevido": {"respeto": 2, "atraccion": 1},
+			"coqueto": {"default": {"atraccion": 1}, "irritado": {"afecto": -1, "resentimiento": 2}},
+			"protector": {"default": {"respeto": -2, "resentimiento": 1}, "ansioso": {"confianza": 2, "afecto": 1}},
+			"complaciente": {"respeto": -2},
+			"dominante": {"respeto": -1, "resentimiento": 4},
+			"independiente": {"respeto": 2},
+			"provocador": {"default": {"respeto": 1, "afecto": 1}, "irritado": {"resentimiento": 3}},
+			"testarudo": {"respeto": 1},
+			"empático": {"confianza": 1},
+			"pragmático": {"respeto": 1},
+			"curioso": {"afecto": 1}
+		},
+		"stances": {
+			"criaturas": {
+				"acoger": {"confianza": -1},
+				"rechazar": {"respeto": 1}
+			},
+			"proteger_a_otros": {
+				"si": {"respeto": 2, "afecto": 1},
+				"no": {"respeto": -3}
+			}
+		},
+		"actions": {
+			"talk": {"afecto": 1},
+			"flirt": {"default": {"atraccion": 1}, "triste": {"afecto": -1}, "irritado": {"afecto": -2, "resentimiento": 3}},
+			"fight": {"default": {"respeto": 2, "afecto": 1}, "irritado": {"respeto": 1}}
+		},
+		"fed_up": {
+			"mood": "irritado",
+			"talk": {"afecto": -2},
+			"flirt": {"resentimiento": 3, "asco": 1},
+			"fight": {"respeto": -1}
+		}
+	},
+
+	"relationships": {
+		"ren": {"afecto": 20, "confianza": 20, "respeto": 10},
+		"kenji": {"afecto": 25, "confianza": 15, "respeto": 30},
+		"rika": {"afecto": 0, "confianza": 0, "respeto": 5},
+		"shiori": {"afecto": 5, "confianza": 5, "respeto": 15}
+	},
+
+	"gear": {"arma": "Botas con puntera", "accesorio": "Muñequera de pinchos", "modulo": ""},
+	"combat": {
+		"level": 15, "pv": 250, "pm": 85, "attack": "Patada de pogo", "damage": 38,
+		"items": {"pochicola": 1},
+		"stats": {"FUE": 26, "TEC": 16, "INT": 14, "VOL": 18, "RES": 22, "AGI": 24}
+	}
+}

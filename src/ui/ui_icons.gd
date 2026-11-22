@@ -185,10 +185,33 @@ static func can(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
 	ci.draw_line(r.position + Vector2(s * 0.14, -s * 0.06), r.position + Vector2(s * 0.34, -s * 0.06), color, 2.5)
 
 
+static func moon(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
+	# Media luna: arco exterior y arco interior desplazado.
+	var r := s * 0.42
+	var pts := PackedVector2Array()
+	for i in 25:
+		var a := lerpf(-PI * 0.75, PI * 0.75, i / 24.0) + PI
+		pts.append(c + Vector2(cos(a), sin(a)) * r)
+	var inner_c := c + Vector2(-r * 0.45, -r * 0.1)
+	for i in 25:
+		var a := lerpf(PI * 0.62, -PI * 0.62, i / 24.0) + PI
+		pts.append(inner_c + Vector2(cos(a), sin(a)) * r * 0.82)
+	ci.draw_colored_polygon(pts, color)
+
+
+static func clock(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
+	var r := s * 0.42
+	ci.draw_arc(c, r, 0, TAU, 32, color, 2.5, true)
+	ci.draw_line(c, c + Vector2(0, -r * 0.62), color, 2.5, true)
+	ci.draw_line(c, c + Vector2(r * 0.5, 0), color, 2.5, true)
+
+
 ## Dibuja el icono por nombre.
 static func draw_named(ci: CanvasItem, icon: String, c: Vector2, s: float, color: Color) -> void:
 	match icon:
 		"chevrons": chevrons(ci, c, s, color)
+		"moon": moon(ci, c, s, color)
+		"clock": clock(ci, c, s, color)
 		"play": play(ci, c, s, color)
 		"menu": menu(ci, c, s, color)
 		"calendar": calendar(ci, c, s, color)
@@ -203,3 +226,4 @@ static func draw_named(ci: CanvasItem, icon: String, c: Vector2, s: float, color
 		"lock": lock(ci, c, s, color)
 		"slash": slash(ci, c, s, color)
 		"can": can(ci, c, s, color)
+		"alert": alert(ci, c, s, color, UIStyle.INK)

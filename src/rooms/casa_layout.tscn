@@ -1,0 +1,52 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/rooms/room_layout.gd" id="1_layout"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/casa.png" id="2_fondo"]
+[ext_resource type="Texture2D" path="res://assets/props/pantalla.png" id="3_pantalla"]
+[ext_resource type="Texture2D" path="res://assets/props/estanteria.png" id="4_estanteria"]
+[ext_resource type="Texture2D" path="res://assets/props/cama.png" id="5_cama"]
+
+[node name="CasaLayout" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1672.0
+offset_bottom = 941.0
+mouse_filter = 2
+script = ExtResource("1_layout")
+
+[node name="Fondo" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 1672.0
+offset_bottom = 941.0
+mouse_filter = 2
+texture = ExtResource("2_fondo")
+
+[node name="pantalla" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = -6.0
+offset_top = 293.0
+offset_right = 301.0
+offset_bottom = 676.0
+mouse_filter = 2
+texture = ExtResource("3_pantalla")
+expand_mode = 1
+
+[node name="estanteria" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 787.0
+offset_top = 120.0
+offset_right = 1299.0
+offset_bottom = 789.0
+mouse_filter = 2
+texture = ExtResource("4_estanteria")
+expand_mode = 1
+
+[node name="cama" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 877.0
+offset_top = 450.0
+offset_right = 1784.0
+offset_bottom = 1079.0
+mouse_filter = 2
+texture = ExtResource("5_cama")
+expand_mode = 1

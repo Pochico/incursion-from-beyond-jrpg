@@ -49,6 +49,17 @@ extends Button
 		subtle = value
 		queue_redraw()
 
+## Si es false, pasar el ratón por encima no lo selecciona: solo el clic
+## (o el teclado). Para menús en los que el hover no debe cambiar la elección.
+@export var hover_focus: bool = true
+
+## Fuerza el aspecto seleccionado (p. ej. el comando activo mientras se elige
+## una de sus opciones).
+@export var active: bool = false:
+	set(value):
+		active = value
+		_animate_highlight()
+
 ## 0 = oculto (desplazado a la izquierda), 1 = visible. Útil para animar entradas.
 @export_range(0.0, 1.0) var reveal: float = 1.0:
 	set(value):
@@ -85,13 +96,15 @@ func _ready() -> void:
 
 
 func _on_mouse_entered() -> void:
-	if not Engine.is_editor_hint() and focus_mode != Control.FOCUS_NONE and not has_focus():
+	if not Engine.is_editor_hint() and hover_focus and focus_mode != Control.FOCUS_NONE and not has_focus():
 		grab_focus()
 	else:
 		_animate_highlight()
 
 
 func _is_highlighted() -> bool:
+	if active:
+		return true
 	if toggle_mode and button_pressed:
 		return true
 	if focus_mode == Control.FOCUS_NONE:
@@ -100,6 +113,8 @@ func _is_highlighted() -> bool:
 
 
 func _animate_highlight() -> void:
+	if not is_inside_tree():
+		return
 	var target := 1.0 if _is_highlighted() else 0.0
 	if _tween:
 		_tween.kill()

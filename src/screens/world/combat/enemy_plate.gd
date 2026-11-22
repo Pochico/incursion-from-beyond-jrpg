@@ -15,6 +15,7 @@ var analyzed := false:
 		analyzed = value
 		queue_redraw()
 var attack_text := ""
+var tag := "RIVAL"
 
 
 func _ready() -> void:
@@ -28,6 +29,10 @@ func setup(fighter: Dictionary) -> void:
 	pv_max = fighter.pv_max
 	pv = fighter.pv
 	attack_text = "%s · %d de daño" % [fighter.attack, fighter.damage]
+	for skill_id: String in fighter.get("skills", []):
+		attack_text += " · " + SkillDB.display_name(skill_id)
+	var nature: String = fighter.get("nature", "")
+	tag = SkillDB.NATURE_NAMES.get(nature, "RIVAL").to_upper() if CharacterDB.is_enemy(character_id) else "RIVAL"
 
 
 func animate_pv(value: int) -> void:
@@ -45,7 +50,7 @@ func _draw() -> void:
 	var name_text := CharacterDB.display_name(character_id)
 	draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(46, 50), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, UIStyle.WHITE)
 	var nw := UIStyle.FONT_BOLD_ITALIC.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36).x
-	UIStyle.draw_spaced(self, UIStyle.FONT_MEDIUM, Vector2(46 + nw + 16, 48), "RIVAL", 14, 3.0, color)
+	UIStyle.draw_spaced(self, UIStyle.FONT_MEDIUM, Vector2(46 + nw + 16, 48), tag, 14, 3.0, color)
 	draw_string(UIStyle.FONT_REGULAR, Vector2(0, 46), "Nivel %d" % level, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 36, 20, UIStyle.WHITE)
 
 	# Fila 2: PV (los números solo tras analizar).

@@ -1,0 +1,327 @@
+# SHIORI — compañera de clase de Ren y Rika. Leyendas urbanas, seca, exacta y curiosa.
+# Ficha: src/data/characters/shiori.json
+
+# =====================================================================================
+# HABLAR — antes de la incursión
+# =====================================================================================
+
+~ shiori_hablar_primera
+# cuando: hablar, una vez, fase = rutina
+Shiori: ...Ren. Última fila, junto a la ventana. Mirando por ella, normalmente.
+Ren: Ese soy yo.
+Shiori: Si vienes a pedirme los apuntes, la respuesta es no. Si vienes a otra cosa, tienes un minuto.
+- ¿Qué estás leyendo? [#curioso]
+- Solo pasaba por aquí. [#evasivo]
+	Shiori: Todo el mundo «solo pasa por aquí». Es la frase más repetida de la ciudad. Aun así, te quedan cincuenta segundos.
+- ¿Un minuto exacto? [#bromista]
+	Shiori: Más o menos. Es una unidad de cortesía, no de tiempo. ...Está bien, me has hecho gracia. Dos minutos.
+Shiori: «Leyendas urbanas del sur de Madrid». Edición de 1987. La encontré en un contenedor de papel, cosa que ya me parece una leyenda en sí misma.
+Shiori: Hay una teoría en el prólogo que no me quito de la cabeza. Las ciudades también tienen mitos. Y los mitos necesitan que alguien crea en ellos para existir.
+Shiori: Cuanta más gente los cuenta, más reales se vuelven. Y cuando nadie los recuerda... se mueren de hambre.
+- Suena a cuento para asustar críos. [#pragmático, #franco]
+	Shiori: Lo es. Los cuentos para críos son los mitos que mejor han sobrevivido. Eso no los hace falsos; los hace eficaces.
+- ¿Y cuál es el mito de Leganés? [#curioso]
+	Shiori: Tiene varios. Pero uno se repite en ediciones distintas, con décadas de diferencia.
+- Me lo creo. [#idealista]
+	Shiori: No deberías decir eso tan rápido. Creer es justo lo que les da de comer.
+Shiori: La Torre. Dicen que, a medianoche, desde el andén de la estación se ve un piso más de los que tiene. Uno con la luz encendida.
+Shiori: Lo conté anoche desde el tren. Catorce plantas. Hoy, a plena luz, he contado trece.
+Ren: Te habrás equivocado.
+Shiori: Probablemente. Por eso pienso volver a contarlas esta noche.
+$> Story.set_flag("shiori_torre_14")
+Shiori: Se te ha acabado el minuto, Ren. ...Pero no ha estado mal.
+=> END
+
+~ shiori_hablar_rutina
+# cuando: hablar, fase = rutina
+%
+	Shiori: ¿Sabías que en 1962 hubo una semana entera en la que todos los relojes de la estación iban dos minutos tarde? Nadie lo arregló. Se arreglaron solos.
+	- ¿Cómo sabes eso? [#curioso]
+		Shiori: Hemeroteca. Es el sitio más infravalorado de la ciudad. Hay calefacción y nadie habla.
+	- Sería un fallo eléctrico. [#pragmático]
+		Shiori: Eso decía el periódico. En una columna de cuatro líneas. Las explicaciones cortas me dan más miedo que las largas.
+%
+	Shiori: Rika me ha pedido los apuntes. Otra vez. Le he dicho que no. Otra vez.
+	- Haces bien. [#franco, #independiente]
+		Shiori: Lo sé. Pero me mira como si le hubiera pisado un gato. Es una técnica muy eficaz.
+	- Podrías ayudarla un poco. [#empático, #conciliador]
+		Shiori: Ayudarla sería explicárselo. Darle los apuntes es otra cosa. ...Bueno. Puede que se lo explique.
+		$> Story.change("shiori", "respeto", 1)
+	- Ya caerás. [#bromista, #provocador]
+		Shiori: Llevo dos cursos sin caer. Tengo una racha que proteger.
+%
+	Shiori: ...
+	Shiori: Perdona. Estaba terminando un párrafo. No es educado interrumpir un párrafo.
+	- Te espero. [#prudente, #cariñoso]
+		Shiori: ...
+		Shiori: Ya. Gracias por esperar. Casi nadie lo hace.
+		$> Story.change("shiori", "afecto", 1)
+	- ¿Tan bueno es? [#curioso]
+		Shiori: Es un hombre que jura que su ascensor tiene un botón que no estaba ayer. Es excelente.
+=> END
+
+~ shiori_hablar_otra_vez_hoy
+# cuando: hablar, hoy >= 2
+% Shiori: ¿Has olvidado algo? Porque yo no he olvidado que ya hemos hablado hoy.
+% Shiori: Segunda visita. Empiezo a sospechar que te intereso como objeto de estudio.
+% Shiori: Si es otra vez por los apuntes, sigue siendo no.
+=> END
+
+~ shiori_hablar_torre
+# cuando: hablar, flag shiori_torre_14, una vez, fase = rutina
+Shiori: Las conté anoche. Desde el andén. A las doce y cinco.
+Shiori: Catorce. Y la de arriba tenía la luz encendida.
+- ¿Y si es un piso que no ves de día? [#curioso, #idealista]
+	Shiori: Esa es la pregunta correcta. La incorrecta sería «¿estás segura?».
+	$> Story.change("shiori", "respeto", 2)
+- ¿Estás segura? [#pragmático]
+	Shiori: Esa es la pregunta incorrecta. Sí. Estoy segura.
+- No vuelvas sola por la noche. [#protector]
+	Shiori: ...No necesito niñera. Pero tomo nota de que te preocupa.
+Shiori: Esta noche voy a sacar una foto. Si sale, ya no será una leyenda. Será un dato.
+=> END
+
+# --- Ánimo y relación ----------------------------------------------------------------
+
+~ shiori_hablar_ansiosa
+# cuando: hablar, ánimo = ansioso, sabe incursion_1, no hoy >= 2
+Shiori: He apuntado todo lo que vi. Tres veces. Cada vez lo recuerdo un poco distinto.
+Shiori: Eso me preocupa más que lo que vi.
+- Es normal después de un susto. [#empático]
+	Shiori: Lo sé. Lo he leído. Saberlo no ayuda tanto como dicen los libros.
+- Compara tus notas con las mías. [#pragmático, #curioso]
+	Shiori: ...Buena idea. Dos testigos valen más que uno. Aunque uno sea de la última fila.
+	$> Story.change("shiori", "confianza", 2)
+=> END
+
+~ shiori_hablar_irritada
+# cuando: hablar, ánimo = irritado, no hoy >= 2
+Shiori: Hoy no. Alguien ha subrayado con rotulador un libro de la biblioteca. Con rotulador, Ren.
+- Qué barbaridad. [#empático]
+	Shiori: Gracias. Es la única respuesta aceptable.
+	$> Story.set_mood("shiori", "tranquilo", 40)
+- Solo es un libro. [#pragmático, #provocador]
+	Shiori: «Solo es un libro». Voy a fingir que no has dicho eso.
+=> END
+
+~ shiori_hablar_fria
+# cuando: hablar, tramo <= fria, no hoy >= 2
+Shiori: Estoy ocupada.
+Shiori: ...Y aunque no lo estuviera.
+=> END
+
+~ shiori_hablar_cercana
+# cuando: hablar, tramo >= cercana, no hoy >= 2, fase = rutina
+Shiori: Ren. Te he guardado una cosa. Es una fotocopia de un artículo de 1974 sobre «ruidos sin fuente» en el metro.
+Shiori: Pensé que te gustaría. No sé por qué. Simplemente lo pensé.
+- Me encanta. Gracias. [#cariñoso]
+	Shiori: No es para tanto. Es una fotocopia.
+	Shiori: ...Me alegra que te guste.
+- ¿Ruidos sin fuente? Kenji tiene que ver esto. [#curioso]
+	Shiori: ¿Tu amigo el del bajo? ...Interesante. Dile que me lo devuelva sin manchas de café.
+	$> Story.set_flag("shiori_articulo_kenji")
+=> END
+
+# =====================================================================================
+# HABLAR — después de la incursión
+# =====================================================================================
+
+~ shiori_hablar_tras_incursion
+# cuando: hablar, fase >= incursion_1, sabe incursion_1, una vez
+Shiori: He revisado el libro. Diecinueve leyendas de Leganés. Ninguna habla de algo como lo que vimos.
+Shiori: Pero el prólogo sí. «Los mitos necesitan que alguien crea en ellos». Y esa cosa venía hambrienta.
+if GameState.incursion_enemy == "oni"
+	Shiori: Dijo que esta ciudad ya no cree en nada. Que hacía siglos que no cenaba tan bien. Ren, ¿y si se alimenta de eso?
+else
+	Shiori: Era como si algo de dentro de las pantallas hubiera aprendido a tener dientes. No encaja con ninguna leyenda. Encaja con todas.
+- Quiero entender qué son. [#curioso, #criaturas=acoger]
+	Shiori: Bien. Es la única postura sensata. El miedo sin datos solo produce más miedo.
+- Hay que pararlas antes de que vuelvan. [#decidido, #criaturas=rechazar]
+	Shiori: ¿Pararlas cómo? No sabemos qué son. Sería como intentar apagar un incendio sin saber qué arde.
+- Esto me supera. [#franco, #dubitativo]
+	Shiori: A mí también. Por eso lo estoy apuntando todo. Es lo único que sé hacer.
+Shiori: Voy a seguir investigando. Si encuentras algo, lo que sea, avísame. Aunque parezca una tontería.
+$> Story.set_flag("shiori_investiga")
+=> END
+
+~ shiori_hablar_rumores
+# cuando: hablar, fase >= incursion_1, no sabe incursion_1, una vez
+Shiori: Hay doce vídeos de la plaza. He visto los doce. En once, la criatura sale borrosa. En el último no sale nada, pero la gente mira al mismo sitio.
+Shiori: ¿Tú sabes algo, Ren?
+- Estaba allí. Es real. [#franco]
+	$> Story.tell("shiori", "incursion_1")
+	Shiori: ...
+	Shiori: Cuéntamelo todo. Despacio. Y en orden.
+	$> Story.change("shiori", "confianza", 3)
+- No sé nada. [#evasivo]
+	Shiori: Ya. Mientes mal, por cierto. Pero respeto que no quieras contarlo.
+=> END
+
+~ shiori_hablar_post
+# cuando: hablar, fase >= incursion_1
+% Shiori: He empezado un cuaderno nuevo. «Avistamientos». De momento tiene una entrada. Espero que siga teniendo solo una.
+% Shiori: La Torre sigue teniendo catorce plantas por la noche. Nadie más parece darse cuenta.
+% Shiori: He dejado de leer antes de dormir. Es la primera vez en mi vida. No me gusta.
+=> END
+
+# =====================================================================================
+# LIGAR
+# =====================================================================================
+
+~ shiori_ligar
+# cuando: ligar
+%
+	Ren: Las gafas te quedan genial.
+	Shiori: Interesante estrategia. Directa, sin preámbulos y completamente ineficaz.
+	Shiori: ...Son graduadas, por cierto. No son un accesorio. Pero gracias.
+%
+	Ren: Me gusta cómo hablas de tus libros.
+	Shiori: ...Eso no es un halago estándar. Lo voy a tener que analizar.
+=> END
+
+~ shiori_ligar_curiosa
+# cuando: ligar, ánimo = curioso
+Ren: ¿Sabes que eres la persona más interesante de la clase?
+Shiori: Eso es una afirmación comprobable. ...Y probablemente cierta. Pero me gusta que la hayas hecho tú.
+=> END
+
+~ shiori_ligar_cercana
+# cuando: ligar, tramo >= cercana
+Ren: Si fueras una leyenda urbana, yo creería en ti.
+Shiori: ...
+Shiori: Eso ha sido muy cursi, Ren.
+Shiori: Lo voy a apuntar.
+=> END
+
+~ shiori_ligar_irritada
+# cuando: ligar, ánimo = irritado
+Ren: Estás guapa hasta enfadada.
+Shiori: «Hasta». Qué palabra tan desafortunada. Vuelve otro día. O no vuelvas.
+=> END
+
+# =====================================================================================
+# LUCHAR
+# =====================================================================================
+
+~ shiori_luchar
+# cuando: luchar
+Ren: ¿Te apetece pelear?
+Shiori: ...No.
+Shiori: Aunque, pensándolo bien, llevo toda la mañana queriendo comprobar cuánto pesa de verdad una edición de tapa dura de 1987.
+Shiori: De acuerdo. Cinco minutos. Y no me pises los apuntes.
+=> END
+
+~ shiori_luchar_tras_incursion
+# cuando: luchar, fase >= incursion_1
+Ren: Deberíamos aprender a defendernos.
+Shiori: Estoy de acuerdo. Lo he anotado como prioridad. Prioridad dos, después de «entender qué está pasando».
+=> END
+
+~ shiori_luchar_gana
+# cuando: luchar_fin, resultado = gana
+Shiori: ...Me has ganado. Anotado. No pienso repetirlo en voz alta.
+Ren: ¿Estás bien?
+Shiori: Perfectamente. Solo herida en el orgullo, que es un órgano que no aparece en ningún libro de anatomía. Debería escribir sobre eso.
+=> END
+
+~ shiori_luchar_pierde
+# cuando: luchar_fin, resultado = pierde
+Shiori: Novecientas páginas. Encuadernación cosida. Lo sospechaba; es un arma excelente.
+Ren: Me has dado con un libro.
+Shiori: Te he dado con conocimiento. Hay una diferencia sutil. ...Ponte hielo.
+=> END
+
+# =====================================================================================
+# CANSANCIO Y MALOS DÍAS
+# =====================================================================================
+
+~ shiori_harto_hablar
+# cuando: harto_hablar
+Shiori: Ren. Mi cupo de conversación de hoy está agotado. Mañana se renueva. Probablemente.
+=> END
+
+~ shiori_harto_ligar
+# cuando: harto_ligar
+Shiori: Esto ya no es un halago, es una insistencia. Y la insistencia no me parece atractiva. Para.
+=> END
+
+~ shiori_harto_luchar
+# cuando: harto_luchar
+Shiori: No. Tengo agujetas en sitios que no sabía que tenía.
+=> END
+
+~ shiori_no_quiere
+# cuando: no_quiere
+Shiori: Necesito estar sola. No es contigo.
+=> END
+
+# =====================================================================================
+# PRIMERA INCURSIÓN
+# =====================================================================================
+
+~ shiori_alarma
+# cuando: alarma
+Shiori: Eso no ha sido un terremoto. Los terremotos no hacen parpadear las luces al ritmo de un pulso.
+Ren: Algo viene.
+=> END
+
+~ shiori_tras_incursion_gana
+# cuando: tras_incursion, resultado = gana
+Shiori: ...Lo he visto. Lo he visto de verdad. Necesito apuntarlo antes de convencerme de que no ha pasado.
+Ren: Pues ha pasado.
+$> Story.set_mood("shiori", "ansioso", 55)
+=> END
+
+~ shiori_tras_incursion_pierde
+# cuando: tras_incursion, resultado = pierde
+Shiori: Ren, mírame. Respira. ...Se ha ido. No lo has vencido, pero se ha ido. Y eso también me preocupa.
+Ren: A mí también.
+$> Story.set_mood("shiori", "ansioso", 55)
+=> END
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ shiori_movil
+# cuando: movil
+%
+	Ren: Hola, Shiori.
+	Shiori: Hola. ¿Necesitas algo concreto o es un saludo sin objetivo?
+%
+	Ren: ¿Qué haces?
+	Shiori: Leer sobre un pueblo de Guadalajara donde los relojes se paran a la misma hora. Interesante.
+%
+	Ren: Ey.
+	Shiori: «Ey» no es una frase completa. Pero lo acepto.
+=> END
+
+~ shiori_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Ey, otra vez yo.
+	Shiori: Segundo mensaje del día. Lo apunto como dato anómalo.
+%
+	Ren: ¿Sigues por ahí?
+	Shiori: Sigo leyendo. Te contesto cuando acabe el capítulo.
+=> END
+
+~ shiori_movil_bajon
+# cuando: movil, ánimo = triste|ansioso
+Ren: ¿Va todo bien?
+Shiori: No lo sé. Estoy intentando ordenar algunas ideas.
+Shiori: Gracias por preguntar. No es habitual.
+=> END
+
+~ shiori_movil_fria
+# cuando: movil, tramo <= fria
+Ren: Hola.
+Shiori: Recibido.
+=> END
+
+~ shiori_movil_tras_incursion
+# cuando: movil, fase >= incursion_1, sabe incursion_1
+Ren: ¿Estás bien?
+Shiori: Físicamente, sí. Llevo toda la noche buscando casos parecidos al de la estación.
+Shiori: Hay más de los que debería. Mañana te enseño lo que he encontrado.
+=> END

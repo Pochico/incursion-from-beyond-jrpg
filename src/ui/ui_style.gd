@@ -38,6 +38,16 @@ static var _theme: Theme
 
 
 ## Tema por defecto para los Control estándar (Label, Button...).
+## «12460» -> «12,460».
+static func format_money(value: int) -> String:
+	var s := str(value)
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return s + out
+
+
 static func get_theme() -> Theme:
 	if _theme == null:
 		_theme = Theme.new()

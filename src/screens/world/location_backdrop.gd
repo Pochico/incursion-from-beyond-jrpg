@@ -4,7 +4,8 @@ extends Control
 ##
 ## Si existe `res://assets/backgrounds/<id>.(png|jpg|webp)`, se usa esa imagen.
 ## Si no, se genera un fondo PROVISIONAL por código: ciudad nocturna con la
-## paleta de la ubicación (ver LocationDB). La ubicación vacía o «casa» es negro.
+## paleta de la ubicación (ver LocationDB). Sin imagen, la ubicación vacía o
+## «casa» es negro.
 
 const BACKGROUND_DIR := "res://assets/backgrounds/"
 
@@ -39,11 +40,11 @@ func _draw() -> void:
 	var h := size.y
 	draw_rect(Rect2(Vector2.ZERO, size), UIStyle.INK)
 
-	if location_id == "" or location_id == LocationDB.HOME:
-		return
-
 	if _texture:
 		_draw_cover(_texture)
+		return
+
+	if location_id == "" or location_id == LocationDB.HOME:
 		return
 
 	_draw_procedural(w, h)
@@ -51,9 +52,23 @@ func _draw() -> void:
 
 func _draw_cover(tex: Texture2D) -> void:
 	var ts := tex.get_size()
-	var scale := maxf(size.x / ts.x, size.y / ts.y)
-	var ds := ts * scale
-	draw_texture_rect(tex, Rect2((size - ds) * 0.5, ds), false)
+	draw_texture_rect(tex, Rect2(image_to_local(Vector2.ZERO), ts * cover_scale()), false)
+
+
+## Escala del fondo con imagen (cubre todo el control, recortando lo que sobre).
+func cover_scale() -> float:
+	if _texture == null:
+		return 1.0
+	var ts := _texture.get_size()
+	return maxf(size.x / ts.x, size.y / ts.y)
+
+
+## Convierte un punto en píxeles de la imagen de fondo a coordenadas locales.
+func image_to_local(p: Vector2) -> Vector2:
+	if _texture == null:
+		return p
+	var s := cover_scale()
+	return (size - _texture.get_size() * s) * 0.5 + p * s
 
 
 # --- Generación procedural ---------------------------------------------------------

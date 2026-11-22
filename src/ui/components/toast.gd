@@ -1,7 +1,7 @@
 class_name Toast
 extends Control
 ## Aviso breve en un panel inclinado con barra de color. Se destruye solo.
-##   Toast.show_in(parent, "Afinidad con Kael ↑", color)
+##   Toast.show_in(parent, "Pulsa [M] para abrir el mapa", color)
 
 var text := ""
 var color := UIStyle.LIME

@@ -1,0 +1,349 @@
+# RIKA — compañera de clase de Ren y Shiori. Gyaru, juguetona y directa.
+# Ficha: src/data/characters/rika.json
+#
+# Etiquetas de las opciones: estilos de Ren ([#franco]) y posturas ([#criaturas=acoger]).
+# Reglas: «# cuando: momento, condición, condición...». Gana la más específica.
+
+# =====================================================================================
+# HABLAR — antes de la incursión
+# =====================================================================================
+
+~ rika_hablar_primera
+# cuando: hablar, una vez, fase = rutina
+Rika: ¡Anda, Ren! ¿Tú fuera de clase y a la luz del día? Pensaba que te recargabas en un enchufe hasta el lunes.
+- Me han dejado salir por buen comportamiento. [#bromista, #desenfadado]
+	Rika: ¡Jajaja! Mira, si hasta tienes sentido del humor. Todo el curso sentado dos filas detrás de mí y yo sin enterarme.
+- Iba a casa. [#reservado]
+	Rika: Qué hablador. Vale, vale, no te entretengo... Bueno, sí. Un poquito.
+- ¿Y tú qué haces aquí sola? [#curioso, #protector]
+	Rika: ¿Sola? Cielo, yo nunca estoy sola. Estoy esperando, que es distinto.
+Rika: Mi amiga llega tardísimo, como siempre. Así que me haces compañía un ratito.
+Rika: Por cierto, ¿has hecho lo de Historia para mañana? Tengo una teoría: si no lo hace nadie, el profe no puede suspendernos a todos.
+- Yo ya lo tengo. Te lo paso si quieres. [#cariñoso, #complaciente]
+	Rika: ¿En serio? Ay, eres un sol... Aunque así no aprendo nada, ¿eh? Bueno, ya lo pensaré mañana.
+	$> Story.set_flag("rika_deberes_pasados")
+- Hazlo tú, que no es para tanto. [#franco, #independiente]
+	Rika: Uf, qué directo. ...Vale, tienes razón. Pero si suspendo, la culpa es tuya.
+- Tu teoría tiene un fallo: Shiori. [#bromista]
+	Rika: Ugh. Shiori. Esa lo tiene hecho desde el viernes, seguro. Y subrayado en tres colores.
+Rika: Venga, ya te dejo. Pero la próxima vez me invitas a algo. Una Pochicola, por ejemplo. Soy una chica sencilla.
+=> END
+
+~ rika_hablar_rutina
+# cuando: hablar, fase = rutina
+%
+	Rika: ¡Ren! ¿Otra vez por aquí? Al final voy a pensar que vienes a verme.
+	- Puede. [#coqueto, #atrevido]
+		Rika: Uy, «puede». Me gusta ese «puede». Apúntatelo.
+	- Paso por aquí para ir a casa. [#franco]
+		Rika: Ya, ya. Todos pasáis por aquí para ir a casa.
+	- Vengo por la Pochicola que me debes. [#bromista, #provocador]
+		Rika: ¡¿Que yo te debo?! Al revés, listo. Pero me ha hecho gracia el intento.
+%
+	Rika: Mira, mira. Uñas nuevas. Estrellitas. Las he hecho yo. ¿A que son monísimas?
+	- Son una pasada. [#cariñoso]
+		Rika: ¿Verdad? Algún día pongo un salón y te hago precio de amigo.
+	- No entiendo de uñas, pero te quedan bien. [#franco, #tímido]
+		Rika: Con eso me vale, cielo. La sinceridad también cuenta.
+	- ¿Y no te molestan para escribir? [#curioso, #pragmático]
+		Rika: Uf, muchísimo. Por eso escribo poco. Es una decisión de estilo de vida.
+%
+	Rika: ¿Sabes qué? El sábado hay una fiesta en casa de una de mi grupo. Si vienes, te presento a gente. Gente con color, no como tú.
+	- Igual me paso. [#dubitativo]
+		Rika: «Igual» no es una respuesta. Te lo vuelvo a preguntar el viernes.
+	- No me van mucho las fiestas. [#reservado, #franco]
+		Rika: Ya lo sé, por eso te invito. Alguien tiene que sacarte de la cueva.
+	- Solo si vienes tú conmigo. [#coqueto, #atrevido]
+		Rika: ...Vaya, vaya. Pues claro que voy, es la fiesta de mi amiga. Pero me lo apunto.
+=> END
+
+~ rika_hablar_otra_vez_hoy
+# cuando: hablar, hoy >= 2
+% Rika: ¿Otra vez tú? Me vas a gastar.
+% Rika: Dos veces en un día, Ren. La gente va a empezar a hablar.
+% Rika: Si vuelves es que me echabas de menos. No lo niegues.
+=> END
+
+~ rika_hablar_con_kenji
+# cuando: hablar, presente kenji, una vez, visto rika_hablar_primera, fase = rutina
+Rika: Oye, Ren, ¿el de las rastas es tu amigo? Lleva media hora mirando a la nada con los cascos puestos.
+Kenji: Te estoy oyendo, ¿eh? Estoy trabajando. Escucho la ciudad.
+Rika: ¿Y qué dice la ciudad?
+Kenji: Hoy está rara. Desafina.
+Rika: ...Vale, tu amigo es muy mono, pero da un poco de miedo.
+- Es el mejor tío que conozco. [#protector, #franco]
+	Rika: Oooh, qué bonito. Defiendes a tus amigos. Eso suma puntos, ¿sabes?
+	$> Story.change("kenji", "afecto", 2)
+- Siempre ha sido así de raro. [#bromista]
+	Kenji: Raro no. Sensible al ruido de fondo. Es distinto.
+	Rika: Vale, vale. Sois tal para cual.
+=> END
+
+# --- Ánimo y relación ----------------------------------------------------------------
+
+~ rika_hablar_triste
+# cuando: hablar, ánimo = triste, no hoy >= 2
+Rika: Ah. Hola, Ren.
+Rika: No me mires así, que estoy bien. Es solo... un día de esos.
+- ¿Quieres contármelo? [#empático]
+	Rika: ...Hoy no, cielo. Pero gracias por preguntar. De verdad.
+	$> Story.change("rika", "confianza", 2)
+- Te invito a una Pochicola. [#cariñoso]
+	Rika: ...Vale. Eso sí. Con mucho hielo.
+	$> Story.set_mood("rika", "tranquilo", 40)
+- Pues anímate, mujer. [#desenfadado]
+	Rika: Ya. Claro. Como si fuera un botón.
+=> END
+
+~ rika_hablar_irritada
+# cuando: hablar, ánimo = irritado, no hoy >= 2
+Rika: Hoy no tengo el cuerpo para tonterías, te aviso.
+- Vale. Solo venía a saludar. [#conciliador, #prudente]
+	Rika: ...Hola. Ya está. Saludada.
+- ¿Qué te pasa? [#franco, #curioso]
+	Rika: Que hay gente que no sabe respetar el espacio de los demás. No lo digo por ti. Hoy.
+- Uy, qué humor. [#provocador]
+	Rika: ¿Perdona? Ren, de verdad, hoy no.
+=> END
+
+~ rika_hablar_fria
+# cuando: hablar, tramo <= fria, no hoy >= 2
+Rika: Ah. Eres tú.
+Rika: ¿Querías algo? Porque estoy esperando a alguien.
+- Nada. Ya me voy. [#reservado]
+- Quería hablar de lo de la otra vez. [#conciliador, #franco]
+	Rika: Pues habla. Te escucho. Pero no prometo nada.
+	$> Story.change("rika", "resentimiento", -3)
+=> END
+
+~ rika_hablar_cercana
+# cuando: hablar, tramo >= cercana, no hoy >= 2, fase = rutina
+Rika: ¡Mi persona favorita de la última fila! Ven, siéntate, que te cuento el drama del día.
+Rika: Resulta que la del grupo ha dejado al novio por un mensaje. ¡Por un mensaje, Ren! Con un emoji de pulgar.
+- Eso es de ser muy fría. [#franco]
+	Rika: ¿Verdad? Yo lo dejaría con un audio de cinco minutos, por lo menos. Con música de fondo.
+- Igual se lo merecía. [#provocador]
+	Rika: ...Bueno. Un poco sí. Pero el pulgar, Ren. El pulgar.
+=> END
+
+# =====================================================================================
+# HABLAR — después de la incursión
+# =====================================================================================
+
+~ rika_hablar_tras_incursion
+# cuando: hablar, fase >= incursion_1, sabe incursion_1, una vez
+Rika: Ren. No he dormido nada. Cada vez que cierro los ojos veo a esa cosa.
+Rika: Y a ti delante de ella. Como si supieras lo que hacías.
+- No tenía ni idea de lo que hacía. [#franco]
+	Rika: Pues lo disimulas genial. Casi me lo creo.
+- Alguien tenía que hacerlo. [#decidido, #proteger_a_otros=si]
+	Rika: Ya... Pero no tenías por qué ser tú. Me asusté, ¿sabes? Por ti.
+	$> Story.change("rika", "afecto", 2)
+- Estaba tan asustado como tú. [#empático, #tímido]
+	Rika: ¿Sí? Menos mal. Pensaba que era la única que temblaba.
+Rika: ¿Y si vuelven? ¿Qué hacemos? Porque yo no tengo ningún bolso para eso.
+- Hay que entender qué son antes de nada. [#curioso, #criaturas=acoger]
+	Rika: ¿Entenderlas? Ren, esa cosa quería comernos. Yo no quiero entenderla, quiero que se vaya.
+- Si vuelven, las echaremos. [#decidido, #criaturas=rechazar]
+	Rika: «Las echaremos». Me gusta cómo suena eso. Aunque no sé muy bien quién es el «nosotros».
+- No lo sé. [#dubitativo]
+	Rika: Ya... yo tampoco.
+Rika: Prométeme una cosa. Si vuelve a pasar, no te hagas el héroe tú solo.
+=> END
+
+~ rika_hablar_rumores
+# cuando: hablar, fase >= incursion_1, no sabe incursion_1, una vez
+Rika: ¿Te has enterado? Dicen que ayer en la plaza hubo un temblor rarísimo y que la gente vio... algo.
+Rika: Mi grupo dice que era una peli. Una de esas campañas con proyecciones. Pero el vídeo da un mal rollo...
+- Yo estaba allí. Era real. [#franco, #criaturas=rechazar]
+	$> Story.tell("rika", "incursion_1")
+	Rika: ...¿Qué? Ren, no me vaciles. ¿Real real?
+	Rika: Vale. Vale. Esta noche duermo con la luz encendida. Y tú me vas a contar todo.
+- Será una campaña de marketing. [#evasivo]
+	Rika: Eso. Seguro. Marketing. ...Me quedo más tranquila si lo dices tú.
+=> END
+
+~ rika_hablar_post
+# cuando: hablar, fase >= incursion_1
+% Rika: Ahora miro dos veces antes de cruzar la plaza. Antes solo miraba si había alguien guapo.
+% Rika: He metido en el bolso un espray de pimienta. No sé si sirve contra un monstruo, pero me da seguridad.
+% Rika: Mi madre dice que vuelva antes de que anochezca. Por primera vez en mi vida, le hago caso.
+=> END
+
+# =====================================================================================
+# LIGAR
+# =====================================================================================
+
+~ rika_ligar
+# cuando: ligar
+%
+	Ren: Hoy estás deslumbrante.
+	Rika: Ya lo sé, cielo. Pero me encanta que me lo digan, así que repítelo cuando quieras.
+	Rika: ...Oye, que no ha estado mal, ¿eh? Un poco tímido, pero no ha estado mal.
+%
+	Ren: Ese color de pelo te queda genial.
+	Rika: ¿Te has fijado? Nadie se fija. Me lo retoqué ayer.
+	Rika: Puntos para Ren. Muchos puntos.
+%
+	Ren: Si sonríes así, voy a llegar tarde a casa.
+	Rika: ¡Ay! Ese ha sido bueno. Bueno de verdad. ¿De dónde lo has sacado?
+=> END
+
+~ rika_ligar_cercana
+# cuando: ligar, tramo >= cercana
+Ren: ¿Sabes que eres lo mejor de las clases de Historia?
+Rika: Ren... Que te pones tierno y luego no sé qué hacer con las manos.
+Rika: ...Tú también eres lo mejor de las clases de Historia. Pero no se lo digas a nadie, que tengo una reputación.
+=> END
+
+~ rika_ligar_otra_vez
+# cuando: ligar, veces >= 2
+Ren: ¿Te he dicho ya que hoy estás guapísima?
+Rika: Sí, cielo. Hace un rato. Sigue gustándome, pero no te vengas arriba.
+=> END
+
+~ rika_ligar_triste
+# cuando: ligar, ánimo = triste
+Ren: Hoy estás muy guapa.
+Rika: ...Gracias. Hoy no estoy para esto, pero gracias.
+=> END
+
+~ rika_ligar_irritada
+# cuando: ligar, ánimo = irritado
+Ren: Oye, qué guapa estás cuando te enfadas.
+Rika: ¿En serio? ¿Ahora? Ren, lee un poco el ambiente, por favor.
+=> END
+
+# =====================================================================================
+# LUCHAR
+# =====================================================================================
+
+~ rika_luchar
+# cuando: luchar
+Ren: ¿Un combate?
+Rika: ¿Contra mí? ¿En serio? Ay, qué mono.
+Rika: Vale, pero si me rompes una uña te la pago yo... no, espera. Me la pagas tú.
+=> END
+
+~ rika_luchar_tras_incursion
+# cuando: luchar, fase >= incursion_1
+Ren: ¿Entrenamos un poco?
+Rika: ...Vale. Si esas cosas vuelven, no quiero quedarme quieta mirando.
+Rika: Pero sin pasarte, ¿eh? Que te conozco.
+=> END
+
+~ rika_luchar_gana
+# cuando: luchar_fin, resultado = gana
+Rika: ¡Eh, eh, vale! Tiempo muerto. Me has despeinado y eso no se hace.
+Ren: Has empezado tú con el bolso.
+Rika: El bolso es legítima defensa. Bueno... has ganado. Pero yo sigo yendo mejor vestida.
+=> END
+
+~ rika_luchar_pierde
+# cuando: luchar_fin, resultado = pierde
+Rika: ¡Bolsazo de la victoria! Nunca subestimes a una chica con un bolso lleno de cosas.
+Ren: ¿Qué llevas ahí dentro? ¿Ladrillos?
+Rika: Maquillaje, cargador, tres pintalabios y un peluche. Lo justo para sobrevivir. Anda, levanta, campeón.
+=> END
+
+# =====================================================================================
+# CANSANCIO Y MALOS DÍAS
+# =====================================================================================
+
+~ rika_harto_hablar
+# cuando: harto_hablar
+Rika: Ren, me encanta charlar contigo, pero hoy ya me has gastado la batería social. Mañana más, ¿vale?
+=> END
+
+~ rika_harto_ligar
+# cuando: harto_ligar
+Rika: Bueno, ya, ¿no? Una cosa es que me lo digas y otra que me lo digas cada cinco minutos.
+Rika: Cielo, se te está gastando el encanto. Dale un descanso.
+=> END
+
+~ rika_harto_luchar
+# cuando: harto_luchar
+Rika: ¿Otra vez? No, gracias. Ya me he despeinado bastante por hoy.
+=> END
+
+~ rika_no_quiere
+# cuando: no_quiere
+Rika: Hoy no, Ren. En serio. No estoy para nadie.
+=> END
+
+~ rika_no_quiere_irritada
+# cuando: no_quiere, ánimo = irritado
+Rika: Si vienes a insistir, date la vuelta. Hoy muerdo.
+=> END
+
+# =====================================================================================
+# PRIMERA INCURSIÓN
+# =====================================================================================
+
+~ rika_alarma
+# cuando: alarma
+Rika: ¡Ay! ¡¿Qué ha sido eso?! Ren, no te muevas de mi lado, ¿vale? Ni se te ocurra.
+Ren: Algo viene.
+=> END
+
+~ rika_tras_incursion_gana
+# cuando: tras_incursion, resultado = gana
+Rika: ...Vale. Vale. Necesito sentarme. Y luego necesito que me expliques qué acabas de hacer.
+Ren: Cuando lo sepa, te lo cuento.
+$> Story.set_mood("rika", "ansioso", 65)
+=> END
+
+~ rika_tras_incursion_pierde
+# cuando: tras_incursion, resultado = pierde
+Rika: ¡Ren! ¡Ren, mírame! Uf... estás bien. Esa cosa se ha ido sin más. Me has dado un susto horrible.
+Ren: Va a volver.
+$> Story.set_mood("rika", "ansioso", 65)
+=> END
+
+# =====================================================================================
+# MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
+# =====================================================================================
+
+~ rika_movil
+# cuando: movil
+%
+	Ren: Hola, Rika.
+	Rika: ¡Ren! Qué milagro. Pensaba que tu móvil solo servía para poner la alarma.
+%
+	Ren: ¿Qué tal?
+	Rika: Bien, probándome tres outfits para no ir a ningún sitio. Lo normal.
+	Rika: ¿Y tú? No me digas que «bien» a secas, que te conozco.
+%
+	Ren: Ey.
+	Rika: Eyyy. ¿Me escribes para copiar los apuntes de mates? Porque te cobro en bubble tea.
+=> END
+
+~ rika_movil_otra_vez
+# cuando: movil, veces >= 2
+%
+	Ren: Ey, otra vez yo.
+	Rika: Jajaja, ¿hoy estás hablador o qué? Me gusta esta versión de ti.
+%
+	Ren: ¿Sigues por ahí?
+	Rika: Te he leído, eh. No me hagas spam, que me lo creo.
+=> END
+
+~ rika_movil_bajon
+# cuando: movil, ánimo = triste|ansioso
+Ren: ¿Estás bien?
+Rika: Sí, sí, todo genial.
+Rika: ...Bueno, no del todo. Pero gracias por preguntar.
+=> END
+
+~ rika_movil_fria
+# cuando: movil, tramo <= fria
+Ren: Hola.
+Rika: Ah. Hola.
+=> END
+
+~ rika_movil_tras_incursion
+# cuando: movil, fase >= incursion_1, sabe incursion_1
+Ren: ¿Cómo lo llevas?
+Rika: Fatal. No he salido de casa. Cada vez que tiembla algo pienso que es otra vez eso.
+Rika: Escríbeme más a menudo, ¿vale? Me ayuda.
+=> END

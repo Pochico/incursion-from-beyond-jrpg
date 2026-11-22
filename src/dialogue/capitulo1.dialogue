@@ -1,0 +1,154 @@
+# CAPÍTULO 1 — Día 1 (lunes): instituto, Westfield Parquesur y vuelta a casa.
+# El orden y los objetivos están en src/data/chapter_db.gd.
+#
+# La profesora aún no tiene nombre ni diseño: habla como «Profesora», sin retrato.
+# Matemáticas II es la única asignatura en la que juntan las dos clases, por eso
+# Kenji (y Yuna, su novia, de su misma clase) están en el aula con Ren, Rika y Shiori.
+
+~ dia1_despertar
+Lunes, siete y veinte.
+La alarma suena por tercera vez. La apagas sin abrir los ojos.
+Ren: Cinco minutos más...
+Mamá: ¡Ren! ¡Que son y veinte, cariño! ¡Que llegas tarde!
+Ren: Ya voy, mamá...
+Mamá: Te he dejado el desayuno en la mesa. ¡Y abrígate, que hace frío!
+$> Story.text("kenji", "¿Vienes hoy o te doy por muerto? Te espero en mates.")
+El móvil vibra encima de la mesilla. Es Kenji.
+Ren: Vale, vale. Ya voy.
+=> END
+
+# --- Instituto ------------------------------------------------------------------------
+
+~ dia1_clase
+Aula de 2.º B. Faltan unos minutos para Matemáticas II, la única asignatura en la que juntan las dos clases.
+Kenji: ¡Ren! Desde el viernes sin contestar un mensaje, tío. ¿Qué tal el finde?
+- Bien. Tranquilo. [#reservado]
+	Kenji: «Tranquilo». O sea, que no has salido de tu cuarto. Te conozco.
+- Épico. He dormido catorce horas. [#bromista, #desenfadado]
+	Kenji: Récord personal. Estoy orgulloso de ti, de verdad.
+- No me acuerdo, la verdad. [#franco]
+	Kenji: Eso es o muy preocupante o muy legendario. No hay término medio.
+Kenji: Yo el sábado estuve grabando hasta las tantas. Me salió una base que flipas. Luego te la paso.
+Kenji: Y el domingo, comida familiar con Yuna. Mi abuela le preguntó tres veces cuándo nos casamos. Tres.
+- ¿Y qué le dijo Yuna? [#curioso]
+	Kenji: Que cuando apruebe Mates. O sea, nunca. Mi abuela se rio tanto que se atragantó con el arroz.
+- Pobre Yuna. [#provocador, #bromista]
+	Kenji: ¡Eh! Pobre yo, que me tocó traducirle a mi abuela todo el rato.
+Alguien llega por detrás y abraza a Kenji por la espalda, con la barbilla apoyada en su hombro.
+Yuna: Buenos días, osito.
+Kenji: ¡Mi vida! Ya pensaba que me dejabas solo ante las derivadas.
+Yuna: Nunca, cariño. ¿Has desayunado algo o otra vez nada?
+Kenji: Un Cola Cao. Cuenta como desayuno, ¿verdad, cielo?
+Yuna: No. Toma, te he guardado media napolitana.
+Kenji: ¿Lo ves, Ren? Por esto me voy a casar con ella.
+Yuna: Hola, Ren. Este no ha parado en todo el finde con que no le contestabas.
+- Lo siento, se me pasó. [#franco]
+	Yuna: A mí no me lo digas. Díselo a él, que estaba preocupado.
+	Kenji: No estaba preocupado. Estaba... atento.
+- Le estaba poniendo a prueba. [#bromista]
+	Yuna: Pues casi suspende. Ha mirado el móvil cuarenta veces.
+- Gracias por cuidar de él. [#cariñoso]
+	Yuna: Alguien tiene que hacerlo. Tú también, ¿eh?
+Rika: ¡Buenos días, chicos! Uy, ya están los tortolitos dando envidia a primera hora.
+Kenji: Envidia sana, Rika. Envidia sana.
+Yuna: Buenos días, Rika.
+Rika: Ren, ¿hiciste los ejercicios del viernes? Dime que sí y que me los dejas.
+- Sí, toma. [#cariñoso]
+	Rika: ¡Te quiero! Bueno, quiero a tus ejercicios. Pero a ti un poco también.
+- No los hice. [#franco]
+	Rika: ¿Tú tampoco? Pues ya somos dos. Tres, que Kenji seguro que tampoco.
+	Kenji: Me ofende que lo des por hecho. Aunque aciertas.
+- Pídeselos a Shiori. [#bromista]
+	Rika: ¿A Shiori? Me cobra intereses.
+Shiori: Buenos días. Los ejercicios del viernes estaban en el libro, Rika. Con las soluciones al final.
+Rika: ¿Al final? ¿Desde cuándo?
+Shiori: Desde siempre.
+Se abre la puerta. Entra la profesora con una pila de fotocopias y el café a medio terminar.
+Profesora: Buenos días. Sentaos, que hoy empezamos tema nuevo.
+Profesora: Toca aprender a derivar. Id abriendo los libros por la página ciento doce.
+Kenji: (En voz baja.) Qué coñazo, tío...
+Shiori: Espabila, Kenji. Que al final no llegas a selectividad.
+Kenji: Gracias por tu apoyo, Shiori. Siempre tan cálida.
+Yuna: (Bajito.) Venga, osito, que tú puedes. Luego te lo explico yo.
+Profesora: ¿Algún comentario que queráis compartir con la clase?
+Kenji: No, no. Le decía que me encantan las derivadas.
+=> END
+
+~ dia1_clase_fundido
+Cincuenta minutos de límites, pendientes y una pizarra llena de letras que nadie pidió.
+Kenji dibuja en el margen. Rika mira el reloj cada dos minutos. Shiori subraya con tres colores distintos.
+Suena el timbre.
+=> END
+
+~ dia1_clase_salida
+Profesora: Para mañana, del uno al quince. Y no copiéis, que se nota.
+Rika: ¡Por fin! Oye, ¿hacemos algo esta tarde? Necesito despejarme después de esto.
+Kenji: Han abierto unas camas elásticas en el Westfield Parquesur. Si vas en grupo, hacen descuento.
+Yuna: Me apunto. Así te grabo, osito.
+Rika: ¡Sí! Camas elásticas. Ren, tú vienes.
+- Vale, me apunto. [#decidido]
+	Kenji: ¡Ese es mi Ren!
+- No sé... Estoy cansado. [#dubitativo]
+	Kenji: Estás cansado desde 2019. Vienes.
+	Rika: Te vas a reír, ya verás. Te lo prometo.
+- Solo si no grabáis vídeos. [#bromista]
+	Rika: No prometo nada.
+Shiori: Yo también voy. Alguien tendrá que llamar a la ambulancia cuando Kenji intente un mortal.
+Kenji: Voy a hacer un mortal. Y va a ser precioso.
+Rika: ¡Pues quedamos allí después de clase! ¡No lleguéis tarde!
+=> END
+
+# --- Westfield Parquesur --------------------------------------------------------------
+
+~ dia1_camas
+Westfield Parquesur. Música alta, calcetines antideslizantes y un monitor que repite las normas sin mucha fe.
+Kenji: Atención, público. Lo que vais a ver a continuación no lo intentéis en casa. Esto va por ti, mi amor.
+Yuna: Te estoy grabando, cielo. Sin presión.
+Kenji intenta un mortal. Aterriza de espaldas, rebota dos veces y se queda mirando el techo.
+Shiori: Lo he grabado. Para la posteridad.
+Yuna: Yo también. Desde dos ángulos.
+Kenji: Ha sido intencionado. Es arte contemporáneo.
+Rika: ¡Ren, salta conmigo! ¡A la de tres!
+- (Saltar con todas tus fuerzas.) [#decidido, #desenfadado]
+	Saltas tan alto que, durante un segundo, no piensas en nada. Ni en la pantalla, ni en la cama, ni en mañana.
+	Rika: ¡Eso! ¡Así se hace!
+- (Saltar sin muchas ganas.) [#reservado]
+	Rika: ¡Venga ya, que no muerde! ¡Más alto!
+	Al tercer salto se te escapa una risa. No recuerdas la última vez.
+Shiori: Ren se está riendo. Kenji, apúntalo.
+Kenji: Lunes, dieciséis de noviembre. Ren se ríe. Hito histórico.
+=> END
+
+~ dia1_camas_fundido
+Una hora después, nadie siente las piernas.
+Rika ha perdido un calcetín. Kenji insiste en que el mortal le salió «casi». Shiori tiene el vídeo, por si alguien lo duda.
+=> END
+
+~ dia1_despedida
+Al salir ya está anocheciendo. El aparcamiento empieza a encender sus farolas.
+Rika: Me duele todo. Mañana no me levanto.
+Shiori: Mañana hay clase a primera hora.
+Rika: Por eso lo digo.
+Un coche se para junto a la acera y baja la ventanilla.
+Madre de Kenji: ¡Kenji! ¡Yuna! Subid, que os acerco. ¡Ren, mi niño! ¿Te llevo a ti también?
+Ren: No hace falta, gracias. Voy andando, que está aquí al lado.
+Madre de Kenji: Pues dale recuerdos a tu madre. ¡Y abrígate!
+Kenji: Bueno, cada mochuelo a su olivo. Ren, contesta los mensajes, que te conozco.
+- Que sí, pesado. [#bromista]
+	Kenji: Eso dices siempre. Y luego, nada.
+- Gracias por sacarme de casa. [#cariñoso, #franco]
+	Kenji: ...Vale, eso no me lo esperaba. Me has pillado sin respuesta graciosa.
+	Kenji: De nada, tío. Cuando quieras.
+Cada uno se va a su casa.
+=> END
+
+# --- Casa -----------------------------------------------------------------------------
+
+~ dia1_casa
+Mamá: ¿Ren? ¿Ya estás aquí, cariño? ¿Has cenado?
+Ren: Algo en Parquesur. Buah... Estoy hecho polvo.
+Mamá: Pues a la cama, que mañana hay clase. Me alegro de que hayas salido con los chicos.
+$> Story.text("kenji", "El vídeo del mortal ya está en el grupo. Ni se te ocurra silenciarlo.")
+Ren: Ni pantalla ni nada. A dormir.
+Te dejas caer en la cama con la ropa puesta. Esta noche ni siquiera oyes el frigorífico.
+=> END

@@ -42,6 +42,13 @@ const GLOW_MARGIN := 40.0
 		dim = value
 		_update_shader()
 
+## Si es true, la imagen ocupa exactamente el rectángulo del control aunque
+## eso cambie sus proporciones (objetos encajados sobre un fondo).
+@export var stretch: bool = false:
+	set(value):
+		stretch = value
+		queue_redraw()
+
 ## Desplazamiento horizontal del dibujo (para animar entradas).
 @export var slide: float = 0.0:
 	set(value):
@@ -117,24 +124,39 @@ func _gui_input(event: InputEvent) -> void:
 # --- Geometría -----------------------------------------------------------------
 
 ## Rectángulo (en coordenadas locales) donde se dibuja la imagen, sin margen.
+## Ocupa toda la altura salvo que la imagen sea más ancha que el control
+## (p. ej. criaturas apaisadas): entonces se ajusta al ancho, apoyada abajo.
 func image_rect() -> Rect2:
 	if texture == null:
 		return Rect2()
+	if stretch:
+		return Rect2(Vector2(slide, 0.0), size)
 	var tex_size := texture.get_size()
-	var h := size.y
-	var w := h * tex_size.x / tex_size.y
-	return Rect2(Vector2((size.x - w) * 0.5 + slide, 0.0), Vector2(w, h))
+	var s := _scale()
+	var w := tex_size.x * s
+	var h := tex_size.y * s
+	return Rect2(Vector2((size.x - w) * 0.5 + slide, size.y - h), Vector2(w, h))
+
+
+## Escala por eje entre la textura y la pantalla.
+func _scale2() -> Vector2:
+	if stretch and texture:
+		return size / texture.get_size()
+	return Vector2.ONE * _scale()
 
 
 func _scale() -> float:
-	return size.y / texture.get_size().y if texture else 1.0
+	if texture == null:
+		return 1.0
+	var tex_size := texture.get_size()
+	return minf(size.y / tex_size.y, size.x / tex_size.x) if size.x > 0.0 else size.y / tex_size.y
 
 
 func _draw() -> void:
 	if texture == null:
 		return
 	var rect := image_rect()
-	var s := _scale()
+	var s := _scale2()
 	var m := GLOW_MARGIN
 	# Dibujamos un rectángulo más grande (salvo por abajo) con UV fuera de rango:
 	# el shader los trata como transparentes y ahí pinta el halo.
@@ -153,7 +175,7 @@ func head_point() -> Vector2:
 		return Vector2(rect.get_center().x, rect.position.y)
 	if _head_px == Vector2(-1, -1):
 		_head_px = _find_head(img)
-	return rect.position + _head_px * _scale()
+	return rect.position + _head_px * _scale2()
 
 
 func _find_head(img: Image) -> Vector2:
@@ -199,7 +221,7 @@ func _has_point(point: Vector2) -> bool:
 		return false
 	if _get_image() == null:
 		return true
-	var px := Vector2i((point - rect.position) / _scale())
+	var px := Vector2i((point - rect.position) / _scale2())
 	px = px.clamp(Vector2i.ZERO, _image.get_size() - Vector2i.ONE)
 	return _image.get_pixelv(px).a > 0.3
 
