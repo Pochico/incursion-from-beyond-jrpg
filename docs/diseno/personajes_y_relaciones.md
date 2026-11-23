@@ -119,7 +119,7 @@ Una respuesta de Ren puede repetirse una vez por cada personaje que cumpla unos 
 ```
 
 - Salen de más a menos afecto por Ren. Nunca salen Ren, quien acaba de hablar (el que pregunta) ni el interlocutor. Si nadie cumple, la opción no aparece.
-- Filtros (opcionales, se combinan): cualquier dimensión de lo que siente por Ren (`afecto>=15`, `confianza>30`…), `tramo>=cercana`, `genero=mujer|hombre`, `joven` / `adulto`, `entre=rika|akane`, `presente` / `ausente`. Género y edad salen de la ficha (`identity.gender`, `identity.generation`).
+- Filtros (opcionales, se combinan): cualquier dimensión de lo que siente por Ren (`afecto>=15`, `confianza>30`…), `tramo>=cercana`, `genero=mujer|hombre`, `joven` / `adulto`, `edad<=45`, `entre=rika|akane`, `presente` / `ausente`. Salen de la ficha: `identity.gender`, `identity.generation` y `identity.age` (de momento solo las madres: Mamá 41, madre de Kenji 44; quien no tiene edad no cumple un filtro de edad).
 - Al elegirla, `Story.persona` guarda a quién se eligió: `{persona}` sirve en las líneas siguientes y `if Story.persona == "rika"` para ramas propias. La persona elegida cuenta como mencionada (se da por aludida si está presente).
 - Código: `Social.PERSON_TAG`, `Social.person_candidates`, `ConversationView._choices_from`.
 

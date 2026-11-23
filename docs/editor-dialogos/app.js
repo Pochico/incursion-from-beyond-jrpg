@@ -575,7 +575,7 @@
 
 	// Opciones «por persona» ([#persona] + filtros): réplica de Social.person_candidates.
 	const PERSON = "persona", PERSON_PH = "{persona}";
-	const PERSON_WORDS = ["joven", "adulto", "presente", "ausente"], PERSON_KEYS = ["genero", "entre", "tramo"];
+	const PERSON_WORDS = ["joven", "adulto", "presente", "ausente"], PERSON_KEYS = ["genero", "entre", "tramo", "edad"];
 	function isPersonFilter(t) {
 		if (PERSON_WORDS.includes(t)) return true;
 		for (const op of M.OPS) { const i = t.indexOf(op); if (i > 0) { const k = t.slice(0, i); return PERSON_KEYS.includes(k) || Object.prototype.hasOwnProperty.call(S.cfg.dims, k); } }
@@ -612,6 +612,7 @@
 					const k = f.slice(0, i), arg = f.slice(i + op.length);
 					if (k === "genero") return arg.split("|").includes(idt.gender || "") !== (op === "!=");
 					if (k === "entre") return arg.split("|").includes(id) !== (op === "!=");
+					if (k === "edad") return idt.age !== undefined && cmp(Number(idt.age), op, parseFloat(arg) || 0);
 					if (k === "tramo") return cmp(S.cfg.tiers.indexOf(M.tierFromDims(d)), op, S.cfg.tiers.indexOf(arg));
 					return cmp(d[k] || 0, op, parseFloat(arg) || 0);
 				}

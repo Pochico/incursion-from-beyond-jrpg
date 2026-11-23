@@ -42,11 +42,12 @@ const MENTION_TAG := "alude"
 ##   - Tuve una cita con {persona}. [#persona, #afecto>=25, #genero=mujer, #joven, #bromista]
 ## Filtros (todos opcionales; nunca salen Ren ni quien acaba de hablar ni el interlocutor):
 ##   afecto>=25 (cualquier dimensión de lo que siente por Ren; =, !=, <, >, <=, >=)
-##   tramo>=cercana · genero=mujer|hombre · joven · adulto · entre=rika|akane
+##   tramo>=cercana · genero=mujer|hombre · joven · adulto · edad<=45 (identity.age;
+##   quien no tiene edad en la ficha no cumple) · entre=rika|akane
 ##   presente · ausente
 const PERSON_TAG := "persona"
 const PERSON_WORDS: Array[String] = ["joven", "adulto", "presente", "ausente"]
-const PERSON_KEYS: Array[String] = ["genero", "entre", "tramo"]
+const PERSON_KEYS: Array[String] = ["genero", "entre", "tramo", "edad"]
 
 const OK := "ok"
 const TIRED := "tired"        ## Se ha hartado: «bueno, ya, ¿no?»
@@ -257,6 +258,8 @@ static func _person_matches(id: String, f: String) -> bool:
 				return identity.get("gender", "") in arg.split("|") if op != "!=" else not identity.get("gender", "") in arg.split("|")
 			"entre":
 				return id in arg.split("|") if op != "!=" else not id in arg.split("|")
+			"edad":
+				return identity.has("age") and _cmp(float(identity.age), op, float(arg))
 			"tramo":
 				var tiers := ["hostil", "fria", "neutral", "cercana", "intima"]
 				return _cmp(tiers.find(tier(id, CharacterDB.PROTAGONIST)), op, tiers.find(arg))

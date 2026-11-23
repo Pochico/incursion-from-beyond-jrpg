@@ -106,7 +106,8 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   (`Social.person_candidates`; excluye a Ren, a quien pregunta y al
   interlocutor). `Story.persona` guarda la elegida. El editor web replica los
   filtros en `personCandidates` (app.js): si cambias unos, cambia los otros.
-  Las fichas tienen `identity.gender` y `identity.generation`.
+  Las fichas tienen `identity.gender`, `identity.generation` y, las madres,
+  `identity.age` (Mamá 41, madre de Kenji 44).
 - `flujo.js` convierte el texto de un cue en un árbol por sangría (líneas,
   opciones `- `, variantes `%`, `if`, `$>`, `=>`) para el diagrama editable de
   la conversación, y lo reescribe cambiando solo las líneas editadas. Los 162
