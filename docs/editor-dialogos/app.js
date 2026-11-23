@@ -1013,7 +1013,7 @@
 			<div class="field"><label>Rama</label><input class="input" id="a-branch" value="${esc(S.repo.branch)}" autocapitalize="off"></div>
 			<div class="field"><label>Token de GitHub (solo para guardar)</label>
 				<input class="input" id="a-token" type="password" value="${esc(S.token)}" placeholder="github_pat_…" autocomplete="off">
-				<div class="small muted" style="margin-top:6px">Créalo en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained token</a>: <i>Repository access</i> → solo este repositorio; <i>Permissions</i> → <b>Contents: Read and write</b>. Se guarda solo en este navegador.</div></div>
+				<div class="small muted" style="margin-top:6px">Créalo en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained token</a>: <i>Repository access</i> → <i>Only select repositories</i> → este repositorio. En <i>Permissions</i>, pulsa <b>+</b>, marca <b>Contents</b> y cierra la lista; luego cambia su acceso de <i>Read-only</i> a <b>Read and write</b>. <i>Metadata</i> (solo lectura) se añade sola. No hace falta ningún otro permiso. Se guarda solo en este navegador.</div></div>
 			<div class="row" style="margin-bottom:16px"><button class="btn lime" id="a-ok">Guardar y recargar</button><button class="btn ghost" id="a-forget">Olvidar token</button></div>
 			<h3>Sin conexión</h3>
 			<p class="small muted">Abre .dialogue de tu ordenador o móvil y descarga los cambios al terminar.</p>

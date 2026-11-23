@@ -256,7 +256,10 @@ App web en `docs/editor-dialogos/`. Lee los diálogos del repositorio en GitHub,
 - **Editar**: las reglas `# cuando:` con controles (momento, fase, ánimo, tramo, dimensiones de la relación, «una vez», «visto», «sabe», indicadores, presentes, interacciones de hoy, resultado del combate, y «no» para negar), una frase que explica cuándo sale, el peso y la puntuación. El texto del diálogo con atajos y vista previa. Crear, renombrar (actualiza los `visto` y `=>` que lo usan), mover de archivo y borrar.
 - **Simular**: eliges personaje, momento y situación (fase, ánimo, relación, interacciones, resultado, presentes, lo que sabe, indicadores, lo ya visto) y dice qué diálogo sale, con qué puntuación y por qué falla cada uno de los demás. Usa el mismo selector que el juego (comprobado con `tools/editor_dialogos/paridad.sh`). «Inicio de partida» parte de las fichas; «Cargar partida…» lee un `partida.json`.
 - **Guardar**: muestra las diferencias y sube un solo commit a `main` (solo los cues tocados cambian en el archivo). Si alguien ha cambiado ese archivo en GitHub mientras tanto, no sube nada y avisa. Sin conexión: abre `.dialogue` locales y descárgalos.
-- **Token**: para guardar hace falta un *fine-grained token* de GitHub con acceso solo a este repositorio y permiso **Contents: Read and write** (⋯ → Ajustes). Se guarda solo en ese navegador.
+- **Token**: para guardar hace falta un *fine-grained token* de GitHub (github.com → Settings → Developer settings → Fine-grained tokens → Generate new token):
+  - *Repository access* → *Only select repositories* → este repositorio.
+  - *Permissions* → botón **+** → marca **Contents** → cambia su acceso de *Read-only* a **Read and write**. *Metadata* (solo lectura) se añade sola; no hace falta nada más.
+  - Pégalo en la app en ⋯ → Ajustes. Se guarda solo en ese navegador.
 
 ## Cómo añadir contenido
 
