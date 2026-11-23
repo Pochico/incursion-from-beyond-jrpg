@@ -7,7 +7,7 @@ JRPG híbrido con novela visual, ambientado en un mundo cotidiano y ligeramente 
 ## Versión de pruebas para móvil
 
 - **Jugar en el navegador** (también en el móvil): https://pochico.github.io/incursion-from-beyond-jrpg/pruebas/
-- **APK para Android** y explicaciones en esa misma página.
+- **APK para Android**: no se sube al repositorio; se genera desde la rama `pruebas-movil` y se entrega aparte.
 - Se genera desde la rama `pruebas-movil` (controles táctiles en la mazmorra, «atrás» de Android, orientación horizontal). Ver `CLAUDE.md`.
 
 ## Requisitos

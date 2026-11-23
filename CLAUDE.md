@@ -127,10 +127,11 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   sin hilos, con aviso de «gira el móvil»). Firma por variables de entorno
   (`GODOT_ANDROID_KEYSTORE_RELEASE_*`), nunca claves en el repo.
 - Publicación: la web exportada va en `docs/pruebas/web/` de `main` (GitHub
-  Pages solo sirve `main/docs`); la APK en `descargas/incursion.apk` de la rama
-  `pruebas-movil` (esta sesión no puede crear *releases*). Página:
-  `docs/pruebas/index.html`. Cada exportación nueva pesa ~85 MB (web) y ~64 MB
-  (APK) en el historial: no las regeneres sin necesidad.
+  Pages solo sirve `main/docs`). **La APK no se sube al repositorio** (ni a la
+  rama ni a `main`): se genera y se le pasa al usuario directamente (el
+  usuario pidió borrar del historial la que se subió). Página:
+  `docs/pruebas/index.html`. Cada exportación web nueva pesa ~85 MB en el
+  historial: no la regeneres sin necesidad.
 - En la nube no hay SDK de Android de Google: basta un SDK mínimo con `adb`,
   `apksigner` y `zipalign` de apt (`platform-tools/`, `build-tools/35.0.0/`)
   y las plantillas de 4.7 en `~/.local/share/godot/export_templates/4.7.stable/`.
