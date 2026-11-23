@@ -29,9 +29,43 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 	- Sí, bueno. Más o menos. [#reservado]
 		Kenji: ¿Qué fue? Cuenta, cuenta.
 	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|akane|rika|yuna|madre_kenji, #atrevido, #franco]
-		if Story.persona == "rika" and Story.present("rika")
-			Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
-		Kenji: ¡¿Qué me dices?!
+		if Story.persona == "yuna"
+			$> Story.set_flag("dia1_cita_yuna")
+			Kenji: ...
+			Kenji: ¿Con Yuna? ¿Con MI Yuna?
+			Kenji: Tío, eso no se dice ni en broma. Que me da algo.
+			- Es broma, hombre. Relaja. [#conciliador]
+				Kenji: Ya sé que es broma. Pero me ha dado un vuelco el corazón igual. Estas cosas no, loco.
+				$> Story.change("kenji", "confianza", -1)
+			- Pregúntale a ella, a ver qué te dice. [#provocador]
+				Kenji: Pues mira, se lo pienso preguntar. Y como me diga que sí, te reto a duelo. A Tekken.
+				$> Story.change("kenji", "confianza", -2)
+				$> Story.change("kenji", "resentimiento", 2)
+		elif Story.persona == "madre_kenji"
+			$> Story.set_flag("dia1_cita_madre_kenji")
+			Kenji: ¿Con mi madre? JAJAJAJA.
+			Kenji: Tío, que te ponga un táper de croquetas en la mano no es una cita. Es mi madre siendo mi madre.
+			Kenji: Ay, no puedo. Se lo pienso contar. Le va a encantar, que siempre dice que eres su otro hijo.
+		else
+			Kenji: ¡¿Qué me dices?!
+			if Story.persona == "rika"
+				$> Story.set_flag("dia1_cita_rika")
+				Kenji: ¿Rika? ¿La de tu clase? ¿La que te pide los deberes todos los lunes?
+				Kenji: No me lo creo, loco. Tú no eres capaz de hablar con ella sin mirar al suelo.
+				- Pues créetelo. [#decidido]
+					Kenji: Vale, vale. Cuando llegue se lo pregunto. Como me mientas, te enteras.
+				- Bueno... cita, cita, tampoco. [#dubitativo]
+					Kenji: Eso ya me cuadra más. Ya me lo contará ella, que seguro que tiene otra versión.
+			elif Story.persona == "shiori"
+				$> Story.set_flag("dia1_cita_shiori")
+				Kenji: ¿Shiori? ¿La que habla como un diccionario?
+				Kenji: Ren, tú y yo nos conocemos desde los seis años. Eso no te lo crees ni tú.
+				Kenji: ¿Qué hicisteis, leer en silencio en la biblioteca? Porque eso no cuenta como cita.
+			elif Story.persona == "akane"
+				$> Story.set_flag("dia1_cita_akane")
+				Kenji: ¿Akane? ¿La de las recreativas? ¿La de la banda punk?
+				Kenji: Tío, esa te come vivo. Bueno, ya me contarás si sobreviviste. Por lo visto, sí.
+				Kenji: Esta tarde en Parquesur pasamos por las recreativas y se lo pregunto a ella.
 - Meh, un poco mierdolo, pero no terrible. [#franco]
 	Kenji: ¿Y eso? ¿Ha pasado algo?
 	- No, simplemente un poco rollo. [#evasivo]
@@ -57,9 +91,27 @@ Yuna: Hola, Ren. Este no ha parado en todo el finde con que no le contestabas.
 	Yuna: Pues casi suspende. Ha mirado el móvil cuarenta veces.
 - Gracias por cuidar de él. [#cariñoso]
 	Yuna: Alguien tiene que hacerlo. Tú también, ¿eh?
+if Story.flag("dia1_cita_yuna")
+	Kenji: Amor. Que sepas que Ren va diciendo por ahí que el finde tuvisteis una cita.
+	Yuna: ¿Una cita? El sábado no salí de casa. Estuve estudiando.
+	Yuna: Ren, si es una broma, no tiene gracia. Mira cómo lo has dejado.
+	Kenji: No me ha dejado de ninguna manera. Estoy perfectamente. ...Un poco tocado, quizá.
+	Yuna: Ya está, osito. Ya está.
+	$> Story.change("yuna", "afecto", -2)
 Rika: ¡Buenos días, chicos! Uy, ya están los tortolitos dando envidia a primera hora.
 Kenji: Envidia sana, Rika. Envidia sana.
 Yuna: Buenos días, Rika.
+if Story.flag("dia1_cita_rika")
+	Kenji: Oye, Rika. Dice Ren que el finde tuvisteis una cita.
+	Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
+	Rika: Fuimos a por un bubble tea y me acompañó a casa. Eso es... logística, cielo.
+	Kenji: Logística. Ya.
+	Rika: ...Aunque si la próxima vez paga él, igual lo reconsidero.
+	- La próxima pago yo. [#atrevido, #coqueto]
+		Rika: Uy. Anotado, ¿eh? Que luego me acuerdo de todo.
+		$> Story.change("rika", "atraccion", 2)
+	- Fue un bubble tea, Kenji. Tampoco te emociones. [#reservado]
+		Rika: Eso, eso. Un bubble tea. ...Muy rico, por cierto.
 Rika: Ren, ¿hiciste los ejercicios del viernes? Dime que sí y que me los dejas.
 - Sí, toma. [#cariñoso]
 	Rika: ¡Te quiero! Bueno, quiero a tus ejercicios. Pero a ti un poco también.
@@ -71,6 +123,12 @@ Rika: Ren, ¿hiciste los ejercicios del viernes? Dime que sí y que me los dejas
 Shiori: Buenos días. Los ejercicios del viernes estaban en el libro, Rika. Con las soluciones al final.
 Rika: ¿Al final? ¿Desde cuándo?
 Shiori: Desde siempre.
+if Story.flag("dia1_cita_shiori")
+	Kenji: Shiori, una pregunta rápida. ¿Es verdad que el finde tuviste una cita con Ren?
+	Shiori: No.
+	Shiori: El sábado estuve en la biblioteca municipal de diez a dos y después en casa. Si alguien dice otra cosa, que lo demuestre.
+	Rika: Uy, qué frío ha hecho de repente. ¿Y por qué lo dice Ren, entonces?
+	Shiori: Pregúntaselo a él. Aunque, si lo dice para que lo dejéis en paz, entiendo la estrategia.
 Se abre la puerta. Entra la profesora con una pila de fotocopias y el café a medio terminar.
 Profesora: Buenos días. Sentaos, que hoy empezamos tema nuevo.
 Profesora: Toca aprender a derivar. Id abriendo los libros por la página ciento doce.
@@ -125,6 +183,15 @@ Rika: ¡Ren, salta conmigo! ¡A la de tres!
 	Al tercer salto se te escapa una risa. No recuerdas la última vez.
 Shiori: Ren se está riendo. Kenji, apúntalo.
 Kenji: Lunes, dieciséis de noviembre. Ren se ríe. Hito histórico.
+if Story.flag("dia1_cita_akane")
+	Kenji: Por cierto, he pasado por las recreativas a preguntarle a Akane por vuestra «cita».
+	Kenji: Me ha mirado tres segundos sin pestañear y me ha dicho: «¿Y a ti qué te importa?».
+	Kenji: Eso es un sí, tío. O un «te voy a matar». Con Akane nunca se sabe.
+	Rika: ¿Ren y Akane? ¿La punki? ...Vale, ahora sí que quiero detalles.
+elif Story.flag("dia1_cita_madre_kenji")
+	Kenji: Le he contado a mi madre lo de vuestra «cita».
+	Kenji: Me ha mandado tres corazones, un «ay, mi niño» y una foto de un táper. Dice que el viernes cenas en casa.
+	Yuna: Tu madre es la mejor, cielo.
 => END
 
 ~ dia1_camas_fundido
