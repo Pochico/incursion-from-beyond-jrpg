@@ -6,7 +6,12 @@ JRPG híbrido con novela visual, ambientado en un mundo cotidiano y ligeramente 
 
 ## Requisitos
 
-- [Godot 4.4](https://godotengine.org/download) o superior (versión estándar, sin .NET).
+- [Godot 4.7](https://godotengine.org/download) (versión estándar, sin .NET).
+- Al clonar, activa los hooks de git del proyecto (una vez por copia):
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+  Impiden subir cambios sin actualizar el contexto de `CLAUDE.md` (ver ese archivo).
 
 ## Cómo ejecutarlo
 
