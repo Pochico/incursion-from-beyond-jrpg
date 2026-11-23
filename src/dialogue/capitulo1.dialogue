@@ -28,7 +28,7 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 	Kenji: Uhhh ¿y eso? ¿Hiciste algo en especial?
 	- Sí, bueno. Más o menos. [#reservado]
 		Kenji: ¿Qué fue? Cuenta, cuenta.
-	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15]
+	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|akane|rika|yuna|madre_kenji, #atrevido, #franco]
 		if Story.persona == "rika" and Story.present("rika")
 			Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
 		Kenji: ¡¿Qué me dices?!
