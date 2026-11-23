@@ -8,26 +8,32 @@
 ~ dia1_despertar
 Lunes, siete y veinte.
 La alarma suena por tercera vez. La apagas sin abrir los ojos.
-Ren: Cinco minutos más...
-Mamá: ¡Ren! ¡Que son y veinte, cariño! ¡Que llegas tarde!
+Ren: Ay no...
+Mamá: ¡Ren! ¡Que son y veinte! ¡Que llegas tarde!
 Ren: Ya voy, mamá...
-Mamá: Te he dejado el desayuno en la mesa. ¡Y abrígate, que hace frío!
+Mamá: Te he dejado el desayuno en la mesa. ¡Y abrígate, que hace frío! Yo ya me voy a trabajar.
 $> Story.text("kenji", "¿Vienes hoy o te doy por muerto? Te espero en mates.")
 El móvil vibra encima de la mesilla. Es Kenji.
-Ren: Vale, vale. Ya voy.
+Ren: Pero si le voy a ver ahora, qué manía tiene.
 => END
 
 # --- Instituto ------------------------------------------------------------------------
 
 ~ dia1_clase
 Aula de 2.º B. Faltan unos minutos para Matemáticas II, la única asignatura en la que juntan las dos clases.
-Kenji: ¡Ren! Desde el viernes sin contestar un mensaje, tío. ¿Qué tal el finde?
-- Bien. Tranquilo. [#reservado]
-	Kenji: «Tranquilo». O sea, que no has salido de tu cuarto. Te conozco.
-- Épico. He dormido catorce horas. [#bromista, #desenfadado]
+Kenji: ¡Ren! Desde el viernes sin contestar un mensaje, loco. ¿Qué tal el finde?
+- Bien. Sin más, no hay mucha novedad [#reservado]
+	Kenji: «Sin más». Vamos que regular...
+- De super puta madre, socio. [#bromista, #desenfadado]
 	Kenji: Récord personal. Estoy orgulloso de ti, de verdad.
-- No me acuerdo, la verdad. [#franco]
-	Kenji: Eso es o muy preocupante o muy legendario. No hay término medio.
+	- Respuesta 1
+		{{Story.speaker}}: …
+	- Respuesta 2
+		{{Story.speaker}}: …
+- Meh, un poco mierdolo, pero no terrible. [#franco]
+	Kenji: ¿Y eso? ¿Ha pasado algo?
+	- No, simplemente un poco rollo. [#evasivo]
+		Kenji: Bueno, mientras solo sea eso...
 Kenji: Yo el sábado estuve grabando hasta las tantas. Me salió una base que flipas. Luego te la paso.
 Kenji: Y el domingo, comida familiar con Yuna. Mi abuela le preguntó tres veces cuándo nos casamos. Tres.
 - ¿Y qué le dijo Yuna? [#curioso]
