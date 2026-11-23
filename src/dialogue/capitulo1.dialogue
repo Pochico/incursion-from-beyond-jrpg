@@ -104,17 +104,17 @@ Yuna: Buenos días, Rika.
 if Story.flag("dia1_cita_rika")
 	Kenji: Oye, Rika. Dice Ren que el finde tuvisteis una cita.
 	Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
-	Rika: Fuimos a por un bubble tea y me acompañó a casa. Eso es... logística, cielo.
-	Kenji: Logística. Ya.
-	Rika: ...Aunque si la próxima vez paga él, igual lo reconsidero.
-	- La próxima pago yo. [#atrevido, #coqueto]
-		Rika: Uy. Anotado, ¿eh? Que luego me acuerdo de todo.
+	Rika: Fui a estudiar a su casa porque sé que se le da bien explicar. Ahora a todo le llaman una cita.
+	Kenji: Ya... ¿Y por qué no me avisasteis?
+	Rika: Así que eso vas diciendo, ¿eh? ¿Es lo que querrías?
+	- Y si fuese así ¿qué dirías? [#atrevido, #coqueto]
+		Rika: Eh, eh, echa el freno magdaleno. Somos amigos. Lo dices de coña, ¿no?
 		$> Story.change("rika", "atraccion", 2)
 	- Fue un bubble tea, Kenji. Tampoco te emociones. [#reservado]
 		Rika: Eso, eso. Un bubble tea. ...Muy rico, por cierto.
 Rika: Ren, ¿hiciste los ejercicios del viernes? Dime que sí y que me los dejas.
 - Sí, toma. [#cariñoso]
-	Rika: ¡Te quiero! Bueno, quiero a tus ejercicios. Pero a ti un poco también.
+	Rika: ¡Te quiero! Bueno, quiero tus ejercicios, pero para ti también hay un poquito
 - No los hice. [#franco]
 	Rika: ¿Tú tampoco? Pues ya somos dos. Tres, que Kenji seguro que tampoco.
 	Kenji: Me ofende que lo des por hecho. Aunque aciertas.
@@ -134,7 +134,7 @@ Profesora: Buenos días. Sentaos, que hoy empezamos tema nuevo.
 Profesora: Toca aprender a derivar. Id abriendo los libros por la página ciento doce.
 Kenji: (En voz baja.) Qué coñazo, tío...
 Shiori: Espabila, Kenji. Que al final no llegas a selectividad.
-Kenji: Gracias por tu apoyo, Shiori. Siempre tan cálida.
+Kenji: ¿Así me animas? Qué solo estoy...¡QUÉ SOLO!
 Yuna: (Bajito.) Venga, osito, que tú puedes. Luego te lo explico yo.
 Profesora: ¿Algún comentario que queráis compartir con la clase?
 Kenji: No, no. Le decía que me encantan las derivadas.
