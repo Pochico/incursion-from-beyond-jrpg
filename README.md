@@ -4,6 +4,12 @@ JRPG híbrido con novela visual, ambientado en un mundo cotidiano y ligeramente 
 
 ![Menú de inicio](docs/capturas/menu_inicio.webp)
 
+## Versión de pruebas para móvil
+
+- **Jugar en el navegador** (también en el móvil): https://pochico.github.io/incursion-from-beyond-jrpg/pruebas/
+- **APK para Android** y explicaciones en esa misma página.
+- Se genera desde la rama `pruebas-movil` (controles táctiles en la mazmorra, «atrás» de Android, orientación horizontal). Ver `CLAUDE.md`.
+
 ## Requisitos
 
 - [Godot 4.7](https://godotengine.org/download) (versión estándar, sin .NET).

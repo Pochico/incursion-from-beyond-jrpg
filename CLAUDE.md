@@ -114,6 +114,27 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   cues actuales se reconstruyen idénticos; si añades sintaxis nueva de
   Dialogue Manager a los diálogos, comprueba que `Flujo.kind` la reconoce.
 
+## Exportar (APK y web) y rama `pruebas-movil`
+
+- Godot no exporta el archivo original de un recurso importado: los `.dialogue`
+  viajarían solo compilados, sin las reglas `# cuando:`. El complemento
+  `addons/incursion_export` (activado en `project.godot`) añade su texto al
+  paquete. No lo quites o, en una versión exportada, no saldrá ninguna
+  conversación del selector.
+- La rama **`pruebas-movil`** tiene lo necesario para móvil: cruceta táctil en
+  la mazmorra (`App.is_touch()`), «atrás» de Android = Esc, orientación
+  horizontal, ETC2/ASTC y `export_presets.cfg` (Android arm64 sin Gradle y Web
+  sin hilos, con aviso de «gira el móvil»). Firma por variables de entorno
+  (`GODOT_ANDROID_KEYSTORE_RELEASE_*`), nunca claves en el repo.
+- Publicación: la web exportada va en `docs/pruebas/web/` de `main` (GitHub
+  Pages solo sirve `main/docs`); la APK en `descargas/incursion.apk` de la rama
+  `pruebas-movil` (esta sesión no puede crear *releases*). Página:
+  `docs/pruebas/index.html`. Cada exportación nueva pesa ~85 MB (web) y ~64 MB
+  (APK) en el historial: no las regeneres sin necesidad.
+- En la nube no hay SDK de Android de Google: basta un SDK mínimo con `adb`,
+  `apksigner` y `zipalign` de apt (`platform-tools/`, `build-tools/35.0.0/`)
+  y las plantillas de 4.7 en `~/.local/share/godot/export_templates/4.7.stable/`.
+
 ## Cómo probar los cambios
 
 - **En la nube (Linux)**: descarga Godot 4.7 si no está (`https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip`) en el scratchpad, no en el repo.
