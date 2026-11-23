@@ -93,6 +93,20 @@ Momentos:
 | `afecto >= N` | Cualquier dimensión de lo que siente por Ren. |
 | `resultado = gana` | Dato del momento (combates). |
 
+### Menciones: darse por aludido
+
+- **Mecánica.** Una respuesta de Ren puede mencionar a alguien con la etiqueta `#alude=rika` (varios: `#alude=rika|kenji`). Si el mencionado está presente, se da por aludido: reacciona a los estilos y posturas de esa respuesta con peso completo, como el interlocutor, en vez de la mitad que reciben los oyentes. Si no está presente, no se entera. Se registra en el evento `choice` (`mentions`). Código: `Social.on_choice` y `MENTION_TAG`.
+- **Guion.** Para que el aludido conteste, se pone debajo de la línea (o dentro de la rama de la respuesta) un bloque `if Story.present("rika")` con su réplica. Si no está, la conversación sigue sin ella.
+
+```
+- Pregúntale a Rika, que siempre dice que brillo. [#bromista, #alude=rika]
+	if Story.present("rika")
+		Rika: ¡Eh! Yo no he dicho eso nunca.
+	Kenji: ¡Ja! Ese es mi Ren.
+```
+
+El editor de diálogos web hace las dos cosas con botones («Menciona a…» y «Si está presente, contesta…») y el simulador abre esa rama según los presentes marcados.
+
 Cualquier condición acepta `no` delante. Los cues ya mostrados se guardan en los indicadores como `visto:<cue>`.
 
 Al exportar el juego hay que incluir `*.dialogue` en «Filtros para exportar archivos que no son recursos»: el selector lee las reglas de los archivos originales.

@@ -35,6 +35,9 @@ const OBSERVER_WEIGHT := 0.5
 ## Intentos extra que se aguantan según la acción (hablar cansa menos que ligar).
 const TOLERANCE_BONUS := {"talk": 1}
 
+## Etiqueta de las opciones que mencionan a alguien: [#alude=rika].
+const MENTION_TAG := "alude"
+
 const OK := "ok"
 const TIRED := "tired"        ## Se ha hartado: «bueno, ya, ¿no?»
 const REFUSED := "refused"    ## Mal día: no quiere hablar
@@ -164,14 +167,17 @@ static func begin_interaction(target: String, action: String, force: bool = fals
 
 ## Ren elige una opción de diálogo hablando con `target`. Reaccionan todos los
 ## presentes con ficha: el interlocutor del todo; el resto, a medias.
-## Opción: {styles: ["franco", ...], stance: {tema: postura}}.
+## Los mencionados (`mentions`) que están presentes se dan por aludidos y
+## reaccionan del todo, como el interlocutor. Si no están, no se enteran.
+## Opción: {styles: ["franco", ...], stance: {tema: postura}, mentions: ["rika"]}.
 static func on_choice(target: String, choice: Dictionary) -> void:
 	var styles: Array = choice.get("styles", [])
 	var stance: Dictionary = choice.get("stance", {})
+	var mentions: Array = choice.get("mentions", [])
 	if styles.is_empty() and stance.is_empty():
 		return
 	GameState.record("choice", CharacterDB.PROTAGONIST, target,
-			{"styles": styles, "stance": stance, "text": choice.get("text", "")}, present())
+			{"styles": styles, "stance": stance, "mentions": mentions, "text": choice.get("text", "")}, present())
 	# Ya está registrada la interacción en curso: las anteriores de hoy son una menos.
 	var factor := _repeat_factor(interactions_today(target) - 1)
 	for who: String in present():
@@ -185,7 +191,7 @@ static func on_choice(target: String, choice: Dictionary) -> void:
 			_add(deltas, _for_mood(reactions.get("styles", {}).get(style, {}), mood_id))
 		for topic: String in stance:
 			_add(deltas, _for_mood(reactions.get("stances", {}).get(topic, {}).get(stance[topic], {}), mood_id))
-		var weight := factor if who == target else OBSERVER_WEIGHT
+		var weight := factor if who == target else (1.0 if who in mentions else OBSERVER_WEIGHT)
 		_apply(who, deltas, weight, "opción «%s»" % choice.get("text", ""))
 
 

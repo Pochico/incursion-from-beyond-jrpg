@@ -115,7 +115,9 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 	finished.emit()
 
 
-## Opciones disponibles de una línea: {text, next_id, styles, stance}.
+## Opciones disponibles de una línea: {text, next_id, styles, stance, mentions}.
+## `#alude=rika` (o `#alude=rika|kenji`) marca a quién menciona Ren: si está
+## presente, se da por aludido (ver Social.on_choice).
 func _choices_from(line: DialogueLine) -> Array:
 	var out := []
 	for r: DialogueResponse in line.responses:
@@ -123,12 +125,17 @@ func _choices_from(line: DialogueLine) -> Array:
 			continue
 		var styles: Array[String] = []
 		var stance := {}
+		var mentions: Array[String] = []
 		for tag: String in r.tags:
-			if "=" in tag:
+			if tag.begins_with(Social.MENTION_TAG + "="):
+				for who in tag.get_slice("=", 1).split("|", false):
+					if not who in mentions:
+						mentions.append(who)
+			elif "=" in tag:
 				stance[tag.get_slice("=", 0)] = tag.get_slice("=", 1)
 			else:
 				styles.append(tag)
-		out.append({"text": r.text, "next_id": r.next_id, "styles": styles, "stance": stance})
+		out.append({"text": r.text, "next_id": r.next_id, "styles": styles, "stance": stance, "mentions": mentions})
 	return out
 
 

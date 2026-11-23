@@ -285,6 +285,9 @@
 				if (c.kind === "dim" && isNaN(parseFloat(c.arg))) out.push(["err", "La dimensión necesita un número" + n + "."]);
 			}
 		});
+		// Menciones
+		for (const m of cue.body.matchAll(/#alude=([^\],\s]+)/g)) for (const w of m[1].split("|")) if (!charInfo(w)) out.push(["warn", "Menciona a «" + w + "», que no es un personaje."]);
+		for (const m of cue.body.matchAll(/Story\.present\("([^"]+)"\)/g)) if (!charInfo(m[1])) out.push(["warn", "Story.present(\"" + m[1] + "\"): no es un personaje."]);
 		// Texto
 		const lines = cue.body.split("\n");
 		lines.forEach((raw, i) => {
@@ -550,6 +553,47 @@
 	// --- Flujo de la conversación (diagrama editable) -------------------------------------------
 
 	const F = window.Flujo;
+	const MENTION = "alude";   // [#alude=rika|kenji]: Ren menciona a alguien (Social.MENTION_TAG)
+
+	/** Etiquetas de una opción separadas en {tags: [...], mentions: [...]}. */
+	function splitMentions(list) {
+		const tags = [], mentions = [];
+		for (const t of list) {
+			if (t.startsWith(MENTION + "=")) for (const w of t.slice(MENTION.length + 1).split("|")) { if (w && !mentions.includes(w)) mentions.push(w); }
+			else tags.push(t);
+		}
+		return { tags, mentions };
+	}
+	const people = () => S.cfg.characters.filter((c) => !c.enemy && c.id !== S.cfg.protagonist);
+	/** Personajes cuyo nombre aparece en un texto. */
+	function namesIn(text) {
+		const t = (text || "").toLowerCase();
+		return people().filter((c) => new RegExp("(^|[^\\p{L}])" + c.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^\\p{L}])", "u").test(t)).map((c) => c.id);
+	}
+
+	/**
+	 * Evalúa una condición de un bloque «if» con la situación del simulador.
+	 * Entiende Story.present/flag/knows/seen/phase y Story.mood/tier == del
+	 * personaje simulado, con and/or/not. Devuelve null si no puede saberlo.
+	 */
+	function evalCond(text, sim) {
+		if (!sim) return null;
+		if (/^else\b/.test(text)) return true;
+		const st = M.simState(sim, S.cfg);
+		const pres = (id) => id === sim.who || st.present(id);
+		const who = (w, f) => (w === sim.who ? String(f()) : "?");
+		let e = text.replace(/^(if|elif)\s+/, "")
+			.replace(/Story\.present\("([^"]+)"\)/g, (a, id) => String(pres(id)))
+			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => String(st.flag(f)))
+			.replace(/Story\.seen\("([^"]+)"\)/g, (a, c) => String(st.seen(c)))
+			.replace(/Story\.phase\("([^"]+)"\)/g, (a, p) => String(st.phaseIndex() >= S.cfg.phases.indexOf(p)))
+			.replace(/Story\.knows\("([^"]+)",\s*"([^"]+)"\)/g, (a, w, ev) => who(w, () => st.knows(w, ev)))
+			.replace(/Story\.mood\("([^"]+)"\)\s*(==|!=)\s*"([^"]+)"/g, (a, w, op, m) => who(w, () => (sim.mood === m) === (op === "==")))
+			.replace(/Story\.tier\("([^"]+)"\)\s*(==|!=)\s*"([^"]+)"/g, (a, w, op, t) => who(w, () => (M.tierFromDims(sim.dims) === t) === (op === "==")));
+		if (!/^(true|false|and|or|not|\(|\)|\s)+$/.test(e)) return null;
+		e = e.replace(/\band\b/g, "&&").replace(/\bor\b/g, "||").replace(/\bnot\b/g, "!");
+		try { return !!Function('"use strict"; return (' + e + ");")(); } catch (err) { return null; }
+	}
 	S.flow = {};   // "archivo/cue" -> {choices: {ruta: índice}, edit: ruta|null, confirm: ruta|null}
 
 	function flowState(cue) {
@@ -570,7 +614,7 @@
 	function styleTags() {
 		const count = {};
 		for (const c of allCues()) for (const m of c.body.matchAll(/^\s*- .*?(\[#[^\]]*\])/gm)) for (const t of F.tagList(m[1])) count[t] = (count[t] || 0) + 1;
-		return Object.keys(count).sort((a, b) => (a.includes("=") - b.includes("=")) || count[b] - count[a]);
+		return Object.keys(count).filter((t) => !t.startsWith(MENTION + "=")).sort((a, b) => (a.includes("=") - b.includes("=")) || count[b] - count[a]);
 	}
 
 	function humanMutation(t) {
@@ -586,17 +630,19 @@
 
 	function humanCond(t) {
 		if (t.startsWith("else")) return "Si no";
-		return t.replace(/^(if|elif)\s+/, "Si ").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
+		return t.replace(/^(if|elif)\s+/, "Si ")
+			.replace(/not\s+Story\.present\("([^"]+)"\)/g, (a, w) => charName(w) + " no está")
+			.replace(/Story\.present\("([^"]+)"\)/g, (a, w) => charName(w) + " está presente").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
 			.replace(/Story\.tier\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "relación de " + charName(w) + " = " + m)
 			.replace(/Story\.knows\("([^"]+)",\s*"([^"]+)"\)/g, (a, w, e) => charName(w) + " sabe «" + e + "»")
 			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => "indicador «" + f + "»");
 	}
 
 	/** HTML del diagrama de un cue. */
-	function flowHTML(cue) {
+	function flowHTML(cue, sim) {
 		const st = flowState(cue);
 		const tree = F.parse(cue.body);
-		const ctx = { st, cue, step: 0 };
+		const ctx = { st, cue, step: 0, sim: sim || null };
 		const body = seqHTML(tree.children, [], ctx);
 		return `<div class="flow">${body || '<div class="empty">Este diálogo está vacío.</div>'}
 			<div class="fadd"><button class="btn sm" data-op="add-end">+ Línea al final</button></div></div>`;
@@ -664,9 +710,21 @@
 		const key = pkey(path.concat(grp[0].idx));
 		let sel = ctx.st.choices[key] || 0;
 		if (sel >= grp.length) sel = 0;
-		const labels = { option: renName() + " responde · elige una opción", variant: "Al azar · sale una de estas", cond: "Según la situación" };
+		// En el simulador, las condiciones que se pueden evaluar eligen su rama solas.
+		let auto = false;
+		if (k === "cond" && ctx.sim) {
+			const vals = grp.map((g) => evalCond(g.n.text, ctx.sim));
+			const hit = vals.findIndex((v) => v === true);
+			if (vals.every((v) => v !== null) || hit >= 0 && vals.slice(0, hit).every((v) => v === false)) { auto = true; sel = hit; }
+		}
+		const labels = { option: renName() + " responde · elige una opción", variant: "Al azar · sale una de estas",
+			cond: auto ? "Según la situación · la de la simulación" : "Según la situación" };
 		const tabLabel = (g, i) => k === "option" ? F.parseOption(g.n.text).body : k === "variant" ? "Variante " + (i + 1) : humanCond(g.n.text);
-		const tabs = grp.map((g, i) => `<button class="ftab ${i === sel ? "on" : ""}" data-op="choose" data-key="${key}" data-i="${i}">${esc(tabLabel(g, i))}</button>`).join("");
+		const tabs = grp.map((g, i) => `<button class="ftab ${i === sel ? "on" : ""}" data-op="choose" data-key="${key}" data-i="${i}" ${auto ? 'data-auto="1"' : ""}>${esc(tabLabel(g, i))}</button>`).join("");
+		if (auto && sel < 0) {
+			return `<div class="fgroup cond"><div class="fglabel">${esc(labels.cond)}</div><div class="ftabs">${tabs}</div>
+				<div class="fbranch"><div class="fmut cond">Con esta situación no se cumple ninguna: no se dice nada aquí.</div></div></div>`;
+		}
 		const add = k === "option" ? `<button class="ftab add" data-op="add-option" data-path="${pkey(path.concat(grp[grp.length - 1].idx))}">+ Opción</button>`
 			: k === "variant" ? `<button class="ftab add" data-op="add-variant" data-path="${pkey(path.concat(grp[grp.length - 1].idx))}">+ Variante</button>` : "";
 		const chosen = grp[sel];
@@ -678,7 +736,9 @@
 		} else if (k === "option") {
 			const o = F.parseOption(chosen.n.text);
 			ctx.step++;
-			const tags = F.tagList(o.tags).map((t) => `<span class="ftag">${esc(t)}</span>`).join("");
+			const sm = splitMentions(F.tagList(o.tags));
+			const tags = sm.tags.map((t) => `<span class="ftag">${esc(t)}</span>`).join("") +
+				sm.mentions.map((w) => `<span class="ftag mention" style="--c:${charColor(w)}">@${esc(charName(w))}</span>`).join("");
 			inner = `<div class="fcard ren opt" data-path="${ckey}"><div class="fhead">${tags}<span class="fname">${esc(renName())}</span><span class="fstep">${ctx.step}</span></div>
 				<div class="ftext">${esc(o.body)}</div></div>` + (o.jump ? `<div class="fend goto">→ Sigue en <b>${esc(o.jump)}</b></div>` : "");
 		} else if (k === "variant") {
@@ -708,27 +768,42 @@
 			fields = `<select class="input" name="speaker"><option value="">Narración</option>${names.map((nm) => `<option ${nm === p.speaker ? "selected" : ""}>${esc(nm)}</option>`).join("")}</select>
 				<textarea class="input" name="body" placeholder="Lo que se dice…">${esc(F.unescape(p.body))}</textarea>
 				<input class="input" name="tags" value="${esc(p.tags)}" placeholder="Etiquetas (opcional) [#…]">`;
-			return `<div class="fform" data-path="${key}" data-kind="line">${fields}${buttons(
+			return `<div class="fform" data-path="${key}" data-kind="line">${fields}${reactHTML(p.body, false)}${buttons(
 				`<button class="btn sm" data-op="add-after">+ Línea debajo</button><button class="btn sm" data-op="add-options">+ Respuestas de ${esc(renName())}</button>`)}</div>`;
 		}
 		if (k === "option") {
 			const o = F.parseOption(n.text);
-			const on = F.tagList(o.tags);
+			const sm = splitMentions(F.tagList(o.tags));
+			const on = sm.tags;
 			const chips = styleTags().slice(0, 24).map((t) => `<span class="chip small ${on.includes(t) ? "on" : ""}" data-op="tag" data-v="${esc(t)}">${esc(t)}</span>`).join("");
+			const found = namesIn(o.body);
+			const ppl = people().slice().sort((a, b) => found.includes(b.id) - found.includes(a.id));
+			const mentionChips = ppl.map((c) => `<span class="chip small ${sm.mentions.includes(c.id) ? "on" : ""}" data-op="mention" data-v="${c.id}" style="${sm.mentions.includes(c.id) ? "" : "border-color:" + c.color}">${found.includes(c.id) ? "• " : ""}${esc(c.name)}</span>`).join("");
 			fields = `<div class="small muted">Lo que responde ${esc(renName())}</div>
 				<textarea class="input" name="body">${esc(o.body)}</textarea>
 				<div class="small muted">Estilo y postura (los personajes reaccionan según esto)</div>
 				<div class="chips">${chips}</div>
 				<input class="input" name="tags" value="${esc(on.join(", "))}" placeholder="franco, criaturas=acoger…">
+				<div class="small muted">Menciona a… (si está presente, se da por aludido: reacciona como si le hablaras a él o ella). «•» = sale su nombre en el texto.</div>
+				<div class="chips">${mentionChips}</div>
+				<input type="hidden" name="mentions" value="${esc(sm.mentions.join("|"))}">
 				<div class="small muted">Al elegirla, ¿salta a otro diálogo?</div>
 				<select class="input" name="jump"><option value="">No, sigue aquí</option>${["END"].concat(allCues().map((c) => c.name)).map((c) => `<option ${c === o.jump ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>`;
-			return `<div class="fform" data-path="${key}" data-kind="option">${fields}${buttons(
+			return `<div class="fform" data-path="${key}" data-kind="option">${fields}${reactHTML(o.body, true)}${buttons(
 				`<button class="btn sm" data-op="add-option">+ Otra opción</button><button class="btn sm" data-op="add-child">+ Línea en esta rama</button>`)}</div>`;
 		}
 		const help = { mutation: "Efecto (código, p. ej. $> Story.change(\"kenji\", \"afecto\", 2))", jump: "Salto: => END o => nombre_de_cue", cond: "Condición (if …, elif …, else)", variant: "Variante al azar (% …)", comment: "Comentario (# …)" }[k] || "Línea";
 		return `<div class="fform" data-path="${key}" data-kind="raw"><div class="small muted">${esc(help)}</div>
 			<input class="input" name="raw" value="${esc(n.text)}" spellcheck="false" autocapitalize="off">${buttons(
 			k === "cond" || k === "variant" ? '<button class="btn sm" data-op="add-child">+ Línea dentro</button>' : '<button class="btn sm" data-op="add-after">+ Línea debajo</button>')}</div>`;
+	}
+
+	/** Botones «si está presente, contesta»: añaden un bloque if Story.present(...). */
+	function reactHTML(text, inBranch) {
+		const found = namesIn(text);
+		const ppl = people().slice().sort((a, b) => found.includes(b.id) - found.includes(a.id));
+		return `<div class="small muted">${inBranch ? "Tras esta respuesta" : "Tras esta línea"}, si está presente, contesta… ${found.length ? "(«•» = sale en el texto)" : ""}</div>
+			<div class="chips">${ppl.map((c) => `<span class="chip small" data-op="react" data-v="${c.id}" style="border-color:${c.color}">${found.includes(c.id) ? "• " : ""}+ ${esc(c.name)}</span>`).join("")}</div>`;
 	}
 
 	/** Conecta los clics de un diagrama. `rerender` vuelve a dibujar la vista que lo contiene. */
@@ -745,7 +820,21 @@
 
 	function flowOp(el, cue, st, rerender, container) {
 		const op = el.dataset.op;
-		if (op === "choose") { st.choices[el.dataset.key] = +el.dataset.i; st.edit = null; rerender(); return; }
+		if (op === "choose") {
+			if (el.dataset.auto) { toast("En el simulador esta rama sale de la situación: cambia los presentes, el ánimo… más abajo"); return; }
+			st.choices[el.dataset.key] = +el.dataset.i; st.edit = null; rerender(); return;
+		}
+		if (op === "mention") {
+			const form = el.closest(".fform");
+			const input = form.querySelector('[name="mentions"]');
+			const list = input.value.split("|").filter(Boolean);
+			const i = list.indexOf(el.dataset.v);
+			i >= 0 ? list.splice(i, 1) : list.push(el.dataset.v);
+			input.value = list.join("|");
+			el.classList.toggle("on");
+			el.style.borderColor = el.classList.contains("on") ? "" : charColor(el.dataset.v);
+			return;
+		}
 		if (op === "goto") { const c = allCues().find((x) => x.name === el.dataset.cue); if (c) selectCue(c.name, c.file, true); else toast("No existe ese diálogo", true); return; }
 		if (op === "tag") {
 			const form = el.closest(".fform");
@@ -768,23 +857,48 @@
 		const npcLine = (indent) => mk(npcName(cue) + ": …", indent);
 		let focus = null;
 
+		// Pasa lo escrito en el formulario al nodo (para «Aplicar» y antes de añadir reacciones).
+		const applyForm = () => {
+			const form = el.closest(".fform");
+			if (!form) return true;
+			const val = (n) => { const f = form.querySelector(`[name="${n}"]`); return f ? f.value.replace(/\s*\n\s*/g, " ").trim() : ""; };
+			let text;
+			if (form.dataset.kind === "line") {
+				const prev = F.parseLine(node.text);
+				text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: val("tags") });
+			} else if (form.dataset.kind === "option") {
+				const tags = val("tags").split(",").map((t) => t.trim()).filter(Boolean);
+				const mentions = val("mentions").split("|").filter(Boolean);
+				if (mentions.length) tags.push(MENTION + "=" + mentions.join("|"));
+				text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), jump: val("jump") });
+			} else {
+				text = val("raw");
+			}
+			if (!text) { toast("La línea no puede quedar vacía", true); return false; }
+			if (text !== node.text) { node.text = text; node.dirty = true; }
+			return true;
+		};
+
 		switch (op) {
 			case "apply": {
-				const form = el.closest(".fform");
-				const val = (n) => { const f = form.querySelector(`[name="${n}"]`); return f ? f.value.replace(/\s*\n\s*/g, " ").trim() : ""; };
-				let text;
-				if (form.dataset.kind === "line") {
-					const prev = F.parseLine(node.text);
-					text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: val("tags") });
-				} else if (form.dataset.kind === "option") {
-					const tags = val("tags").split(",").map((t) => t.trim()).filter(Boolean);
-					text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), jump: val("jump") });
-				} else {
-					text = val("raw");
-				}
-				if (!text) { toast("La línea no puede quedar vacía", true); return; }
-				if (text !== node.text) { node.text = text; node.dirty = true; }
+				if (!applyForm()) return;
 				st.edit = null;
+				break;
+			}
+			case "react": {
+				if (!applyForm()) return;
+				const who = el.dataset.v;
+				const isOption = F.kind(node.text) === "option";
+				const base = isOption ? node.indent + 1 : node.indent;
+				const block = mk(`if Story.present("${who}")`, base, [mk(charName(who) + ": …", base + 1)]);
+				if (isOption) {
+					node.children.unshift(block);
+					focus = path.concat(0, 0);
+				} else {
+					parent.children.splice(idx + 1, 0, block);
+					focus = path.slice(0, -1).concat(idx + 1, 0);
+				}
+				toast(charName(who) + " contestará solo si está presente");
 				break;
 			}
 			case "del": {
@@ -1095,7 +1209,7 @@
 		const pick = Math.min(S.simPick || 0, winners.length - 1);
 		const cue = winners[pick].rule.cueRef;
 		const tabs = winners.length > 1 ? `<div class="ftabs" style="margin-bottom:8px">${winners.map((w, i) => `<button class="ftab ${i === pick ? "on" : ""}" data-pick="${i}">${esc(w.rule.cue)}</button>`).join("")}</div>` : "";
-		return `<h2>Conversación · ${esc(cue.name)}</h2>${tabs}<div id="s-flow">${flowHTML(cue)}</div>`;
+		return `<h2>Conversación · ${esc(cue.name)}</h2>${tabs}<div id="s-flow">${flowHTML(cue, S.sim)}</div>`;
 	}
 
 	function bindSimFlow(winners) {

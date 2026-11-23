@@ -96,6 +96,11 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   los autoloads).
 - `motor.parseFile`/`serializeFile` reescriben solo los cues editados: un
   archivo sin cambios sale idéntico byte a byte.
+- **Menciones**: `#alude=<id>` (o `id|id`) en una opción de Ren hace que el
+  mencionado, si está presente, reaccione con peso completo
+  (`Social.on_choice`, `Social.MENTION_TAG`; se lee en
+  `ConversationView._choices_from`). Las réplicas del aludido van en bloques
+  `if Story.present("<id>")`. Ver `personajes_y_relaciones.md`.
 - `flujo.js` convierte el texto de un cue en un árbol por sangría (líneas,
   opciones `- `, variantes `%`, `if`, `$>`, `=>`) para el diagrama editable de
   la conversación, y lo reescribe cambiando solo las líneas editadas. Los 162
