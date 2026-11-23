@@ -25,11 +25,13 @@ Kenji: ¡Ren! Desde el viernes sin contestar un mensaje, loco. ¿Qué tal el fin
 - Bien. Sin más, no hay mucha novedad [#reservado]
 	Kenji: «Sin más». Vamos que regular...
 - De super puta madre, socio. [#bromista, #desenfadado]
-	Kenji: Récord personal. Estoy orgulloso de ti, de verdad.
-	- Respuesta 1
-		{{Story.speaker}}: …
-	- Respuesta 2
-		{{Story.speaker}}: …
+	Kenji: Uhhh ¿y eso? ¿Hiciste algo en especial?
+	- Sí, bueno. Más o menos. [#reservado]
+		Kenji: ¿Qué fue? Cuenta, cuenta.
+	- Pues sí la verdad. Tuve una cita con
+		if Story.present("rika")
+			Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
+		Kenji: ¡¿Qué me dices?!
 - Meh, un poco mierdolo, pero no terrible. [#franco]
 	Kenji: ¿Y eso? ¿Ha pasado algo?
 	- No, simplemente un poco rollo. [#evasivo]
