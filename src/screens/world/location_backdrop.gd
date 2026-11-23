@@ -30,6 +30,12 @@ func set_location(id: String) -> void:
 	queue_redraw()
 
 
+## Fondo concreto, sin depender de la ubicación (p. ej. el de los combates de una mazmorra).
+func set_texture(tex: Texture2D) -> void:
+	_texture = tex
+	queue_redraw()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()

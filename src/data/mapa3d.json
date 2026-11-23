@@ -1,12 +1,6 @@
 {
 	"camera": {
-		"target": [
-			-65.7581401467323,
-			145.718078613281
-		],
-		"yaw": 0.0,
-		"pitch": 64.0,
-		"distance": 1886.51353962802,
+		"pitch": 60.0,
 		"fov": 45.0
 	},
 	"lighting": {
@@ -60,7 +54,7 @@
 	},
 	"veil": {
 		"color": "#7c7f88",
-		"amount": 0.22
+		"amount": 0.79
 	},
 	"colors": {
 		"ground": "#f4f4f4",
@@ -105,17 +99,26 @@
 		"campus": [
 			-1286.4,
 			435.3
+		],
+		"punto_1": [
+			-151.1,
+			815.7
 		]
 	},
 	"names": {
 		"parque": "Bowls",
 		"plaza": "Colinas",
-		"campus": "Egaleo"
+		"campus": "Egaleo",
+		"punto_1": "tu awela"
 	},
 	"descs": {
 		"parque": "Rampas de skate, zona de ocio tranqui",
 		"plaza": "Parque, zona verde, tranquila, con árboles, donde la gente hace deportes como el voley, saca a los perros, etc",
-		"campus": "Teatro, cine, eventos culturales."
+		"campus": "Teatro, cine, eventos culturales.",
+		"punto_1": ""
 	},
-	"custom": []
+	"custom": [
+		"punto_1"
+	],
+	"hidden": []
 }

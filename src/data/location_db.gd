@@ -8,7 +8,9 @@ extends RefCounted
 ## Su posición y tamaño se ajustan a mano en la escena `layout` (ver RoomLayout).
 ## `cast` = personajes que hay en la ubicación. Sin nadie, al llegar salta un
 ## combate contra un enemigo al azar (ver `RANDOM_ENEMIES`), salvo en los
-## lugares seguros (`safe`) y en casa.
+## lugares seguros (`safe`), en casa y en las mazmorras (`dungeon`: al llegar se
+## pregunta si entrar; `dungeon_map` = mapa de src/data/mazmorras/;
+## `battle_background` = fondo de los combates dentro de la mazmorra).
 ## El fondo real, si existe, es assets/backgrounds/<id>.png.
 
 const HOME := "casa"
@@ -60,7 +62,8 @@ const ALL := {
 	},
 	"torre": {
 		"name": "La Torre", "desc": "Mazmorra. El acceso al Corredor de la Torre está aquí.",
-		"on_map": true, "pos": Vector2(0.86, 0.48), "dungeon": true,
+		"on_map": true, "pos": Vector2(0.86, 0.48), "dungeon": true, "dungeon_map": "torre",
+		"battle_background": "res://assets/backgrounds/torre_mazmorra.png",
 		"sky_top": Color("08060f"), "sky_bottom": Color("4a2a6e"), "tower": true,
 	},
 }
@@ -108,7 +111,12 @@ static func cast(id: String) -> Array:
 
 ## Ubicación del mapa sin nadie: al llegar hay un combate.
 static func is_hostile(id: String) -> bool:
-	return id != HOME and not get_location(id).get("safe", false) and cast(id).is_empty()
+	var loc := get_location(id)
+	return id != HOME and not loc.get("safe", false) and not loc.get("dungeon", false) and cast(id).is_empty()
+
+
+static func is_dungeon(id: String) -> bool:
+	return get_location(id).get("dungeon", false)
 
 
 ## Ubicaciones visibles en el mapa, en orden de navegación.

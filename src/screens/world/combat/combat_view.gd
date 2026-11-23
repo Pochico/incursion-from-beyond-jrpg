@@ -37,6 +37,8 @@ const COMMANDS := [
 ]
 
 var _battle: Battle
+## Fondo del visor en lugar del de la ubicación (p. ej. dentro de una mazmorra). null = el de la ubicación.
+var backdrop_override: Texture2D
 var _actor := Battle.PLAYER       # miembro del grupo al que le toca elegir
 var _state := State.IDLE
 var _enemy_id := ""
@@ -185,6 +187,8 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = []) -> v
 	_log_text = ""
 
 	_backdrop.set_location(GameState.location_id)
+	if backdrop_override != null:
+		_backdrop.set_texture(backdrop_override)
 	_minimap.location_id = GameState.location_id
 	_minimap.queue_redraw()
 

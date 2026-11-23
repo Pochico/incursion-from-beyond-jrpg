@@ -3,6 +3,7 @@ extends Control
 
 const WORLD_SCREEN := "res://src/screens/world/world_screen.tscn"
 const TEXTURE_STUDIO := "res://src/tools/texture_studio/texture_studio.tscn"
+const DUNGEON_EDITOR := "res://src/tools/editor_mazmorras/editor_mazmorras.tscn"
 
 @onready var _logo: Control = %Logo
 @onready var _menu: VBoxContainer = %Menu
@@ -35,20 +36,25 @@ func _ready() -> void:
 func _add_tools_button() -> void:
 	if not OS.has_feature("editor"):
 		return
-	var b := PillButton.new()
-	b.label = "Estudio de texturas"
-	b.icon_name = "sparkle"
-	b.font_size = 22
-	b.pressed.connect(func() -> void: SceneRouter.go_to(TEXTURE_STUDIO))
-	add_child(b)
-	# Arriba a la derecha (anclado al borde derecho).
-	var w := b.get_combined_minimum_size().x
-	b.anchor_left = 1.0
-	b.anchor_right = 1.0
-	b.offset_right = -48.0
-	b.offset_left = -48.0 - w
-	b.offset_top = 40.0
-	b.offset_bottom = 90.0
+	var right := 48.0
+	for tool: Array in [["Estudio de texturas", "sparkle", TEXTURE_STUDIO], ["Editor de mazmorras", "menu", DUNGEON_EDITOR]]:
+		var b := PillButton.new()
+		b.label = tool[0]
+		b.icon_name = tool[1]
+		b.font_size = 22
+		b.pressed.connect(func() -> void:
+			SceneRouter.tool_context = {}
+			SceneRouter.go_to(tool[2]))
+		add_child(b)
+		# Arriba a la derecha (anclados al borde derecho), uno junto a otro.
+		var w := b.get_combined_minimum_size().x
+		b.anchor_left = 1.0
+		b.anchor_right = 1.0
+		b.offset_right = -right
+		b.offset_left = -right - w
+		b.offset_top = 40.0
+		b.offset_bottom = 90.0
+		right += w + 16.0
 
 
 func _buttons() -> Array[SlantButton]:

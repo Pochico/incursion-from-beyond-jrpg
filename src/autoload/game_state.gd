@@ -32,6 +32,9 @@ var inventory: Dictionary = START_INVENTORY.duplicate()
 ## Conversaciones del móvil: id del contacto -> [{from, text, time, date}], de la más antigua
 ## a la más reciente. Un contacto aparece en Mensajes desde su primer mensaje.
 var messages: Dictionary = {}
+## Progreso en cada mazmorra: id del mapa -> estado de DungeonExplorer (puertas,
+## enemigos vencidos, objetos cogidos, casillas visitadas).
+var dungeons: Dictionary = {}
 
 const START_INVENTORY := {"pochicola": 3}
 
@@ -95,6 +98,7 @@ func new_game() -> void:
 	moods = Social.initial_moods()
 	inventory = START_INVENTORY.duplicate()
 	messages = {}
+	dungeons = {}
 	phase = PHASES[0]
 	flags = {}
 	events = EventLog.new()
@@ -127,6 +131,18 @@ func set_location(id: String) -> void:
 
 func item_count(item_id: String) -> int:
 	return inventory.get(item_id, 0)
+
+
+func add_item(item_id: String, count: int = 1) -> void:
+	inventory[item_id] = item_count(item_id) + count
+	changed.emit()
+
+
+## Estado guardado de la mazmorra `map_id` (se crea vacío; se modifica en sitio).
+func dungeon_state(map_id: String) -> Dictionary:
+	if not dungeons.has(map_id):
+		dungeons[map_id] = {}
+	return dungeons[map_id]
 
 
 func use_item(item_id: String) -> bool:
@@ -206,7 +222,7 @@ func save_game() -> void:
 	var data := {
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
-		"location": location_id, "inventory": inventory, "messages": messages,
+		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
 		"relations": relations, "moods": moods,
 		"phase": phase, "flags": flags, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
@@ -238,6 +254,7 @@ func load_game() -> bool:
 	moods = data.get("moods", moods)
 	inventory = _ints(data.get("inventory", START_INVENTORY))
 	messages = data.get("messages", {})
+	dungeons = data.get("dungeons", {})
 	phase = data.get("phase", PHASES[0])
 	flags = data.get("flags", {})
 	events = EventLog.from_dict(data.get("events", {}))

@@ -15,6 +15,7 @@ extends Control
 enum Mode { INTRO, EXPLORE, MAP, MENU, TALK, TRAVEL, COMBAT, PHONE }
 
 const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
+const DUNGEON_SCREEN := "res://src/screens/dungeon/dungeon_screen.tscn"
 ## Color del contorno de los objetos examinables.
 const PROP_COLOR := UIStyle.LIME
 ## Líneas de la conversación que se llegan a ver antes de que la incursión la corte.
@@ -49,11 +50,7 @@ var _phone: PhoneOverlay
 
 
 func _ready() -> void:
-	_hint_bar.set_items([
-		{"id": "menu", "key": "Esc", "label": "Título"},
-		{"id": "phone", "key": "T", "label": "Terminal"},
-		{"id": "map", "key": "M", "label": "Mapa"},
-	])
+	_refresh_hints()
 	_phone = PhoneOverlay.new()
 	add_child(_phone)
 	_phone.closed.connect(func() -> void:
@@ -145,10 +142,24 @@ func _show_hud(full: bool) -> void:
 	t.tween_property(_hint_bar, "modulate:a", 1.0 if full else 0.0, 0.3)
 
 
+## En una mazmorra se añade «Entrar» (tecla E).
+func _refresh_hints() -> void:
+	var items := [
+		{"id": "menu", "key": "Esc", "label": "Título"},
+		{"id": "phone", "key": "T", "label": "Terminal"},
+		{"id": "map", "key": "M", "label": "Mapa"},
+	]
+	if LocationDB.is_dungeon(GameState.location_id):
+		items.append({"id": "dungeon", "key": "E", "label": "Entrar"})
+	_hint_bar.set_items(items)
+
+
 func _on_hint_pressed(id: String) -> void:
 	if mode != Mode.EXPLORE:
 		return
 	match id:
+		"dungeon":
+			_dungeon_entrance()
 		"map":
 			_open_map()
 		"phone":
@@ -168,6 +179,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_open_phone()
 			elif event.is_action_pressed("ui_cancel"):
 				SceneRouter.go_to(TITLE_SCREEN)
+			elif event is InputEventKey and event.pressed and not event.echo \
+					and (event as InputEventKey).physical_keycode == KEY_E and LocationDB.is_dungeon(GameState.location_id):
+				_dungeon_entrance()
 			elif (event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")) \
 					and get_viewport().gui_get_focus_owner() == null:
 				_focus_character(_first_character())
@@ -216,6 +230,7 @@ func _travel(location_id: String) -> void:
 	await SceneRouter.fade_out(0.35)
 	GameState.set_location(location_id)
 	_backdrop.set_location(location_id)
+	_refresh_hints()
 	_empty_hint.visible = false
 	_spawn_cast()
 	await get_tree().process_frame
@@ -225,10 +240,38 @@ func _travel(location_id: String) -> void:
 	if not step.is_empty():
 		await _play_story_step()
 		return
+	if LocationDB.is_dungeon(location_id):
+		GameState.save_game()
+		await _dungeon_entrance(1.4)
+		return
 	if LocationDB.is_hostile(location_id):
 		await _ambush()
 	GameState.save_game()
 	mode = Mode.EXPLORE
+	_update_empty_hint()
+
+
+# --- Mazmorras ---------------------------------------------------------------------------
+
+## Escena a la entrada de una mazmorra: Ren decide si entra («Entrar en la torre»)
+## o se lo piensa. Al entrar empieza el modo mazmorra (DungeonScreen).
+func _dungeon_entrance(delay: float = 0.0) -> void:
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_empty_hint.visible = false
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout   # deja ver el cartel de la ubicación
+	_show_hud(false)
+	GameState.set_flag("entrar_mazmorra", false)
+	await _conversation.play(Story.cue("torre_llegada"), "")
+	if GameState.get_flag("entrar_mazmorra"):
+		GameState.set_flag("entrar_mazmorra", false)
+		GameState.save_game()
+		SceneRouter.go_to(DUNGEON_SCREEN)
+		return
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
 	_update_empty_hint()
 
 
@@ -336,7 +379,7 @@ func _ambush() -> void:
 func _update_empty_hint() -> void:
 	var id := GameState.location_id
 	_empty_hint.text = "No queda nadie por aquí." if LocationDB.is_hostile(id) else "No hay nadie a estas horas."
-	_empty_hint.visible = id != LocationDB.HOME and _cast(id).is_empty() and GameState.story_step == ""
+	_empty_hint.visible = id != LocationDB.HOME and not LocationDB.is_dungeon(id) and _cast(id).is_empty() and GameState.story_step == ""
 
 
 # --- Escenario: personajes -------------------------------------------------------------

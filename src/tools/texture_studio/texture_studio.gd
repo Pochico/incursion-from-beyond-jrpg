@@ -72,7 +72,18 @@ func _ready() -> void:
 	_build_ui()
 	get_window().files_dropped.connect(_on_files_dropped)
 	_apply_surface_defaults()
+	_apply_tool_context()
 	_refresh_all()
+
+
+## Si viene del editor de mazmorras: su tema y la superficie que estaba pintando.
+func _apply_tool_context() -> void:
+	var ctx := SceneRouter.tool_context
+	if ctx.has("theme"):
+		_theme_edit.text = ctx.theme
+	if ctx.get("surface", "") in TextureFormats.SURFACE_ORDER:
+		_surface = ctx.surface
+		_apply_surface_defaults()
 
 
 # =====================================================================================
@@ -597,8 +608,9 @@ func _reset_style() -> void:
 	_set_status("Estilo restablecido.")
 
 
+## Vuelve a quien lo abrió (el editor de mazmorras, con su mapa) o al menú de inicio.
 func _go_back() -> void:
-	SceneRouter.go_to(TITLE_SCREEN)
+	SceneRouter.go_to(SceneRouter.tool_context.get("back", TITLE_SCREEN))
 
 
 func _set_status(text: String, error := false) -> void:

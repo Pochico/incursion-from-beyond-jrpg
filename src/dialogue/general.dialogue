@@ -149,3 +149,25 @@ Ren: Algo viene.
 {{Story.speaker}}: ¿Qué... qué era eso?
 Ren: No lo sé.
 => END
+
+# --- La Torre (mazmorra) -----------------------------------------------------------
+# Al llegar a la Torre (o al pulsar «Entrar»): elegir si entrar en el modo mazmorra.
+# La opción deja el flag «entrar_mazmorra» a true o false (lo lee world_screen).
+
+~ torre_llegada
+if Story.flag("torre_entrada_vista")
+	La Torre sigue ahí, más negra que el cielo que tiene detrás. La puerta de servicio está entornada, como la última vez.
+else
+	$> Story.set_flag("torre_entrada_vista")
+	La Torre se levanta sobre los bloques de alrededor como si no fuera del barrio. Nadie recuerda cuándo la terminaron.
+	Las ventanas de los pisos bajos están tapiadas. En la base, una puerta de servicio entornada deja escapar un zumbido grave.
+	Ren: Esto es lo que salía en los vídeos... El zumbido se te mete en los dientes.
+	Ren: Dicen que el Corredor empieza ahí dentro. Que la gente que entra sale... distinta.
+Ren: ¿Entro?
+- Entrar en la torre
+	$> Story.set_flag("entrar_mazmorra", true)
+	Ren: Vale. Solo un vistazo.
+- Pensarlo mejor
+	$> Story.set_flag("entrar_mazmorra", false)
+	Ren: Hoy no. Mejor me lo pienso.
+=> END

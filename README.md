@@ -183,6 +183,51 @@ Prepara imágenes como texturas de **suelo**, **techo** y **pared** para el dung
 ![Posterizado](docs/capturas/texturas_posterizado.webp)
 ![Aplanado y resalte](docs/capturas/texturas_aplanado_resalte.webp)
 
+### Editor de mazmorras (`src/tools/editor_mazmorras/`)
+
+Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en escenarios 3D ([documento de diseño](docs/diseno/Diseno_Dungeon_Crawler_Godot.md)). Usa las texturas del Estudio de texturas.
+
+**Abrirlo:** ejecuta el juego desde el editor de Godot y pulsa **«Editor de mazmorras»** arriba a la derecha del menú de inicio, o abre `editor_mazmorras.tscn` y pulsa **F6**.
+
+| Herramienta | Qué hace |
+|---|---|
+| **Casillas [1]** | Clic izquierdo pinta (suelo y techo), derecho borra; se puede arrastrar. Las paredes del contorno salen solas. |
+| **Muros [2]** | Clic en el borde entre dos casillas pintadas: muro. Clic derecho lo quita. Se puede arrastrar. |
+| **Puertas [3]** | Clic en el borde entre dos casillas pintadas: puerta. Si ya hay una, la selecciona y se edita en «Selección»: estado inicial y objeto necesario (id del inventario). Clic derecho la quita. |
+| **Texturas [4]** | Elige superficie (suelo, techo, pared) y textura de la paleta. La pared se pinta por cara: cada lado de un muro puede llevar una distinta. Clic derecho: vuelve a la del tema. Con «Suelo», **R** (o Mayús+R) gira el suelo de la casilla bajo el ratón, p. ej. para que una flecha apunte a la escalera. |
+| **Inicio [5]** | Casilla de salida (en la planta que estás editando); clic otra vez para girar la orientación. |
+| **Enemigos [6]** | Pone el enemigo elegido (los de `CharacterDB` con `enemy`) en una casilla; clic derecho lo quita. En el plano sale su cara; en 3D, su retrato de pie. |
+| **Objetos [8]** | Deja en el suelo el objeto elegido (de `ItemDB`) con su cantidad. En el juego se coge desde la casilla de al lado. Clic derecho lo quita. |
+| **Interruptores [9]** | Pone una palanca (bloquea el paso) o la selecciona. Con una seleccionada, clic en una puerta para vincularla o desvincularla: al accionarla, abre o cierra todas sus puertas. Clic derecho la quita. Una puerta puede marcarse como «Solo se abre con una palanca». |
+| **Escaleras [7]** | Escalera que sube o baja hacia donde apunta la flecha (se entra andando en esa dirección). Crea la planta de arriba o de abajo si no existe, y la escalera de vuelta en la misma casilla. Clic otra vez para girarla, clic derecho la quita (con su pareja). |
+
+- **Plantas**: «Planta» en el panel (▼ ▲, «+ Encima», «+ Debajo», «Borrar planta») o **Re Pág / Av Pág**. La planta de debajo se ve en gris para alinear. Solo se puede borrar la de arriba o la de abajo del todo.
+- **Plano**: rueda o pellizco para el zoom, clic central o dos dedos para moverte.
+- **Vista 3D**: muestra la planta que editas y se regenera con cada cambio. Clic derecho para girar, rueda para el zoom, «Techo» lo muestra u oculta.
+- **Probar mapa [P]**: recorre el mapa en primera persona desde el inicio. W/S avanzar y retroceder, A/D girar 90°, Q/E paso lateral, Espacio abre o cierra la puerta de delante, Esc vuelve al editor. Al chocar con un enemigo (o pulsar Espacio delante) empieza el combate de verdad; si ganas, desaparece. Al entrar en una escalera cambias de planta.
+- **Cmd/Ctrl+Z** deshace (cada trazo es un paso), **Cmd/Ctrl+Shift+Z** rehace y **Cmd/Ctrl+S** guarda en `src/data/mazmorras/<nombre>.json`. Hay un mapa de ejemplo (`ejemplo`): pasillo en L, puerta, sala con un Oni y escalera a una segunda planta con un pasillo y otro enemigo.
+
+### Modo mazmorra en el juego (`src/screens/dungeon/`)
+
+- Al viajar a **La Torre** sale una escena con dos opciones: **«Entrar en la torre»** o **«Pensarlo mejor»** (cue `torre_llegada` en `general.dialogue`). Si te lo piensas, sigues en la Torre y puedes volver a intentarlo con **«Entrar» [E]** en la barra de abajo.
+- Al entrar empieza el **modo mazmorra** (`DungeonScreen`) con la interfaz del combate: cabecera, visor grande con la vista 3D, automapa en el hueco del minimapa, fichas del grupo, comandos (**Usar, Objetos, Mapa, Salir**) y barra de descripción y registro.
+- **Interactuar**: lo que hay justo delante (la puerta de ese borde, o la criatura, objeto o palanca de la casilla de delante) se recuadra en lima con una etiqueta («Abrir · Puerta cerrada», «Luchar · Imp», «Coger · Pochicola», «Accionar · Palanca»). Se usa con **clic encima**, **Espacio** o el comando **Usar**. Las criaturas también saltan al chocar con ellas; el combate es el de siempre y, si pierdes, retrocedes una casilla.
+- **Controles**: W/S avanzar y retroceder, A/D girar, Q/E de lado, M automapa, Esc salir.
+- El mapa de cada mazmorra es `dungeon_map` en `LocationDB` (La Torre usa `src/data/mazmorras/torre.json`, editable con el editor) y `battle_background` el fondo de sus combates (La Torre: `assets/backgrounds/torre_mazmorra.png`).
+- Texturas de La Torre (tema `torre`): ocho paneles de pared (`panel_1`…`panel_8`; el predeterminado es `panel_1` y el resto se reparte por las caras) y el suelo `salida`, solo en la casilla de delante de cada escalera con la flecha hacia ella. En `tema.json`, `"suelo": ""` indica que el suelo normal no usa ninguna de las del tema (sale el provisional). El progreso (puertas, criaturas vencidas, objetos cogidos y casillas vistas del automapa) se guarda en la partida (`GameState.dungeons`); al volver se empieza en la entrada. Salir pasa a la franja siguiente del día (salvo de noche).
+
+**Con el Estudio de texturas:**
+- El **tema** del mapa es una carpeta de `assets/textures/<tema>/`; la paleta muestra lo que hay en `suelo/`, `techo/` o `pared/`.
+- **«Estudio de texturas»** abre el Estudio con ese tema y esa superficie ya elegidos. Al pulsar «Volver» regresas al editor con el mapa tal como estaba, aunque no lo hubieras guardado, y las texturas nuevas ya aparecen en la paleta.
+- **«Usar como predeterminada del tema»** la guarda en `assets/textures/<tema>/tema.json`. Las superficies sin textura propia usan la predeterminada; si cambias de tema, cambian con él. Si el tema no tiene texturas, se usan unas provisionales (damero y ladrillo).
+- Cada textura ocupa exactamente una casilla (2 × 2 m) o un tramo de pared (2 × 2,5 m), con las mismas medidas que el Estudio (`TextureFormats`).
+
+**Código** (`src/dungeon/`), pensado para usarlo también en el juego:
+- `DungeonMap`: datos y reglas de paso, por plantas. Cada casilla es dueña de sus bordes norte y oeste, así que una puerta es la misma vista desde los dos lados. Enemigos y escaleras son «cosas» de una casilla.
+- `DungeonBuilder`: genera la geometría, con una malla por textura y las UV según la posición en el mundo.
+- `DungeonExplorer`: movimiento por casillas con cola de una acción, choque con los muros, escaleras entre plantas, lo que hay delante (`front()`) y su uso (puertas, palancas, objetos, encuentros con la señal `encounter`), estado guardable y luz del grupo.
+- `DungeonTextures`: temas, paleta y texturas predeterminadas.
+
 ## Cómo añadir contenido
 
 - **Diálogos**: `src/dialogue/*.dialogue` (plugin [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager), en `addons/`). Uno por personaje más `general.dialogue`. Cada conversación lleva una regla `# cuando:` que decide cuándo sale; ver [el documento de diseño](docs/diseno/personajes_y_relaciones.md).

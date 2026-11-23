@@ -5,6 +5,11 @@ signal scene_changed(path: String)
 
 const FADE_TIME := 0.3
 
+## Datos que se pasan las herramientas internas al saltar de una a otra
+## (p. ej. del editor de mazmorras al Estudio de texturas y vuelta):
+## back = escena a la que volver, y lo que cada herramienta necesite.
+var tool_context: Dictionary = {}
+
 var _curtain: ColorRect
 var _busy := false
 

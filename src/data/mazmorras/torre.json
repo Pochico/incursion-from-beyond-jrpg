@@ -1,0 +1,528 @@
+{
+	"floors": [
+		{
+			"cells": {
+				"-1,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,-10": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,-11": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,-12": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,-2": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-1,0": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-2,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-3,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-3,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-3,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-4,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-4,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-4,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-5,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-5,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-5,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-10": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-11": {
+					"ceiling": "",
+					"floor": "salida"
+				},
+				"0,-12": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-2": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-6": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-7": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-8": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-9": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,0": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-10": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-11": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-12": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-2": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,0": {
+					"ceiling": "",
+					"floor": ""
+				}
+			},
+			"edges": {
+				"-1,-1,W": {
+					"a": "panel_3"
+				},
+				"-1,-10,W": {
+					"a": "panel_5"
+				},
+				"-1,-11,W": {
+					"a": "panel_6"
+				},
+				"-1,-12,N": {
+					"a": "panel_6"
+				},
+				"-1,-12,W": {
+					"a": "panel_7"
+				},
+				"-1,-2,N": {
+					"a": "panel_3"
+				},
+				"-1,-2,W": {
+					"a": "panel_4"
+				},
+				"-1,-4,N": {
+					"a": "panel_5"
+				},
+				"-1,-9,N": {
+					"b": "panel_7"
+				},
+				"-1,0,W": {
+					"a": "panel_2"
+				},
+				"-1,1,N": {
+					"b": "panel_4"
+				},
+				"-2,-3,W": {
+					"b": "panel_2"
+				},
+				"-2,-4,N": {
+					"a": "panel_5"
+				},
+				"-2,-4,W": {
+					"a": "panel_6",
+					"b": "panel_3",
+					"door": {
+						"open": false,
+						"requires": ""
+					},
+					"type": "door"
+				},
+				"-2,-5,W": {
+					"b": "panel_4"
+				},
+				"-3,-2,N": {
+					"b": "panel_7"
+				},
+				"-3,-5,N": {
+					"a": "panel_6"
+				},
+				"-4,-2,N": {
+					"b": "panel_7"
+				},
+				"-4,-5,N": {
+					"a": "panel_6"
+				},
+				"-5,-2,N": {
+					"b": "panel_7"
+				},
+				"-5,-3,W": {
+					"a": "panel_5"
+				},
+				"-5,-4,W": {
+					"a": "panel_6"
+				},
+				"-5,-5,N": {
+					"a": "panel_6"
+				},
+				"-5,-5,W": {
+					"a": "panel_7"
+				},
+				"0,-12,N": {
+					"a": "panel_6"
+				},
+				"0,-3,W": {
+					"a": "panel_5"
+				},
+				"0,-5,W": {
+					"a": "panel_7"
+				},
+				"0,-6,N": {
+					"a": "panel_7",
+					"b": "panel_4",
+					"door": {
+						"open": false,
+						"requires": "",
+						"switch_only": true
+					},
+					"type": "door"
+				},
+				"0,-7,W": {
+					"a": "panel_2"
+				},
+				"0,-8,W": {
+					"a": "panel_3"
+				},
+				"0,-9,W": {
+					"a": "panel_4"
+				},
+				"0,1,N": {
+					"b": "panel_4"
+				},
+				"1,-12,N": {
+					"a": "panel_6"
+				},
+				"1,-2,N": {
+					"a": "panel_3"
+				},
+				"1,-3,W": {
+					"b": "panel_2"
+				},
+				"1,-4,W": {
+					"b": "panel_3"
+				},
+				"1,-5,W": {
+					"b": "panel_4"
+				},
+				"1,-6,W": {
+					"b": "panel_5"
+				},
+				"1,-7,W": {
+					"b": "panel_6"
+				},
+				"1,-8,W": {
+					"b": "panel_7"
+				},
+				"1,-9,N": {
+					"b": "panel_7"
+				},
+				"1,1,N": {
+					"b": "panel_4"
+				},
+				"2,-1,W": {
+					"b": "panel_7"
+				},
+				"2,-10,W": {
+					"b": "panel_2"
+				},
+				"2,-11,W": {
+					"b": "panel_3"
+				},
+				"2,-12,W": {
+					"b": "panel_4"
+				},
+				"2,0,W": {
+					"b": "panel_6"
+				}
+			},
+			"things": {
+				"-1,-12": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"-1,-2": {
+					"count": 1,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"-4,-4": {
+					"enemy": "imp",
+					"type": "enemy"
+				},
+				"-5,-4": {
+					"doors": [
+						"0,-6,N"
+					],
+					"type": "switch"
+				},
+				"0,-12": {
+					"dir": 0,
+					"type": "stairs",
+					"up": true
+				},
+				"1,-11": {
+					"enemy": "engendro",
+					"type": "enemy"
+				}
+			}
+		},
+		{
+			"cells": {
+				"0,-12": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-13": {
+					"ceiling": "",
+					"floor": "salida",
+					"floor_rot": 2
+				},
+				"0,-14": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-15": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-15": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-15": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-15": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-18": {
+					"ceiling": "",
+					"floor": ""
+				}
+			},
+			"edges": {
+				"0,-11,N": {
+					"b": "panel_5"
+				},
+				"0,-12,W": {
+					"a": "panel_3"
+				},
+				"0,-13,W": {
+					"a": "panel_4"
+				},
+				"0,-14,W": {
+					"a": "panel_5"
+				},
+				"0,-15,W": {
+					"a": "panel_6"
+				},
+				"0,-16,N": {
+					"a": "panel_8"
+				},
+				"0,-16,W": {
+					"a": "panel_7"
+				},
+				"1,-12,W": {
+					"b": "panel_7"
+				},
+				"1,-14,W": {
+					"b": "panel_2"
+				},
+				"1,-15,N": {
+					"b": "panel_2"
+				},
+				"1,-15,W": {
+					"b": "panel_3"
+				},
+				"1,-16,N": {
+					"a": "panel_6"
+				},
+				"2,-15,N": {
+					"b": "panel_2"
+				},
+				"2,-16,N": {
+					"a": "panel_6"
+				},
+				"3,-15,N": {
+					"b": "panel_2"
+				},
+				"3,-16,N": {
+					"a": "panel_6"
+				},
+				"4,-15,W": {
+					"a": "panel_6"
+				},
+				"4,-16,W": {
+					"a": "panel_7",
+					"b": "panel_4",
+					"door": {
+						"open": false,
+						"requires": ""
+					},
+					"type": "door"
+				},
+				"4,-18,W": {
+					"a": "panel_2"
+				},
+				"7,-15,W": {
+					"b": "panel_3"
+				},
+				"7,-16,W": {
+					"b": "panel_4"
+				},
+				"7,-17,W": {
+					"b": "panel_5"
+				},
+				"7,-18,W": {
+					"b": "panel_6"
+				}
+			},
+			"things": {
+				"0,-12": {
+					"dir": 2,
+					"type": "stairs",
+					"up": false
+				},
+				"5,-16": {
+					"enemy": "oni",
+					"type": "enemy"
+				},
+				"6,-18": {
+					"count": 3,
+					"item": "pochicola",
+					"type": "item"
+				}
+			}
+		}
+	],
+	"ground": 0,
+	"id": "torre",
+	"level": 0,
+	"start": {
+		"dir": 0,
+		"level": 0,
+		"x": 0,
+		"y": 0
+	},
+	"theme": "torre",
+	"version": 2
+}
