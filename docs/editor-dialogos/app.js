@@ -1357,11 +1357,26 @@
 
 	// --- Hojas, vistas y arranque ------------------------------------------------------------------
 
-	function openSheet(html) { $("#sheet").innerHTML = html; $("#sheet-bg").classList.add("open"); }
-	function closeSheet() { $("#sheet-bg").classList.remove("open"); }
+	// Las hojas también entran en el historial: «atrás» en el móvil las cierra.
+	function openSheet(html) {
+		$("#sheet").innerHTML = html;
+		if (!$("#sheet-bg").classList.contains("open")) history.pushState({ sheet: true }, "", location.hash || "#" + S.view);
+		$("#sheet-bg").classList.add("open");
+	}
+	function closeSheet(fromHistory) {
+		if (!$("#sheet-bg").classList.contains("open")) return;
+		$("#sheet-bg").classList.remove("open");
+		if (fromHistory !== true && history.state && history.state.sheet) history.back();
+	}
 	$("#sheet-bg").addEventListener("click", (e) => { if (e.target.id === "sheet-bg") closeSheet(); });
 
-	function setView(name) {
+	// Cada pantalla es una entrada del historial (#lista, #editar...): el botón
+	// «atrás» del móvil vuelve a la anterior en vez de cerrar la app.
+	const VIEWS = ["lista", "editar", "simular", "guardar"];
+	function setView(name, fromHistory) {
+		if (!VIEWS.includes(name)) name = "lista";
+		if (name === "editar" && !S.sel && fromHistory) name = "lista";
+		if (!fromHistory && name !== S.view) history.pushState({ view: name }, "", "#" + name);
 		S.view = name;
 		document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "v-" + name));
 		document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.v === name));
@@ -1388,6 +1403,23 @@
 	}
 
 	document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => setView(b.dataset.v)));
+	window.addEventListener("popstate", (e) => {
+		if ($("#sheet-bg").classList.contains("open")) { closeSheet(true); if (e.state && e.state.sheet) return; }
+		setView(location.hash.slice(1) || "lista", true);
+	});
+	// Título: vuelve a la pantalla principal.
+	const brand = $(".brand");
+	brand.style.cursor = "pointer";
+	brand.setAttribute("role", "button");
+	brand.title = "Ir a la lista de diálogos";
+	brand.onclick = () => {
+		closeSheet();
+		S.filter = { file: "", moment: "", q: "" };
+		renderList();
+		setView("lista");
+		$("#v-lista").scrollTop = 0;
+	};
+	history.replaceState({ view: "lista" }, "", "#lista");
 	$("#btn-settings").onclick = settingsSheet;
 	$("#btn-save-desk").onclick = () => {
 		openSheet('<div id="save-sheet"></div><div class="row" style="margin-top:10px"><button class="btn ghost" id="ss-close">Cerrar</button></div>');
