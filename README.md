@@ -248,6 +248,16 @@ Da un poco de volumen a una textura, como en los juegos antiguos: marcas qué zo
 - `DungeonExplorer`: movimiento por casillas con cola de una acción, choque con los muros, escaleras entre plantas, lo que hay delante (`front()`) y su uso (puertas, palancas, objetos, encuentros con la señal `encounter`), estado guardable y luz del grupo.
 - `DungeonTextures`: temas, paleta, texturas predeterminadas y relieve (`relief_for`). En el juego carga las texturas importadas; el editor activa `live_files` para leer los PNG recién exportados.
 
+### Editor de diálogos (web, también en el móvil)
+
+App web en `docs/editor-dialogos/`. Lee los diálogos del repositorio en GitHub, permite cambiar **qué conversación sale y cuándo** y guarda los cambios en el repo. Funciona en el navegador del móvil y del ordenador; en el móvil, «Añadir a pantalla de inicio» lo deja como una app.
+
+- **Diálogos**: lista de todos los cues con buscador, filtro por personaje y por momento, y avisos si algo está mal.
+- **Editar**: las reglas `# cuando:` con controles (momento, fase, ánimo, tramo, dimensiones de la relación, «una vez», «visto», «sabe», indicadores, presentes, interacciones de hoy, resultado del combate, y «no» para negar), una frase que explica cuándo sale, el peso y la puntuación. El texto del diálogo con atajos y vista previa. Crear, renombrar (actualiza los `visto` y `=>` que lo usan), mover de archivo y borrar.
+- **Simular**: eliges personaje, momento y situación (fase, ánimo, relación, interacciones, resultado, presentes, lo que sabe, indicadores, lo ya visto) y dice qué diálogo sale, con qué puntuación y por qué falla cada uno de los demás. Usa el mismo selector que el juego (comprobado con `tools/editor_dialogos/paridad.sh`). «Inicio de partida» parte de las fichas; «Cargar partida…» lee un `partida.json`.
+- **Guardar**: muestra las diferencias y sube un solo commit a `main` (solo los cues tocados cambian en el archivo). Si alguien ha cambiado ese archivo en GitHub mientras tanto, no sube nada y avisa. Sin conexión: abre `.dialogue` locales y descárgalos.
+- **Token**: para guardar hace falta un *fine-grained token* de GitHub con acceso solo a este repositorio y permiso **Contents: Read and write** (⋯ → Ajustes). Se guarda solo en ese navegador.
+
 ## Cómo añadir contenido
 
 - **Diálogos**: `src/dialogue/*.dialogue` (plugin [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager), en `addons/`). Uno por personaje más `general.dialogue`. Cada conversación lleva una regla `# cuando:` que decide cuándo sale; ver [el documento de diseño](docs/diseno/personajes_y_relaciones.md).
@@ -321,7 +331,9 @@ src/
     texture_studio/         Estudio de texturas (suelo, techo, pared)
     editor_mazmorras/       Editor de mazmorras
     editor_relieve/         Editor de relieve de las texturas
+    editor_dialogos/        Prueba de paridad del editor de diálogos (lado Godot)
 docs/
+  editor-dialogos/        Editor de diálogos web (GitHub Pages)
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz
   capturas/               Capturas del estado actual

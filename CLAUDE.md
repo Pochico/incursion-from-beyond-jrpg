@@ -46,8 +46,9 @@ trabajar».
 | `src/screens/` | Pantallas: `title`, `world` (escenario, conversación, combate, móvil), `dungeon` | |
 | `src/ui/` | `UIStyle` (paleta, fuentes, dibujo), `UIIcons`, `components/`, `shaders/` | Reutilizar componentes y `UIStyle` antes de crear estilos nuevos. |
 | `src/rooms/` | Distribución de habitaciones interactivas (casa) | |
-| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras`, `editor_relieve`, `editor_mapa` | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. |
-| `tools/` | Scripts **externos** (Python, git…) | Tiene `.gdignore`: Godot no lo ve. No poner escenas aquí. |
+| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras`, `editor_relieve`, `editor_mapa`; y `editor_dialogos/paridad.tscn` (prueba, no herramienta de usuario) | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. |
+| `tools/` | Scripts **externos** (Python, Node, git…) | Tiene `.gdignore`: Godot no lo ve. No poner escenas aquí. |
+| `docs/editor-dialogos/` | **Editor de diálogos web** (HTML + JS, funciona en el móvil). Se publica con GitHub Pages desde `docs/` | `motor.js` replica el selector de `Story`: ver «Paridad». |
 | `assets/` | Fuentes, retratos, fondos, texturas `textures/<tema>/<superficie>/`, mapa, móvil | Medidas de texturas en `src/data/texture_formats.gd`. |
 | `docs/` | Diseño, referencias de UI, capturas | Tiene `.gdignore`. |
 
@@ -71,6 +72,30 @@ líneas finas con quiebro (ver «Guía de estilo» del README).
 
 El usuario guarda material de referencia local en `/context/` y `/refs/`
 (ignorados por git): si te lo pasa, no lo subas.
+
+## Editor de diálogos (web) y paridad con el juego
+
+`docs/editor-dialogos/` es una app web de una página (móvil y escritorio) que
+lee los `.dialogue` de GitHub, edita las reglas `# cuando:` y el texto, simula
+qué cue elige el juego y guarda en `main` con un commit (token de GitHub del
+usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
+
+- `motor.js` es una **réplica exacta** del selector de `src/autoload/story.gd`
+  (`candidates`, `_check`, `_score`, `_parse_criterion`) y lee fases, ánimos,
+  tramos, dimensiones, pesos y personajes del propio código (`game_state.gd`,
+  `social.gd`, `story.gd`, `character_db.gd`): si cambias esas constantes, el
+  editor las recoge solo.
+- **Si cambias cómo elige Story** (condiciones, pesos, desempates, sintaxis de
+  `# cuando:`), cambia `motor.js` igual y pasa la prueba de paridad, que
+  compara ambos en cientos de situaciones al azar:
+  ```bash
+  GODOT=/ruta/a/godot tools/editor_dialogos/paridad.sh 1000
+  ```
+  Debe terminar en «diferencias: 0». El lado Godot es la escena
+  `src/tools/editor_dialogos/paridad.tscn` (escena y no `-s`, para que existan
+  los autoloads).
+- `motor.parseFile`/`serializeFile` reescriben solo los cues editados: un
+  archivo sin cambios sale idéntico byte a byte.
 
 ## Cómo probar los cambios
 
@@ -109,7 +134,7 @@ desactives los hooks para saltarte la regla.
 
 ## Estado y pendientes (resumen)
 
-Hecho: capítulo 1 (día guiado), mundo libre, conversaciones con reglas,
+Hecho: editor de diálogos web (también móvil), capítulo 1 (día guiado), mundo libre, conversaciones con reglas,
 relaciones y ánimo, móvil, combate en grupo con habilidades, criaturas y
 recompensas, guardado automático, mapa 3D con luz por franjas, mazmorra de La
 Torre (palancas, puertas con tarjeta, paredes secretas, plantas, compañero),

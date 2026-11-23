@@ -122,26 +122,45 @@ func moment_for(action: String, result: String = Social.OK) -> String:
 ## `context` añade datos del momento (p. ej. {"resultado": "gana"}).
 func pick(who: String, moment: String, context: Dictionary = {}) -> Dictionary:
 	var best: Array[Dictionary] = []
-	var best_score := -1
-	for rule: Dictionary in _rules.get(moment, []):
-		if rule.file != who and rule.file != GENERAL:
-			continue
-		# Las reglas genéricas (general.dialogue) solo si se refieren a cualquiera.
-		var score := _score(rule, who, moment, context)
-		if score < 0:
-			continue
-		# A igualdad, lo del propio personaje gana a lo genérico.
-		score = score * 2 + (1 if rule.file == who else 0)
-		if score > best_score:
-			best_score = score
-			best = [rule]
-		elif score == best_score:
-			best.append(rule)
+	for c: Dictionary in candidates(who, moment, context):
+		if c.best:
+			best.append(c.rule)
 	if best.is_empty():
 		return {}
 	var chosen: Dictionary = best[_rng.randi_range(0, best.size() - 1)]
 	speaker = CharacterDB.display_name(who)
 	return {"resource": resource(chosen.file), "cue": chosen.cue}
+
+
+## Todas las reglas que se consideran para `who` y `moment`, con su puntuación:
+## [{rule, score, best}]. `score` es -1 si la regla no se cumple; `best` marca
+## las ganadoras (si hay varias, `pick` elige una al azar).
+## `state` permite evaluar con un estado simulado (pruebas, editor de diálogos):
+## un objeto con los mismos métodos de consulta que Story (seen, knows, flag,
+## present, phase_index, tier, mood, today, times_today, value). Por defecto,
+## la partida actual.
+func candidates(who: String, moment: String, context: Dictionary = {}, state: Object = null) -> Array[Dictionary]:
+	var s: Object = state if state != null else self
+	var out: Array[Dictionary] = []
+	var best_score := -1
+	for rule: Dictionary in _rules.get(moment, []):
+		if rule.file != who and rule.file != GENERAL:
+			continue
+		# Las reglas genéricas (general.dialogue) solo si se refieren a cualquiera.
+		var score := _score(rule, who, moment, context, s)
+		if score >= 0:
+			# A igualdad, lo del propio personaje gana a lo genérico.
+			score = score * 2 + (1 if rule.file == who else 0)
+			best_score = maxi(best_score, score)
+		out.append({"rule": rule, "score": score, "best": false})
+	for c: Dictionary in out:
+		c.best = best_score >= 0 and c.score == best_score
+	return out
+
+
+## Índice de la fase actual en GameState.PHASES (para comparar fases).
+func phase_index() -> int:
+	return GameState.PHASES.find(GameState.phase)
 
 
 ## Recurso de un cue concreto (para escenas de guion que no pasan por el selector).
@@ -163,10 +182,10 @@ func resource(file: String) -> DialogueResource:
 
 
 ## Peso de las condiciones que cumple la regla; -1 si falla alguna.
-func _score(rule: Dictionary, who: String, moment: String, context: Dictionary) -> int:
+func _score(rule: Dictionary, who: String, moment: String, context: Dictionary, s: Object) -> int:
 	var score := 0
 	for c: Dictionary in rule.criteria:
-		if not _check(c, rule.cue, who, moment, context):
+		if not _check(c, rule.cue, who, moment, context, s):
 			return -1
 		score += CRITERION_WEIGHTS.get(c.kind, 1)
 	return score
@@ -184,31 +203,33 @@ func times_today(who: String, moment: String) -> int:
 			"target": who, "date": GameState.date})
 
 
-func _check(c: Dictionary, cue_name: String, who: String, moment: String, context: Dictionary) -> bool:
+## Si cambias estas reglas, cambia también el motor del editor de diálogos
+## (docs/editor-dialogos/motor.js) y pasa la prueba de paridad (ver CLAUDE.md).
+func _check(c: Dictionary, cue_name: String, who: String, moment: String, context: Dictionary, s: Object) -> bool:
 	var ok := true
 	match c.kind:
 		"once":
-			ok = not seen(cue_name)
+			ok = not s.seen(cue_name)
 		"seen":
-			ok = seen(c.arg)
+			ok = s.seen(c.arg)
 		"knows":
-			ok = knows(who, c.arg)
+			ok = s.knows(who, c.arg)
 		"flag":
-			ok = flag(c.arg)
+			ok = s.flag(c.arg)
 		"present":
-			ok = present(c.arg)
+			ok = s.present(c.arg)
 		"phase":
-			ok = _compare(GameState.PHASES.find(GameState.phase), c.op, GameState.PHASES.find(c.arg))
+			ok = _compare(s.phase_index(), c.op, GameState.PHASES.find(c.arg))
 		"tier":
-			ok = _compare(TIERS.find(tier(who)), c.op, TIERS.find(c.arg))
+			ok = _compare(TIERS.find(s.tier(who)), c.op, TIERS.find(c.arg))
 		"mood":
-			ok = mood(who) in c.arg.split("|") if c.op == "=" else not mood(who) in c.arg.split("|")
+			ok = s.mood(who) in c.arg.split("|") if c.op == "=" else not s.mood(who) in c.arg.split("|")
 		"today":
-			ok = _compare(today(who), c.op, int(c.arg))
+			ok = _compare(s.today(who), c.op, int(c.arg))
 		"times":
-			ok = _compare(times_today(who, moment), c.op, int(c.arg))
+			ok = _compare(s.times_today(who, moment), c.op, int(c.arg))
 		"dim":
-			ok = _compare(value(who, c.dim), c.op, float(c.arg))
+			ok = _compare(s.value(who, c.dim), c.op, float(c.arg))
 		"context":
 			ok = str(context.get(c.key, "")) in c.arg.split("|")
 	return ok != c.negate
