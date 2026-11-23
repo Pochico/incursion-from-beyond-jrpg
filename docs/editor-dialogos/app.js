@@ -37,7 +37,7 @@
 		rules: { byMoment: {}, cueFiles: {} },
 		sel: null,                  // cue seleccionado
 		filter: { file: "", moment: "", q: "" },
-		bodyMode: "texto",
+		bodyMode: "flujo",
 		view: "lista",
 		sim: null,
 		save: null,                 // partida importada (opcional)
@@ -376,7 +376,8 @@
 			<div id="e-rules"></div>
 			<button class="btn" id="e-add-rule">+ Otra regla</button>
 			<h2>Texto</h2>
-			<div class="row" style="margin-bottom:8px"><div class="seg"><button data-m="texto" class="${S.bodyMode === "texto" ? "on" : ""}">Texto</button><button data-m="vista" class="${S.bodyMode === "vista" ? "on" : ""}">Vista previa</button></div></div>
+			<div class="row" style="margin-bottom:8px"><div class="seg"><button data-m="flujo" class="${S.bodyMode === "flujo" ? "on" : ""}">Conversación</button><button data-m="texto" class="${S.bodyMode === "texto" ? "on" : ""}">Texto</button></div>
+				<span class="muted small">${S.bodyMode === "flujo" ? "Toca una línea para editarla; elige opción para ver su rama." : ""}</span></div>
 			<div id="e-body"></div>
 			<h2>Revisión</h2>
 			<div class="issues">${issues.length ? issues.map((i) => `<div class="${i[0] === "info" ? "muted" : i[0]}">${i[0] === "err" ? "✕" : i[0] === "warn" ? "⚠" : "ℹ"} ${esc(i[1])}</div>`).join("") : '<div class="ok">✓ Sin problemas.</div>'}</div>`;
@@ -514,7 +515,7 @@
 	function renderBody() {
 		const c = S.sel;
 		const box = $("#e-body");
-		if (S.bodyMode === "vista") { box.innerHTML = `<div class="card preview">${previewHTML(c.body)}</div>`; return; }
+		if (S.bodyMode === "flujo") { box.innerHTML = flowHTML(c); bindFlow(box, c, renderEditor); return; }
 		box.innerHTML = `
 			<div class="toolbar">
 				<button class="btn sm" data-ins="\t">⇥ Sangría</button>
@@ -545,34 +546,332 @@
 		ta.focus();
 	}
 
-	function previewHTML(body) {
-		const byName = Object.fromEntries(S.cfg.characters.map((c) => [c.name, c.color]));
-		return body.split("\n").map((raw) => {
-			const ind = (raw.match(/^\t*/) || [""])[0].length;
-			let t = raw.trim();
-			if (!t) return "";
-			let cls = "", html = esc(t);
-			if (t.startsWith("#")) cls = "cmt";
-			else if (/^(\$>|if |elif |else|=>|do |set |%\s*$)/.test(t)) cls = "code";
-			else {
-				const isOpt = t.startsWith("- ");
-				if (isOpt) t = t.slice(2);
-				if (t.startsWith("% ")) t = t.slice(2);
-				const tags = (t.match(/\[#[^\]]*\]/g) || []).join(" ");
-				t = t.replace(/\s*\[#[^\]]*\]/g, "");
-				const m = t.match(/^([^:]{1,30}):\s(.*)$/);
-				if (m && !isOpt) {
-					const color = byName[m[1]] || (m[1].includes("speaker") ? "#c6f432" : "#f2f2f4");
-					html = `<span class="sp" style="color:${color}">${esc(m[1])}:</span> ${esc(m[2].replace(/\\:/g, ":"))}`;
-				} else {
-					html = esc(t.replace(/\\:/g, ":"));
-					cls = isOpt ? "opt" : "narr";
-					if (isOpt) html = "▸ " + html;
+
+	// --- Flujo de la conversación (diagrama editable) -------------------------------------------
+
+	const F = window.Flujo;
+	S.flow = {};   // "archivo/cue" -> {choices: {ruta: índice}, edit: ruta|null, confirm: ruta|null}
+
+	function flowState(cue) {
+		const k = cue.file + "/" + cue.name;
+		return S.flow[k] || (S.flow[k] = { choices: {}, edit: null, confirm: null });
+	}
+
+	const pkey = (path) => path.join(".");
+	const speakerNames = () => [...new Set(S.cfg.characters.map((c) => c.name).concat(["{{Story.speaker}}"]))];
+	function colorOfName(name) {
+		const c = S.cfg.characters.find((x) => x.name === name);
+		return c ? c.color : (name.includes("speaker") ? "#c6f432" : "#f2f2f4");
+	}
+	const renName = () => charName(S.cfg.protagonist);
+	function npcName(cue) { return charInfo(cue.file) ? charName(cue.file) : "{{Story.speaker}}"; }
+
+	/** Etiquetas de estilo usadas en las opciones de todos los diálogos (las más frecuentes primero). */
+	function styleTags() {
+		const count = {};
+		for (const c of allCues()) for (const m of c.body.matchAll(/^\s*- .*?(\[#[^\]]*\])/gm)) for (const t of F.tagList(m[1])) count[t] = (count[t] || 0) + 1;
+		return Object.keys(count).sort((a, b) => (a.includes("=") - b.includes("=")) || count[b] - count[a]);
+	}
+
+	function humanMutation(t) {
+		const s = t.replace(/^\$>\s*/, "");
+		let m;
+		if ((m = s.match(/Story\.change\("([^"]+)",\s*"([^"]+)",\s*(-?[\d.]+)\)/))) return charName(m[1]) + " · " + m[2] + " " + (+m[3] > 0 ? "+" : "") + m[3];
+		if ((m = s.match(/Story\.set_mood\("([^"]+)",\s*"([^"]+)"/))) return charName(m[1]) + " · ánimo: " + m[2];
+		if ((m = s.match(/Story\.set_flag\("([^"]+)"/))) return "Indicador «" + m[1] + "»";
+		if ((m = s.match(/Story\.tell\("([^"]+)",\s*"([^"]+)"/))) return charName(m[1]) + " se entera de «" + m[2] + "»";
+		if ((m = s.match(/Story\.text\("([^"]+)"/))) return "Mensaje de " + charName(m[1]) + " al móvil";
+		return s;
+	}
+
+	function humanCond(t) {
+		if (t.startsWith("else")) return "Si no";
+		return t.replace(/^(if|elif)\s+/, "Si ").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
+			.replace(/Story\.tier\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "relación de " + charName(w) + " = " + m)
+			.replace(/Story\.knows\("([^"]+)",\s*"([^"]+)"\)/g, (a, w, e) => charName(w) + " sabe «" + e + "»")
+			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => "indicador «" + f + "»");
+	}
+
+	/** HTML del diagrama de un cue. */
+	function flowHTML(cue) {
+		const st = flowState(cue);
+		const tree = F.parse(cue.body);
+		const ctx = { st, cue, step: 0 };
+		const body = seqHTML(tree.children, [], ctx);
+		return `<div class="flow">${body || '<div class="empty">Este diálogo está vacío.</div>'}
+			<div class="fadd"><button class="btn sm" data-op="add-end">+ Línea al final</button></div></div>`;
+	}
+
+	function seqHTML(nodes, path, ctx) {
+		let html = "";
+		let i = 0;
+		while (i < nodes.length) {
+			const n = nodes[i];
+			const k = F.kind(n.text);
+			if (k === "blank") { i++; continue; }
+			if (k === "option" || k === "variant" || k === "cond") {
+				const grp = [];
+				let j = i;
+				while (j < nodes.length) {
+					const kk = F.kind(nodes[j].text);
+					if (kk === "blank" || kk === "comment") { j++; continue; }
+					if (kk !== k) break;
+					if (k === "cond" && grp.length && (/^if\b/.test(nodes[j].text) || grp[grp.length - 1].n.text.startsWith("else"))) break;
+					grp.push({ n: nodes[j], idx: j });
+					j++;
 				}
-				if (tags) html += ` <span class="chip small" style="pointer-events:none">${esc(tags)}</span>`;
+				html += groupHTML(k, grp, path, ctx);
+				i = j;
+				continue;
 			}
-			return `<div class="l ${cls}" style="--ind:${ind}">${html}</div>`;
-		}).join("");
+			html += nodeHTML(n, path.concat(i), k, ctx);
+			i++;
+		}
+		return html;
+	}
+
+	function nodeHTML(n, path, k, ctx) {
+		const key = pkey(path);
+		if (ctx.st.edit === key) return formHTML(n, key, k, ctx) + seqHTML(n.children, path, ctx);
+		let html = "";
+		switch (k) {
+			case "line": html = lineCard(n, key, ctx); break;
+			case "mutation": html = `<div class="fmut" data-path="${key}">⚙ ${esc(humanMutation(n.text))}</div>`; break;
+			case "comment": html = `<div class="fcmt" data-path="${key}">${esc(n.text)}</div>`; break;
+			case "jump": {
+				const target = n.text.replace(/^=><?\s*/, "");
+				html = /^END/.test(target)
+					? `<div class="fend" data-path="${key}">■ Fin de la conversación</div>`
+					: `<div class="fend goto" data-path="${key}">→ Sigue en <b>${esc(target)}</b> <button class="btn sm" data-op="goto" data-cue="${esc(target)}">Abrir</button></div>`;
+				break;
+			}
+			default: html = `<div class="fmut" data-path="${key}">${esc(n.text)}</div>`;
+		}
+		return html + seqHTML(n.children, path, ctx);
+	}
+
+	function lineCard(n, key, ctx, asVariant) {
+		const p = F.parseLine(n.text);
+		ctx.step++;
+		const cls = !p.speaker ? "narr" : p.speaker === renName() ? "ren" : "npc";
+		const tags = F.tagList(p.tags).map((t) => `<span class="ftag">${esc(t)}</span>`).join("");
+		return `<div class="fcard ${cls}" data-path="${key}" style="--c:${colorOfName(p.speaker)}">
+			<div class="fhead"><span class="fstep">${ctx.step}</span><span class="fname">${esc(p.speaker || "Narración")}</span>${tags}</div>
+			<div class="ftext">${esc(F.unescape(p.body))}</div></div>`;
+	}
+
+	function groupHTML(k, grp, path, ctx) {
+		const key = pkey(path.concat(grp[0].idx));
+		let sel = ctx.st.choices[key] || 0;
+		if (sel >= grp.length) sel = 0;
+		const labels = { option: renName() + " responde · elige una opción", variant: "Al azar · sale una de estas", cond: "Según la situación" };
+		const tabLabel = (g, i) => k === "option" ? F.parseOption(g.n.text).body : k === "variant" ? "Variante " + (i + 1) : humanCond(g.n.text);
+		const tabs = grp.map((g, i) => `<button class="ftab ${i === sel ? "on" : ""}" data-op="choose" data-key="${key}" data-i="${i}">${esc(tabLabel(g, i))}</button>`).join("");
+		const add = k === "option" ? `<button class="ftab add" data-op="add-option" data-path="${pkey(path.concat(grp[grp.length - 1].idx))}">+ Opción</button>`
+			: k === "variant" ? `<button class="ftab add" data-op="add-variant" data-path="${pkey(path.concat(grp[grp.length - 1].idx))}">+ Variante</button>` : "";
+		const chosen = grp[sel];
+		const cpath = path.concat(chosen.idx);
+		const ckey = pkey(cpath);
+		let inner = "";
+		if (ctx.st.edit === ckey) {
+			inner = formHTML(chosen.n, ckey, k === "variant" && chosen.n.text.replace(/^%\d*\s*/, "") ? "line" : k, ctx);
+		} else if (k === "option") {
+			const o = F.parseOption(chosen.n.text);
+			ctx.step++;
+			const tags = F.tagList(o.tags).map((t) => `<span class="ftag">${esc(t)}</span>`).join("");
+			inner = `<div class="fcard ren opt" data-path="${ckey}"><div class="fhead">${tags}<span class="fname">${esc(renName())}</span><span class="fstep">${ctx.step}</span></div>
+				<div class="ftext">${esc(o.body)}</div></div>` + (o.jump ? `<div class="fend goto">→ Sigue en <b>${esc(o.jump)}</b></div>` : "");
+		} else if (k === "variant") {
+			inner = chosen.n.text.replace(/^%\d*\s*/, "") ? lineCard(chosen.n, ckey, ctx) : `<div class="fmut" data-path="${ckey}">% ${esc(chosen.n.text.slice(1).trim() || "bloque al azar")}</div>`;
+		} else {
+			inner = `<div class="fmut cond" data-path="${ckey}">❓ ${esc(humanCond(chosen.n.text))}</div>`;
+		}
+		inner += seqHTML(chosen.n.children, cpath, ctx);
+		return `<div class="fgroup ${k}"><div class="fglabel">${esc(labels[k])}</div><div class="ftabs">${tabs}${add}</div><div class="fbranch">${inner}</div></div>`;
+	}
+
+	function formHTML(n, key, k, ctx) {
+		const cue = ctx.cue;
+		const confirm = ctx.st.confirm === key;
+		const hasKids = n.children.some((c) => c.text !== "");
+		const buttons = (extra) => `<div class="row">
+			<button class="btn lime sm" data-op="apply">Aplicar</button>
+			<button class="btn sm ghost" data-op="cancel">Cancelar</button>
+			<button class="btn sm" data-op="up" title="Subir">↑</button><button class="btn sm" data-op="down" title="Bajar">↓</button>
+			<button class="btn sm danger" data-op="del">${confirm ? "¿Seguro?" + (hasKids ? " Se borra su rama" : "") : "Borrar"}</button></div>
+			<div class="row">${extra}</div>`;
+		let fields = "";
+		if (k === "line") {
+			const p = F.parseLine(n.text);
+			const names = speakerNames();
+			if (p.speaker && !names.includes(p.speaker)) names.push(p.speaker);
+			fields = `<select class="input" name="speaker"><option value="">Narración</option>${names.map((nm) => `<option ${nm === p.speaker ? "selected" : ""}>${esc(nm)}</option>`).join("")}</select>
+				<textarea class="input" name="body" placeholder="Lo que se dice…">${esc(F.unescape(p.body))}</textarea>
+				<input class="input" name="tags" value="${esc(p.tags)}" placeholder="Etiquetas (opcional) [#…]">`;
+			return `<div class="fform" data-path="${key}" data-kind="line">${fields}${buttons(
+				`<button class="btn sm" data-op="add-after">+ Línea debajo</button><button class="btn sm" data-op="add-options">+ Respuestas de ${esc(renName())}</button>`)}</div>`;
+		}
+		if (k === "option") {
+			const o = F.parseOption(n.text);
+			const on = F.tagList(o.tags);
+			const chips = styleTags().slice(0, 24).map((t) => `<span class="chip small ${on.includes(t) ? "on" : ""}" data-op="tag" data-v="${esc(t)}">${esc(t)}</span>`).join("");
+			fields = `<div class="small muted">Lo que responde ${esc(renName())}</div>
+				<textarea class="input" name="body">${esc(o.body)}</textarea>
+				<div class="small muted">Estilo y postura (los personajes reaccionan según esto)</div>
+				<div class="chips">${chips}</div>
+				<input class="input" name="tags" value="${esc(on.join(", "))}" placeholder="franco, criaturas=acoger…">
+				<div class="small muted">Al elegirla, ¿salta a otro diálogo?</div>
+				<select class="input" name="jump"><option value="">No, sigue aquí</option>${["END"].concat(allCues().map((c) => c.name)).map((c) => `<option ${c === o.jump ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>`;
+			return `<div class="fform" data-path="${key}" data-kind="option">${fields}${buttons(
+				`<button class="btn sm" data-op="add-option">+ Otra opción</button><button class="btn sm" data-op="add-child">+ Línea en esta rama</button>`)}</div>`;
+		}
+		const help = { mutation: "Efecto (código, p. ej. $> Story.change(\"kenji\", \"afecto\", 2))", jump: "Salto: => END o => nombre_de_cue", cond: "Condición (if …, elif …, else)", variant: "Variante al azar (% …)", comment: "Comentario (# …)" }[k] || "Línea";
+		return `<div class="fform" data-path="${key}" data-kind="raw"><div class="small muted">${esc(help)}</div>
+			<input class="input" name="raw" value="${esc(n.text)}" spellcheck="false" autocapitalize="off">${buttons(
+			k === "cond" || k === "variant" ? '<button class="btn sm" data-op="add-child">+ Línea dentro</button>' : '<button class="btn sm" data-op="add-after">+ Línea debajo</button>')}</div>`;
+	}
+
+	/** Conecta los clics de un diagrama. `rerender` vuelve a dibujar la vista que lo contiene. */
+	function bindFlow(container, cue, rerender) {
+		const st = flowState(cue);
+		container.onclick = (e) => {
+			const op = e.target.closest("[data-op]");
+			if (op && container.contains(op)) { flowOp(op, cue, st, rerender, container); return; }
+			if (e.target.closest(".fform")) return;
+			const card = e.target.closest("[data-path]");
+			if (card) { st.edit = card.dataset.path; st.confirm = null; rerender(); }
+		};
+	}
+
+	function flowOp(el, cue, st, rerender, container) {
+		const op = el.dataset.op;
+		if (op === "choose") { st.choices[el.dataset.key] = +el.dataset.i; st.edit = null; rerender(); return; }
+		if (op === "goto") { const c = allCues().find((x) => x.name === el.dataset.cue); if (c) selectCue(c.name, c.file, true); else toast("No existe ese diálogo", true); return; }
+		if (op === "tag") {
+			const form = el.closest(".fform");
+			el.classList.toggle("on");
+			const input = form.querySelector('[name="tags"]');
+			const list = input.value.split(",").map((t) => t.trim()).filter(Boolean);
+			const i = list.indexOf(el.dataset.v);
+			i >= 0 ? list.splice(i, 1) : list.push(el.dataset.v);
+			input.value = list.join(", ");
+			return;
+		}
+		if (op === "cancel") { st.edit = null; st.confirm = null; rerender(); return; }
+
+		const tree = F.parse(cue.body);
+		const path = (el.dataset.path || (el.closest(".fform") || {}).dataset?.path || "").split(".").filter((x) => x !== "").map(Number);
+		const node = path.length ? F.nodeAt(tree, path) : tree;
+		const parent = path.length ? F.nodeAt(tree, path.slice(0, -1)) : null;
+		const idx = path[path.length - 1];
+		const mk = (text, indent, children) => ({ text, indent, dirty: true, children: children || [] });
+		const npcLine = (indent) => mk(npcName(cue) + ": …", indent);
+		let focus = null;
+
+		switch (op) {
+			case "apply": {
+				const form = el.closest(".fform");
+				const val = (n) => { const f = form.querySelector(`[name="${n}"]`); return f ? f.value.replace(/\s*\n\s*/g, " ").trim() : ""; };
+				let text;
+				if (form.dataset.kind === "line") {
+					const prev = F.parseLine(node.text);
+					text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: val("tags") });
+				} else if (form.dataset.kind === "option") {
+					const tags = val("tags").split(",").map((t) => t.trim()).filter(Boolean);
+					text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), jump: val("jump") });
+				} else {
+					text = val("raw");
+				}
+				if (!text) { toast("La línea no puede quedar vacía", true); return; }
+				if (text !== node.text) { node.text = text; node.dirty = true; }
+				st.edit = null;
+				break;
+			}
+			case "del": {
+				if (st.confirm !== pkey(path)) { st.confirm = pkey(path); rerender(); return; }
+				parent.children.splice(idx, 1);
+				st.edit = null; st.confirm = null;
+				break;
+			}
+			case "up": case "down": {
+				const sib = parent.children;
+				let j = idx;
+				do { j += op === "up" ? -1 : 1; } while (j >= 0 && j < sib.length && sib[j].text === "");
+				if (j < 0 || j >= sib.length) { toast("No se puede mover más"); return; }
+				[sib[idx], sib[j]] = [sib[j], sib[idx]];
+				sib[idx].dirty = sib[j].dirty = true;
+				focus = path.slice(0, -1).concat(j);
+				break;
+			}
+			case "add-after":
+				parent.children.splice(idx + 1, 0, npcLine(node.indent));
+				focus = path.slice(0, -1).concat(idx + 1);
+				break;
+			case "add-options":
+				parent.children.splice(idx + 1, 0,
+					mk("- Respuesta 1", node.indent, [npcLine(node.indent + 1)]),
+					mk("- Respuesta 2", node.indent, [npcLine(node.indent + 1)]));
+				focus = path.slice(0, -1).concat(idx + 1);
+				break;
+			case "add-option":
+				parent.children.splice(idx + 1, 0, mk("- Nueva respuesta", node.indent, [npcLine(node.indent + 1)]));
+				focus = path.slice(0, -1).concat(idx + 1);
+				st.choices[groupKeyFor(parent, path, idx)] = countGroupIndex(parent, idx + 1);
+				break;
+			case "add-variant":
+				parent.children.splice(idx + 1, 0, mk("% " + npcName(cue) + ": …", node.indent));
+				focus = path.slice(0, -1).concat(idx + 1);
+				st.choices[groupKeyFor(parent, path, idx)] = countGroupIndex(parent, idx + 1);
+				break;
+			case "add-child":
+				node.children.push(npcLine(node.indent + 1));
+				focus = path.concat(node.children.length - 1);
+				break;
+			case "add-end": {
+				const kids = tree.children;
+				let at = kids.length;
+				while (at > 0 && kids[at - 1].text === "") at--;
+				if (at > 0 && F.kind(kids[at - 1].text) === "jump") at--;
+				kids.splice(at, 0, npcLine(0));
+				focus = [at];
+				break;
+			}
+			default: return;
+		}
+		if (focus) { st.edit = pkey(focus); st.confirm = null; }
+		cue.body = F.serialize(tree);
+		cue.dirty = true;
+		rebuildRules();
+		renderBadges();
+		renderList();
+		rerender();
+		const f = container.querySelector(".fform");
+		if (f) f.scrollIntoView({ block: "center", behavior: "smooth" });
+	}
+
+	// Clave del grupo (ruta del primer elemento del grupo) que contiene la posición idx.
+	function groupKeyFor(parent, path, idx) {
+		const k = F.kind(parent.children[idx].text);
+		let first = idx;
+		for (let j = idx - 1; j >= 0; j--) {
+			const kk = F.kind(parent.children[j].text);
+			if (kk === "blank" || kk === "comment") continue;
+			if (kk !== k) break;
+			first = j;
+		}
+		return pkey(path.slice(0, -1).concat(first));
+	}
+
+	function countGroupIndex(parent, idx) {
+		const k = F.kind(parent.children[idx].text);
+		let n = 0;
+		for (let j = idx - 1; j >= 0; j--) {
+			const kk = F.kind(parent.children[j].text);
+			if (kk === "blank" || kk === "comment") continue;
+			if (kk !== k) break;
+			n++;
+		}
+		return n;
 	}
 
 	// --- Operaciones sobre cues ----------------------------------------------------------------
@@ -723,6 +1022,8 @@
 			<div class="param"><label>Personaje</label><select class="input" id="s-who">${whos.map((w) => `<option value="${w}" ${w === sim.who ? "selected" : ""}>${esc(charName(w))}</option>`).join("")}</select></div>
 			<div class="param"><label>Momento</label><select class="input" id="s-moment">${known.moments.map((m) => `<option ${m === sim.moment ? "selected" : ""}>${m}</option>`).join("")}</select></div>
 			${resultHTML(winners, cands)}
+			<div id="s-flow-wrap">${simFlowHTML(winners)}</div>
+			<h2>Todas las reglas de este momento</h2>
 			<div id="s-cands">${cands.map((x) => candHTML(x)).join("") || '<div class="empty">No hay reglas para este momento.</div>'}</div>
 
 			<h2>Situación</h2>
@@ -786,6 +1087,23 @@
 			renderSim();
 		}));
 		bindCands(v);
+		bindSimFlow(winners);
+	}
+
+	function simFlowHTML(winners) {
+		if (!winners.length) return "";
+		const pick = Math.min(S.simPick || 0, winners.length - 1);
+		const cue = winners[pick].rule.cueRef;
+		const tabs = winners.length > 1 ? `<div class="ftabs" style="margin-bottom:8px">${winners.map((w, i) => `<button class="ftab ${i === pick ? "on" : ""}" data-pick="${i}">${esc(w.rule.cue)}</button>`).join("")}</div>` : "";
+		return `<h2>Conversación · ${esc(cue.name)}</h2>${tabs}<div id="s-flow">${flowHTML(cue)}</div>`;
+	}
+
+	function bindSimFlow(winners) {
+		const wrap = $("#s-flow-wrap");
+		if (!wrap || !winners.length) return;
+		wrap.querySelectorAll("[data-pick]").forEach((b) => (b.onclick = () => { S.simPick = +b.dataset.pick; renderSim(); }));
+		const cue = winners[Math.min(S.simPick || 0, winners.length - 1)].rule.cueRef;
+		bindFlow($("#s-flow"), cue, renderSim);
 	}
 
 	// Solo resultados (al arrastrar un deslizador, sin redibujar los controles).
@@ -799,6 +1117,8 @@
 		if (main) main.outerHTML = resultHTML(winners, cands);
 		$("#s-cands").innerHTML = cands.map(candHTML).join("");
 		bindCands($("#v-simular"));
+		const fw = $("#s-flow-wrap");
+		if (fw) { fw.innerHTML = simFlowHTML(winners); bindSimFlow(winners); }
 	}
 
 	function bindCands(v) {

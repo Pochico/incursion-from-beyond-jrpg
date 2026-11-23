@@ -96,6 +96,11 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   los autoloads).
 - `motor.parseFile`/`serializeFile` reescriben solo los cues editados: un
   archivo sin cambios sale idéntico byte a byte.
+- `flujo.js` convierte el texto de un cue en un árbol por sangría (líneas,
+  opciones `- `, variantes `%`, `if`, `$>`, `=>`) para el diagrama editable de
+  la conversación, y lo reescribe cambiando solo las líneas editadas. Los 162
+  cues actuales se reconstruyen idénticos; si añades sintaxis nueva de
+  Dialogue Manager a los diálogos, comprueba que `Flujo.kind` la reconoce.
 
 ## Cómo probar los cambios
 

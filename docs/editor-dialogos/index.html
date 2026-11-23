@@ -150,6 +150,47 @@ input[type=range] { width: 100%; accent-color: var(--lime); }
 .diff { font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-all; background: var(--ink); border-radius: 10px; padding: 8px; max-height: 320px; overflow: auto; }
 .diff .a { color: var(--lime); } .diff .d { color: var(--red); } .diff .h { color: var(--violet); }
 
+
+/* --- Flujo de la conversación --- */
+.flow { display: flex; flex-direction: column; gap: 8px; }
+.fcard { position: relative; max-width: 88%; border-radius: 14px; padding: 9px 12px 10px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+.fcard.npc { align-self: flex-start; border-left: 4px solid var(--c, var(--gray)); border-top-left-radius: 4px; }
+.fcard.ren { align-self: flex-end; background: rgba(198,244,50,.1); border-color: rgba(198,244,50,.45); border-top-right-radius: 4px; }
+.fcard.ren.opt { border-style: dashed; }
+.fcard.narr { align-self: center; max-width: 94%; background: none; border: 1px dashed var(--line2); text-align: center; }
+.fcard.narr .ftext { font-style: italic; color: #cfcfd8; }
+.fcard:hover { border-color: var(--lime); }
+.fhead { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; flex-wrap: wrap; }
+.fcard.ren .fhead { justify-content: flex-end; }
+.fcard.narr .fhead { justify-content: center; }
+.fstep { font-size: 10.5px; color: var(--gray); font-variant-numeric: tabular-nums; border: 1px solid var(--line2); border-radius: 6px; padding: 0 5px; }
+.fname { font-weight: 800; font-style: italic; font-size: 13.5px; color: var(--c, var(--white)); }
+.fcard.ren .fname { color: var(--lime); }
+.ftext { line-height: 1.42; white-space: pre-wrap; word-break: break-word; }
+.ftag { font-size: 10.5px; padding: 1px 6px; border-radius: 5px; background: rgba(155,92,240,.25); color: #e3d4ff; }
+.fgroup { border: 1px solid rgba(155,92,240,.5); border-radius: 14px; padding: 9px; background: rgba(155,92,240,.07); }
+.fgroup.variant { border-color: rgba(242,242,244,.25); background: rgba(242,242,244,.03); }
+.fgroup.cond { border-color: rgba(255,179,71,.45); background: rgba(255,179,71,.05); }
+.fglabel { font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--violet); margin: 0 2px 6px; font-weight: 600; }
+.fgroup.variant .fglabel { color: var(--gray); } .fgroup.cond .fglabel { color: var(--amber); }
+.ftabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.ftab { flex: none; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--line2); background: var(--ink); border-radius: 10px; padding: 7px 10px; font-size: 13px; cursor: pointer; text-align: left; }
+.ftab.on { background: var(--violet); border-color: var(--violet); color: #fff; font-weight: 600; }
+.fgroup.variant .ftab.on { background: var(--white); color: var(--ink); border-color: var(--white); }
+.fgroup.cond .ftab.on { background: var(--amber); color: var(--ink); border-color: var(--amber); }
+.ftab.add { color: var(--gray); border-style: dashed; }
+.fbranch { display: flex; flex-direction: column; gap: 8px; border-left: 2px dashed rgba(155,92,240,.5); padding: 6px 0 2px 10px; margin-left: 4px; }
+.fmut, .fend, .fcmt { align-self: center; font-size: 12.5px; border-radius: 8px; padding: 4px 10px; cursor: pointer; text-align: center; }
+.fmut { background: rgba(39,180,245,.12); color: #9fdcff; border: 1px solid rgba(39,180,245,.35); }
+.fmut.cond { background: rgba(255,179,71,.1); color: #ffd59a; border-color: rgba(255,179,71,.4); }
+.fend { background: rgba(255,59,71,.08); color: #ff9aa0; border: 1px solid rgba(255,59,71,.35); }
+.fend.goto { background: rgba(198,244,50,.08); color: var(--lime); border-color: rgba(198,244,50,.4); }
+.fcmt { color: #70707c; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+.fform { align-self: stretch; border: 1px solid var(--lime); border-radius: 14px; padding: 10px; background: var(--panel); display: flex; flex-direction: column; gap: 8px; cursor: default; }
+.fform textarea { min-height: 70px; resize: vertical; }
+.fform .row .btn { flex: none; }
+.fadd { display: flex; justify-content: center; margin-top: 4px; }
+
 #toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 18px + var(--safe-b)); transform: translateX(-50%); background: var(--night); border: 1px solid var(--lime); color: var(--white); padding: 10px 16px; border-radius: 12px; z-index: 60; display: none; max-width: 92vw; font-size: 14px; }
 #toast.err { border-color: var(--red); }
 #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; background: var(--ink); z-index: 50; }
@@ -189,6 +230,7 @@ input[type=range] { width: 100%; accent-color: var(--lime); }
 <div id="loading"><div class="spin"></div><div class="muted" id="loading-text">Cargando diálogos…</div></div>
 
 <script src="motor.js"></script>
+<script src="flujo.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
