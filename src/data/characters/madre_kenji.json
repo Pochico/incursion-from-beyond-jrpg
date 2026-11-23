@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "adulto",
 		"tagline": "Te conoce desde crío",
 		"role": "Madre de Kenji y amiga de la madre de Ren. Cocina para medio barrio y trata a Ren como a un segundo hijo."
 	},

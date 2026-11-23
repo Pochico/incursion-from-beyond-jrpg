@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "joven",
 		"tagline": "Novia de Kenji",
 		"role": "Novia de Kenji, de su misma clase. Tranquila y de pocas palabras con todos menos con él. Cuida de Kenji como si fuera su manager."
 	},

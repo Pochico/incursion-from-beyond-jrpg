@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "joven",
 		"tagline": "Compañera de clase",
 		"role": "Compañera de clase de Ren y Shiori. Gyaru extrovertida, va de despreocupada pero se fija en todo."
 	},

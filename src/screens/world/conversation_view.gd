@@ -22,6 +22,9 @@ signal _line_done
 signal _typed
 signal _choice_made(index: int)
 
+## Marca del nombre de la persona elegida en una opción «por persona».
+const PERSON_PLACEHOLDER := "{persona}"
+
 enum State { IDLE, TYPING, WAITING, CHOOSING }
 
 const CHARS_PER_SECOND := 48.0
@@ -86,7 +89,7 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 	var shown := 0
 	while line != null:
 		var choices := _choices_from(line)
-		_show_line({"who": _speaker_id(line.character), "text": line.text, "choices": choices})
+		_show_line({"who": _speaker_id(line.character), "text": line.text.replace(PERSON_PLACEHOLDER, Story.persona_name()), "choices": choices})
 		shown += 1
 		if stop_after > 0 and shown >= stop_after and choices.is_empty():
 			if _state == State.TYPING:
@@ -99,6 +102,8 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 		if not choices.is_empty():
 			var picked: int = await _choice_made
 			var choice: Dictionary = choices[picked]
+			if choice.has("persona"):
+				Story.persona = choice.persona
 			# Las reacciones van por detrás: no se muestra nada.
 			if _npc_id != "":
 				Social.on_choice(_npc_id, choice)
@@ -118,6 +123,9 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 ## Opciones disponibles de una línea: {text, next_id, styles, stance, mentions}.
 ## `#alude=rika` (o `#alude=rika|kenji`) marca a quién menciona Ren: si está
 ## presente, se da por aludido (ver Social.on_choice).
+## `#persona` repite la opción una vez por cada personaje que cumpla sus filtros
+## (ver Social.PERSON_TAG), con {persona} sustituido por su nombre; la copia
+## lleva "persona" y menciona a ese personaje.
 func _choices_from(line: DialogueLine) -> Array:
 	var out := []
 	for r: DialogueResponse in line.responses:
@@ -126,8 +134,14 @@ func _choices_from(line: DialogueLine) -> Array:
 		var styles: Array[String] = []
 		var stance := {}
 		var mentions: Array[String] = []
+		var per_person := Social.PERSON_TAG in r.tags
+		var filters: Array[String] = []
 		for tag: String in r.tags:
-			if tag.begins_with(Social.MENTION_TAG + "="):
+			if tag == Social.PERSON_TAG:
+				continue
+			if per_person and Social.is_person_filter(tag):
+				filters.append(tag)
+			elif tag.begins_with(Social.MENTION_TAG + "="):
 				for who in tag.get_slice("=", 1).split("|", false):
 					if not who in mentions:
 						mentions.append(who)
@@ -135,7 +149,18 @@ func _choices_from(line: DialogueLine) -> Array:
 				stance[tag.get_slice("=", 0)] = tag.get_slice("=", 1)
 			else:
 				styles.append(tag)
-		out.append({"text": r.text, "next_id": r.next_id, "styles": styles, "stance": stance, "mentions": mentions})
+		if per_person:
+			# Nunca quien acaba de hablar (el que pregunta) ni el interlocutor.
+			var exclude := [_speaker_id(line.character), _npc_id]
+			for who in Social.person_candidates(filters, exclude):
+				var m := mentions.duplicate()
+				if not who in m:
+					m.append(who)
+				out.append({"text": r.text.replace(PERSON_PLACEHOLDER, CharacterDB.display_name(who)),
+					"next_id": r.next_id, "styles": styles, "stance": stance, "mentions": m, "persona": who})
+			continue
+		out.append({"text": r.text.replace(PERSON_PLACEHOLDER, Story.persona_name()), "next_id": r.next_id,
+			"styles": styles, "stance": stance, "mentions": mentions})
 	return out
 
 

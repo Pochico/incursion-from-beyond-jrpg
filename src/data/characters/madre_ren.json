@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "adulto",
 		"tagline": "Tu madre",
 		"role": "Madre de Ren. Alegre, ruidosa y con turnos largos. Se preocupa por él más de lo que le dice; lo disimula preguntando si ha comido."
 	},

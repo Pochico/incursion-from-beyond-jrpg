@@ -27,6 +27,9 @@ const ACTION_MOMENTS := {"talk": "hablar", "flirt": "ligar", "fight": "luchar", 
 ## Nombre del interlocutor actual, para las frases genéricas de general.dialogue:
 ##   {{Story.speaker}}: Ahora no me apetece hablar.
 var speaker := ""
+## Persona elegida en la última opción «por persona» ([#persona], ver Social).
+## En los diálogos: {persona} en el texto, o if Story.persona == "rika".
+var persona := ""
 
 var _resources := {}     ## archivo -> DialogueResource
 var _rules := {}         ## momento -> [{cue, file, criteria: Array[Dictionary]}]
@@ -96,6 +99,10 @@ func set_mood(who: String, mood_id: String, intensity: float = 50.0) -> void:
 ## Mensaje de `who` en el móvil de Ren (aparece en Mensajes).
 func text(who: String, message: String) -> void:
 	GameState.add_message(who, who, message)
+
+
+func persona_name() -> String:
+	return CharacterDB.display_name(persona) if persona != "" else ""
 
 
 func enemy_name() -> String:

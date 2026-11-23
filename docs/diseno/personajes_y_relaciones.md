@@ -107,6 +107,22 @@ Momentos:
 
 El editor de diálogos web hace las dos cosas con botones («Menciona a…» y «Si está presente, contesta…») y el simulador abre esa rama según los presentes marcados.
 
+### Opciones por persona
+
+Una respuesta de Ren puede repetirse una vez por cada personaje que cumpla unos filtros, con `{persona}` donde va el nombre:
+
+```
+- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15]
+	if Story.persona == "rika" and Story.present("rika")
+		Rika: A ver, a ver. En ningún momento se habló de que eso fuese una cita.
+	Kenji: ¡¿Qué me dices?!
+```
+
+- Salen de más a menos afecto por Ren. Nunca salen Ren, quien acaba de hablar (el que pregunta) ni el interlocutor. Si nadie cumple, la opción no aparece.
+- Filtros (opcionales, se combinan): cualquier dimensión de lo que siente por Ren (`afecto>=15`, `confianza>30`…), `tramo>=cercana`, `genero=mujer|hombre`, `joven` / `adulto`, `entre=rika|akane`, `presente` / `ausente`. Género y edad salen de la ficha (`identity.gender`, `identity.generation`).
+- Al elegirla, `Story.persona` guarda a quién se eligió: `{persona}` sirve en las líneas siguientes y `if Story.persona == "rika"` para ramas propias. La persona elegida cuenta como mencionada (se da por aludida si está presente).
+- Código: `Social.PERSON_TAG`, `Social.person_candidates`, `ConversationView._choices_from`.
+
 Cualquier condición acepta `no` delante. Los cues ya mostrados se guardan en los indicadores como `visto:<cue>`.
 
 Al exportar el juego hay que incluir `*.dialogue` en «Filtros para exportar archivos que no son recursos»: el selector lee las reglas de los archivos originales.

@@ -285,6 +285,13 @@
 				if (c.kind === "dim" && isNaN(parseFloat(c.arg))) out.push(["err", "La dimensión necesita un número" + n + "."]);
 			}
 		});
+		// Por persona
+		for (const m of cue.body.matchAll(/^\s*- (.*)$/gm)) {
+			const o = F.parseOption("- " + m[1]);
+			const per = F.tagList(o.tags).includes(PERSON);
+			if (per && !o.body.includes(PERSON_PH)) out.push(["warn", "Opción por persona sin {persona}: «" + o.body + "»."]);
+			if (!per && o.body.includes(PERSON_PH)) out.push(["info", "«" + o.body + "» usa {persona} sin ser por persona: dirá la última persona elegida."]);
+		}
 		// Menciones
 		for (const m of cue.body.matchAll(/#alude=([^\],\s]+)/g)) for (const w of m[1].split("|")) if (!charInfo(w)) out.push(["warn", "Menciona a «" + w + "», que no es un personaje."]);
 		for (const m of cue.body.matchAll(/Story\.present\("([^"]+)"\)/g)) if (!charInfo(m[1])) out.push(["warn", "Story.present(\"" + m[1] + "\"): no es un personaje."]);
@@ -565,6 +572,60 @@
 		return { tags, mentions };
 	}
 	const people = () => S.cfg.characters.filter((c) => !c.enemy && c.id !== S.cfg.protagonist);
+
+	// Opciones «por persona» ([#persona] + filtros): réplica de Social.person_candidates.
+	const PERSON = "persona", PERSON_PH = "{persona}";
+	const PERSON_WORDS = ["joven", "adulto", "presente", "ausente"], PERSON_KEYS = ["genero", "entre", "tramo"];
+	function isPersonFilter(t) {
+		if (PERSON_WORDS.includes(t)) return true;
+		for (const op of M.OPS) { const i = t.indexOf(op); if (i > 0) { const k = t.slice(0, i); return PERSON_KEYS.includes(k) || Object.prototype.hasOwnProperty.call(S.cfg.dims, k); } }
+		return false;
+	}
+	/** Etiquetas de una opción → {per, filters, rest}. */
+	function splitPerson(list) {
+		const per = list.includes(PERSON);
+		const filters = [], rest = [];
+		for (const t of list) { if (t === PERSON) continue; (per && isPersonFilter(t) ? filters : rest).push(t); }
+		return { per, filters, rest };
+	}
+	/** Lo que `id` siente por Ren: simulador, partida cargada o ficha. */
+	function dimsOf(id, sim) {
+		if (sim && id === sim.who) return sim.dims;
+		const rel = S.save && (((S.save.relations || {})[id] || {})[S.cfg.protagonist]);
+		if (rel) { const d = {}; for (const k in S.cfg.dims) d[k] = rel[k] !== undefined ? rel[k] : 0; return d; }
+		return initialFor(id).dims;
+	}
+	function personCandidates(filters, exclude, sim) {
+		const cmp = (a, op, b) => ({ ">=": a >= b, "<=": a <= b, ">": a > b, "<": a < b, "!=": a !== b }[op] ?? a === b);
+		const out = [];
+		for (const id of Object.keys(S.profiles)) {
+			if (id === S.cfg.protagonist || exclude.includes(id) || !charInfo(id)) continue;
+			const idt = S.profiles[id].identity || {}, d = dimsOf(id, sim);
+			const present = sim ? id === sim.who || sim.present.includes(id) : true;
+			const ok = filters.every((f) => {
+				if (f === "joven" || f === "adulto") return idt.generation === f;
+				if (f === "presente") return present;
+				if (f === "ausente") return !present;
+				for (const op of M.OPS) {
+					const i = f.indexOf(op);
+					if (i <= 0) continue;
+					const k = f.slice(0, i), arg = f.slice(i + op.length);
+					if (k === "genero") return arg.split("|").includes(idt.gender || "") !== (op === "!=");
+					if (k === "entre") return arg.split("|").includes(id) !== (op === "!=");
+					if (k === "tramo") return cmp(S.cfg.tiers.indexOf(M.tierFromDims(d)), op, S.cfg.tiers.indexOf(arg));
+					return cmp(d[k] || 0, op, parseFloat(arg) || 0);
+				}
+				return true;
+			});
+			if (ok) out.push(id);
+		}
+		return out.sort((a, b) => (dimsOf(b, sim).afecto || 0) - (dimsOf(a, sim).afecto || 0));
+	}
+	function filterText(f) {
+		const m = f.match(/^(genero|entre)(!?=)(.*)$/);
+		if (m) return (m[1] === "genero" ? "" : "solo ") + (m[2] === "!=" ? "no " : "") + m[3].split("|").map((x) => m[1] === "entre" ? charName(x) : x).join(" o ");
+		return f.replace(">=", " ≥ ").replace("<=", " ≤ ").replace("!=", " ≠ ");
+	}
 	/** Personajes cuyo nombre aparece en un texto. */
 	function namesIn(text) {
 		const t = (text || "").toLowerCase();
@@ -583,6 +644,7 @@
 		const pres = (id) => id === sim.who || st.present(id);
 		const who = (w, f) => (w === sim.who ? String(f()) : "?");
 		let e = text.replace(/^(if|elif)\s+/, "")
+			.replace(/Story\.persona\s*(==|!=)\s*"([^"]+)"/g, (a, op, id) => (sim.persona === undefined ? "?" : String((sim.persona === id) === (op === "=="))))
 			.replace(/Story\.present\("([^"]+)"\)/g, (a, id) => String(pres(id)))
 			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => String(st.flag(f)))
 			.replace(/Story\.seen\("([^"]+)"\)/g, (a, c) => String(st.seen(c)))
@@ -614,7 +676,7 @@
 	function styleTags() {
 		const count = {};
 		for (const c of allCues()) for (const m of c.body.matchAll(/^\s*- .*?(\[#[^\]]*\])/gm)) for (const t of F.tagList(m[1])) count[t] = (count[t] || 0) + 1;
-		return Object.keys(count).filter((t) => !t.startsWith(MENTION + "=")).sort((a, b) => (a.includes("=") - b.includes("=")) || count[b] - count[a]);
+		return Object.keys(count).filter((t) => !t.startsWith(MENTION + "=") && t !== PERSON && !isPersonFilter(t)).sort((a, b) => (a.includes("=") - b.includes("=")) || count[b] - count[a]);
 	}
 
 	function humanMutation(t) {
@@ -632,7 +694,10 @@
 		if (t.startsWith("else")) return "Si no";
 		return t.replace(/^(if|elif)\s+/, "Si ")
 			.replace(/not\s+Story\.present\("([^"]+)"\)/g, (a, w) => charName(w) + " no está")
-			.replace(/Story\.present\("([^"]+)"\)/g, (a, w) => charName(w) + " está presente").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
+			.replace(/Story\.present\("([^"]+)"\)/g, (a, w) => charName(w) + " está presente")
+			.replace(/Story\.persona\s*==\s*"([^"]+)"/g, (a, w) => "eligió a " + charName(w))
+			.replace(/Story\.persona\s*!=\s*"([^"]+)"/g, (a, w) => "no eligió a " + charName(w))
+			.replace(/\band\b/g, "y").replace(/\bor\b/g, "o").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
 			.replace(/Story\.tier\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "relación de " + charName(w) + " = " + m)
 			.replace(/Story\.knows\("([^"]+)",\s*"([^"]+)"\)/g, (a, w, e) => charName(w) + " sabe «" + e + "»")
 			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => "indicador «" + f + "»");
@@ -642,7 +707,7 @@
 	function flowHTML(cue, sim) {
 		const st = flowState(cue);
 		const tree = F.parse(cue.body);
-		const ctx = { st, cue, step: 0, sim: sim || null };
+		const ctx = { st, cue, step: 0, sim: sim || null, persona: null, lastSpeaker: "" };
 		const body = seqHTML(tree.children, [], ctx);
 		return `<div class="flow">${body || '<div class="empty">Este diálogo está vacío.</div>'}
 			<div class="fadd"><button class="btn sm" data-op="add-end">+ Línea al final</button></div></div>`;
@@ -696,31 +761,56 @@
 		return html + seqHTML(n.children, path, ctx);
 	}
 
+	const withPersona = (t, ctx) => (ctx.persona ? t.split(PERSON_PH).join(charName(ctx.persona)) : t);
+
 	function lineCard(n, key, ctx, asVariant) {
 		const p = F.parseLine(n.text);
 		ctx.step++;
+		if (p.speaker) ctx.lastSpeaker = p.speaker;
 		const cls = !p.speaker ? "narr" : p.speaker === renName() ? "ren" : "npc";
 		const tags = F.tagList(p.tags).map((t) => `<span class="ftag">${esc(t)}</span>`).join("");
 		return `<div class="fcard ${cls}" data-path="${key}" style="--c:${colorOfName(p.speaker)}">
 			<div class="fhead"><span class="fstep">${ctx.step}</span><span class="fname">${esc(p.speaker || "Narración")}</span>${tags}</div>
-			<div class="ftext">${esc(F.unescape(p.body))}</div></div>`;
+			<div class="ftext">${esc(withPersona(F.unescape(p.body), ctx))}</div></div>`;
 	}
 
 	function groupHTML(k, grp, path, ctx) {
+		const savedPersona = ctx.persona;
 		const key = pkey(path.concat(grp[0].idx));
 		let sel = ctx.st.choices[key] || 0;
-		if (sel >= grp.length) sel = 0;
+		if (k !== "option" && sel >= grp.length) sel = 0;   // las opciones se ajustan tras desplegar «por persona»
 		// En el simulador, las condiciones que se pueden evaluar eligen su rama solas.
 		let auto = false;
 		if (k === "cond" && ctx.sim) {
-			const vals = grp.map((g) => evalCond(g.n.text, ctx.sim));
+			const simP = Object.assign({}, ctx.sim, { persona: ctx.persona || "" });
+			const vals = grp.map((g) => evalCond(g.n.text, simP));
 			const hit = vals.findIndex((v) => v === true);
 			if (vals.every((v) => v !== null) || hit >= 0 && vals.slice(0, hit).every((v) => v === false)) { auto = true; sel = hit; }
 		}
 		const labels = { option: renName() + " responde · elige una opción", variant: "Al azar · sale una de estas",
 			cond: auto ? "Según la situación · la de la simulación" : "Según la situación" };
-		const tabLabel = (g, i) => k === "option" ? F.parseOption(g.n.text).body : k === "variant" ? "Variante " + (i + 1) : humanCond(g.n.text);
-		const tabs = grp.map((g, i) => `<button class="ftab ${i === sel ? "on" : ""}" data-op="choose" data-key="${key}" data-i="${i}" ${auto ? 'data-auto="1"' : ""}>${esc(tabLabel(g, i))}</button>`).join("");
+		// Las opciones «por persona» se despliegan: una pestaña por persona que cumple.
+		if (k === "option") {
+			const speakerId = (S.cfg.characters.find((c) => c.name === ctx.lastSpeaker) || {}).id;
+			const exclude = [speakerId, charInfo(ctx.cue.file) ? ctx.cue.file : null, ctx.sim ? ctx.sim.who : null].filter(Boolean);
+			const items = [];
+			for (const g of grp) {
+				const sp = splitPerson(F.tagList(F.parseOption(g.n.text).tags));
+				if (!sp.per) { items.push({ n: g.n, idx: g.idx }); continue; }
+				const cands = personCandidates(sp.filters, exclude, ctx.sim);
+				if (!cands.length) items.push({ n: g.n, idx: g.idx, persona: "", filters: sp.filters });
+				for (const c of cands) items.push({ n: g.n, idx: g.idx, persona: c, filters: sp.filters });
+			}
+			grp = items;
+			if (sel >= grp.length) sel = 0;
+		}
+		const tabLabel = (g, i) => {
+			if (k !== "option") return k === "variant" ? "Variante " + (i + 1) : humanCond(g.n.text);
+			const body = F.parseOption(g.n.text).body;
+			if (g.persona === undefined) return withPersona(body, ctx);
+			return g.persona ? "👤 " + body.split(PERSON_PH).join(charName(g.persona)) : "👤 nadie cumple los filtros";
+		};
+		const tabs = grp.map((g, i) => `<button class="ftab ${i === sel ? "on" : ""} ${g.persona === "" ? "add" : ""}" data-op="choose" data-key="${key}" data-i="${i}" ${auto ? 'data-auto="1"' : ""}>${esc(tabLabel(g, i))}</button>`).join("");
 		if (auto && sel < 0) {
 			return `<div class="fgroup cond"><div class="fglabel">${esc(labels.cond)}</div><div class="ftabs">${tabs}</div>
 				<div class="fbranch"><div class="fmut cond">Con esta situación no se cumple ninguna: no se dice nada aquí.</div></div></div>`;
@@ -737,16 +827,21 @@
 			const o = F.parseOption(chosen.n.text);
 			ctx.step++;
 			const sm = splitMentions(F.tagList(o.tags));
-			const tags = sm.tags.map((t) => `<span class="ftag">${esc(t)}</span>`).join("") +
-				sm.mentions.map((w) => `<span class="ftag mention" style="--c:${charColor(w)}">@${esc(charName(w))}</span>`).join("");
+			const sp = splitPerson(sm.tags);
+			if (chosen.persona !== undefined) ctx.persona = chosen.persona || null;
+			const ment = sm.mentions.concat(chosen.persona && !sm.mentions.includes(chosen.persona) ? [chosen.persona] : []);
+			const tags = sp.rest.map((t) => `<span class="ftag">${esc(t)}</span>`).join("") +
+				ment.map((w) => `<span class="ftag mention" style="--c:${charColor(w)}">@${esc(charName(w))}</span>`).join("") +
+				(sp.per ? `<span class="ftag mention" style="--c:var(--lime)">👤 por persona: ${esc(sp.filters.map(filterText).join(" · ") || "cualquiera")}</span>` : "");
 			inner = `<div class="fcard ren opt" data-path="${ckey}"><div class="fhead">${tags}<span class="fname">${esc(renName())}</span><span class="fstep">${ctx.step}</span></div>
-				<div class="ftext">${esc(o.body)}</div></div>` + (o.jump ? `<div class="fend goto">→ Sigue en <b>${esc(o.jump)}</b></div>` : "");
+				<div class="ftext">${esc(withPersona(o.body, ctx))}</div></div>` + (o.jump ? `<div class="fend goto">→ Sigue en <b>${esc(o.jump)}</b></div>` : "");
 		} else if (k === "variant") {
 			inner = chosen.n.text.replace(/^%\d*\s*/, "") ? lineCard(chosen.n, ckey, ctx) : `<div class="fmut" data-path="${ckey}">% ${esc(chosen.n.text.slice(1).trim() || "bloque al azar")}</div>`;
 		} else {
 			inner = `<div class="fmut cond" data-path="${ckey}">❓ ${esc(humanCond(chosen.n.text))}</div>`;
 		}
 		inner += seqHTML(chosen.n.children, cpath, ctx);
+		ctx.persona = savedPersona;
 		return `<div class="fgroup ${k}"><div class="fglabel">${esc(labels[k])}</div><div class="ftabs">${tabs}${add}</div><div class="fbranch">${inner}</div></div>`;
 	}
 
@@ -774,7 +869,8 @@
 		if (k === "option") {
 			const o = F.parseOption(n.text);
 			const sm = splitMentions(F.tagList(o.tags));
-			const on = sm.tags;
+			const sp = splitPerson(sm.tags);
+			const on = sp.rest;
 			const chips = styleTags().slice(0, 24).map((t) => `<span class="chip small ${on.includes(t) ? "on" : ""}" data-op="tag" data-v="${esc(t)}">${esc(t)}</span>`).join("");
 			const found = namesIn(o.body);
 			const ppl = people().slice().sort((a, b) => found.includes(b.id) - found.includes(a.id));
@@ -784,6 +880,7 @@
 				<div class="small muted">Estilo y postura (los personajes reaccionan según esto)</div>
 				<div class="chips">${chips}</div>
 				<input class="input" name="tags" value="${esc(on.join(", "))}" placeholder="franco, criaturas=acoger…">
+				${personFormHTML(sp)}
 				<div class="small muted">Menciona a… (si está presente, se da por aludido: reacciona como si le hablaras a él o ella). «•» = sale su nombre en el texto.</div>
 				<div class="chips">${mentionChips}</div>
 				<input type="hidden" name="mentions" value="${esc(sm.mentions.join("|"))}">
@@ -798,6 +895,32 @@
 			k === "cond" || k === "variant" ? '<button class="btn sm" data-op="add-child">+ Línea dentro</button>' : '<button class="btn sm" data-op="add-after">+ Línea debajo</button>')}</div>`;
 	}
 
+	/** Bloque del formulario para opciones «por persona». */
+	function personFormHTML(sp) {
+		const get = (key) => { const f = sp.filters.find((x) => x.startsWith(key + "=") || x.startsWith(key + "!=")); return f ? f.split(/!?=/)[1].split("|") : []; };
+		const dimF = sp.filters.find((f) => { const k = f.split(/[<>=!]/)[0]; return Object.prototype.hasOwnProperty.call(S.cfg.dims, k); }) || "afecto>=15";
+		const dm = dimF.match(/^([a-z_]+)(>=|<=|!=|=|>|<)(.*)$/) || ["", "afecto", ">=", "15"];
+		const tramo = (sp.filters.find((f) => f.startsWith("tramo")) || "").match(/^tramo(>=|<=|!=|=|>|<)(.*)$/);
+		const chip = (grp, v, label, on) => `<span class="chip small ${on ? "on" : ""}" data-op="pf" data-g="${grp}" data-v="${esc(v)}">${esc(label)}</span>`;
+		const gen = get("genero"), entre = get("entre");
+		const age = sp.filters.find((f) => f === "joven" || f === "adulto") || "";
+		const pres = sp.filters.find((f) => f === "presente" || f === "ausente") || "";
+		return `<label class="row small" style="gap:8px;cursor:pointer"><input type="checkbox" name="per" ${sp.per ? "checked" : ""}> <b>Una opción por cada persona</b> que cumpla esto (pon <b>{persona}</b> donde va el nombre)</label>
+			<div class="pbox" style="${sp.per ? "" : "display:none"};border:1px dashed var(--line2);border-radius:10px;padding:8px;display:${sp.per ? "flex" : "none"};flex-direction:column;gap:6px">
+				<div class="row"><button class="btn sm" data-op="ph">Insertar {persona}</button><span class="small muted">Nunca sale quien pregunta ni el interlocutor.</span></div>
+				<div class="small muted">Lo que siente por ${esc(renName())}</div>
+				<div class="row"><select class="input" name="pdim" style="flex:1">${Object.keys(S.cfg.dims).map((d) => `<option ${d === dm[1] ? "selected" : ""}>${d}</option>`).join("")}<option value="" ${sp.per && !sp.filters.some((f) => /^[a-z_]+(>=|<=|!=|=|>|<)/.test(f) && Object.prototype.hasOwnProperty.call(S.cfg.dims, f.split(/[<>=!]/)[0])) ? "selected" : ""}>(sin filtro)</option></select>
+					<select class="input" name="pop" style="width:76px">${M.OPS.map((op) => `<option ${op === dm[2] ? "selected" : ""}>${op}</option>`).join("")}</select>
+					<input class="input" name="pval" type="number" inputmode="numeric" value="${esc(dm[3])}" style="width:84px"></div>
+				<div class="row"><span class="small muted">Relación</span><select class="input" name="ptier" style="flex:1"><option value="">(cualquiera)</option>${S.cfg.tiers.map((t) => `<option ${tramo && tramo[2] === t ? "selected" : ""}>${t}</option>`).join("")}</select>
+					<select class="input" name="ptierop" style="width:76px">${M.OPS.map((op) => `<option ${tramo ? (op === tramo[1] ? "selected" : "") : (op === ">=" ? "selected" : "")}>${op}</option>`).join("")}</select></div>
+				<div class="chips"><span class="small muted">Género</span>${chip("genero", "mujer", "mujer", gen.includes("mujer"))}${chip("genero", "hombre", "hombre", gen.includes("hombre"))}
+					<span class="small muted" style="margin-left:8px">Edad</span>${chip("edad", "joven", "joven", age === "joven")}${chip("edad", "adulto", "adulto", age === "adulto")}
+					<span class="small muted" style="margin-left:8px">Ahora</span>${chip("pres", "presente", "presente", pres === "presente")}${chip("pres", "ausente", "ausente", pres === "ausente")}</div>
+				<div class="chips"><span class="small muted">Solo entre</span>${people().filter((c) => S.profiles[c.id]).map((c) => chip("entre", c.id, c.name, entre.includes(c.id))).join("")}</div>
+			</div>`;
+	}
+
 	/** Botones «si está presente, contesta»: añaden un bloque if Story.present(...). */
 	function reactHTML(text, inBranch) {
 		const found = namesIn(text);
@@ -809,6 +932,9 @@
 	/** Conecta los clics de un diagrama. `rerender` vuelve a dibujar la vista que lo contiene. */
 	function bindFlow(container, cue, rerender) {
 		const st = flowState(cue);
+		container.onchange = (e) => {
+			if (e.target.name === "per") { const box = e.target.closest(".fform").querySelector(".pbox"); box.style.display = e.target.checked ? "flex" : "none"; }
+		};
 		container.onclick = (e) => {
 			const op = e.target.closest("[data-op]");
 			if (op && container.contains(op)) { flowOp(op, cue, st, rerender, container); return; }
@@ -823,6 +949,19 @@
 		if (op === "choose") {
 			if (el.dataset.auto) { toast("En el simulador esta rama sale de la situación: cambia los presentes, el ánimo… más abajo"); return; }
 			st.choices[el.dataset.key] = +el.dataset.i; st.edit = null; rerender(); return;
+		}
+		if (op === "pf") {
+			const single = el.dataset.g === "edad" || el.dataset.g === "pres";
+			if (single && !el.classList.contains("on")) el.parentElement.querySelectorAll(`[data-g="${el.dataset.g}"]`).forEach((x) => x.classList.remove("on"));
+			el.classList.toggle("on");
+			return;
+		}
+		if (op === "ph") {
+			const ta = el.closest(".fform").querySelector('[name="body"]');
+			const s0 = ta.selectionStart ?? ta.value.length;
+			ta.value = ta.value.slice(0, s0) + PERSON_PH + ta.value.slice(ta.selectionEnd ?? s0);
+			ta.focus();
+			return;
 		}
 		if (op === "mention") {
 			const form = el.closest(".fform");
@@ -868,6 +1007,18 @@
 				text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: val("tags") });
 			} else if (form.dataset.kind === "option") {
 				const tags = val("tags").split(",").map((t) => t.trim()).filter(Boolean);
+				const per = form.querySelector('[name="per"]');
+				if (per && per.checked) {
+					const pf = [PERSON];
+					if (val("pdim") && val("pval") !== "") pf.push(val("pdim") + val("pop") + val("pval"));
+					if (val("ptier")) pf.push("tramo" + val("ptierop") + val("ptier"));
+					const on = (g) => [...form.querySelectorAll(`[data-op="pf"][data-g="${g}"].on`)].map((x) => x.dataset.v);
+					if (on("genero").length) pf.push("genero=" + on("genero").join("|"));
+					pf.push(...on("edad"), ...on("pres"));
+					if (on("entre").length) pf.push("entre=" + on("entre").join("|"));
+					tags.unshift(...pf);
+					if (!val("body").includes(PERSON_PH)) toast("Ojo: el texto no lleva {persona}; todas las copias dirán lo mismo");
+				}
 				const mentions = val("mentions").split("|").filter(Boolean);
 				if (mentions.length) tags.push(MENTION + "=" + mentions.join("|"));
 				text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), jump: val("jump") });

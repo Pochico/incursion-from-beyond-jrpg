@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "hombre",
+		"generation": "joven",
 		"tagline": "Mejor amigo · otra clase",
 		"role": "Mejor amigo de Ren desde siempre, de otra clase. Músico: graba bases de noche y toca el bajo. Bromista y cálido; lleva peor de lo que aparenta que no le tomen en serio. Sale con Yuna."
 	},

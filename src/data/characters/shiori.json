@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "joven",
 		"tagline": "Compañera de clase",
 		"role": "Compañera de clase de Ren y Rika. Lectora obsesiva de leyendas urbanas y libros viejos. Seca, precisa y mucho más curiosa de lo que deja ver."
 	},

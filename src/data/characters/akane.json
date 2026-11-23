@@ -4,6 +4,8 @@
 	"identity": {
 		"species": "humano",
 		"nature": "biological",
+		"gender": "mujer",
+		"generation": "joven",
 		"tagline": "Otra clase · recreativas",
 		"role": "De otra clase. Trabaja en el turno de noche de las recreativas de Parquesur y toca en una banda punk. Dura por fuera; protege a los suyos sin decirlo."
 	},

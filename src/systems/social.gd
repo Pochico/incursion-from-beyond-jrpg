@@ -37,6 +37,16 @@ const TOLERANCE_BONUS := {"talk": 1}
 
 ## Etiqueta de las opciones que mencionan a alguien: [#alude=rika].
 const MENTION_TAG := "alude"
+## Etiqueta de las opciones «por persona»: la opción se repite una vez por cada
+## personaje que cumpla los filtros, con {persona} sustituido por su nombre.
+##   - Tuve una cita con {persona}. [#persona, #afecto>=25, #genero=mujer, #joven, #bromista]
+## Filtros (todos opcionales; nunca salen Ren ni quien acaba de hablar ni el interlocutor):
+##   afecto>=25 (cualquier dimensión de lo que siente por Ren; =, !=, <, >, <=, >=)
+##   tramo>=cercana · genero=mujer|hombre · joven · adulto · entre=rika|akane
+##   presente · ausente
+const PERSON_TAG := "persona"
+const PERSON_WORDS: Array[String] = ["joven", "adulto", "presente", "ausente"]
+const PERSON_KEYS: Array[String] = ["genero", "entre", "tramo"]
 
 const OK := "ok"
 const TIRED := "tired"        ## Se ha hartado: «bueno, ya, ¿no?»
@@ -174,10 +184,11 @@ static func on_choice(target: String, choice: Dictionary) -> void:
 	var styles: Array = choice.get("styles", [])
 	var stance: Dictionary = choice.get("stance", {})
 	var mentions: Array = choice.get("mentions", [])
-	if styles.is_empty() and stance.is_empty():
+	if styles.is_empty() and stance.is_empty() and mentions.is_empty():
 		return
 	GameState.record("choice", CharacterDB.PROTAGONIST, target,
-			{"styles": styles, "stance": stance, "mentions": mentions, "text": choice.get("text", "")}, present())
+			{"styles": styles, "stance": stance, "mentions": mentions, "persona": choice.get("persona", ""),
+			"text": choice.get("text", "")}, present())
 	# Ya está registrada la interacción en curso: las anteriores de hoy son una menos.
 	var factor := _repeat_factor(interactions_today(target) - 1)
 	for who: String in present():
@@ -193,6 +204,77 @@ static func on_choice(target: String, choice: Dictionary) -> void:
 			_add(deltas, _for_mood(reactions.get("stances", {}).get(topic, {}).get(stance[topic], {}), mood_id))
 		var weight := factor if who == target else (1.0 if who in mentions else OBSERVER_WEIGHT)
 		_apply(who, deltas, weight, "opción «%s»" % choice.get("text", ""))
+
+
+## ¿Es `tag` un filtro de una opción «por persona»?
+static func is_person_filter(tag: String) -> bool:
+	if tag in PERSON_WORDS:
+		return true
+	for op in [">=", "<=", "!=", "=", ">", "<"]:
+		var i := tag.find(op)
+		if i > 0:
+			var key := tag.substr(0, i)
+			return key in PERSON_KEYS or DIMENSIONS.has(key)
+	return false
+
+
+## Personajes con ficha que cumplen todos los `filters`, de más a menos afecto
+## por Ren. `exclude`: ids que no pueden salir (además de Ren).
+static func person_candidates(filters: Array, exclude: Array = []) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in CharacterDB.with_profile():
+		if id == CharacterDB.PROTAGONIST or id in exclude:
+			continue
+		var ok := true
+		for f: String in filters:
+			if not _person_matches(id, f):
+				ok = false
+				break
+		if ok:
+			out.append(id)
+	out.sort_custom(func(a: String, b: String) -> bool:
+		return value(a, CharacterDB.PROTAGONIST, "afecto") > value(b, CharacterDB.PROTAGONIST, "afecto"))
+	return out
+
+
+static func _person_matches(id: String, f: String) -> bool:
+	var identity: Dictionary = CharacterDB.profile(id).get("identity", {})
+	match f:
+		"joven", "adulto":
+			return identity.get("generation", "") == f
+		"presente":
+			return id in present()
+		"ausente":
+			return not id in present()
+	for op in [">=", "<=", "!=", "=", ">", "<"]:
+		var i := f.find(op)
+		if i <= 0:
+			continue
+		var key := f.substr(0, i)
+		var arg := f.substr(i + op.length())
+		match key:
+			"genero":
+				return identity.get("gender", "") in arg.split("|") if op != "!=" else not identity.get("gender", "") in arg.split("|")
+			"entre":
+				return id in arg.split("|") if op != "!=" else not id in arg.split("|")
+			"tramo":
+				var tiers := ["hostil", "fria", "neutral", "cercana", "intima"]
+				return _cmp(tiers.find(tier(id, CharacterDB.PROTAGONIST)), op, tiers.find(arg))
+		if DIMENSIONS.has(key):
+			return _cmp(value(id, CharacterDB.PROTAGONIST, key), op, float(arg))
+		break
+	push_warning("Social: filtro de persona desconocido '%s'" % f)
+	return true
+
+
+static func _cmp(a: float, op: String, b: float) -> bool:
+	match op:
+		">=": return a >= b
+		"<=": return a <= b
+		">": return a > b
+		"<": return a < b
+		"!=": return a != b
+	return a == b
 
 
 ## Cambia lo que `from` siente por `to`. Valores fuera de rango se recortan.

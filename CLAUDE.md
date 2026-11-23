@@ -101,6 +101,12 @@ usuario, guardado solo en su navegador; el mensaje lleva `[contexto-ok]`).
   (`Social.on_choice`, `Social.MENTION_TAG`; se lee en
   `ConversationView._choices_from`). Las réplicas del aludido van en bloques
   `if Story.present("<id>")`. Ver `personajes_y_relaciones.md`.
+- **Opciones por persona**: `[#persona, #afecto>=15, ...]` + `{persona}` en el
+  texto repite la opción por cada personaje con ficha que cumple los filtros
+  (`Social.person_candidates`; excluye a Ren, a quien pregunta y al
+  interlocutor). `Story.persona` guarda la elegida. El editor web replica los
+  filtros en `personCandidates` (app.js): si cambias unos, cambia los otros.
+  Las fichas tienen `identity.gender` y `identity.generation`.
 - `flujo.js` convierte el texto de un cue en un árbol por sangría (líneas,
   opciones `- `, variantes `%`, `if`, `$>`, `=>`) para el diagrama editable de
   la conversación, y lo reescribe cambiando solo las líneas editadas. Los 162
