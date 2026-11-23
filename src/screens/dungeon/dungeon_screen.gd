@@ -124,6 +124,9 @@ func _build() -> void:
 	_fx.gui_input.connect(_on_view_input)
 	add_child(_fx)
 
+	if App.is_touch():
+		_build_touch_pad()
+
 	_big_map = DungeonAutomap.new()
 	_big_map.big = true
 	_big_map.explorer = _explorer
@@ -302,6 +305,52 @@ func _use() -> void:
 	_clear_options()
 	await _explorer.act("interact")
 	_on_moved()
+
+
+## Cruceta táctil sobre el visor (solo en pantallas táctiles): las mismas
+## acciones que W/S/A/D/Q/E.
+func _build_touch_pad() -> void:
+	const SIZE := 118.0
+	const GAP := 10.0
+	var pad := Control.new()
+	pad.size = Vector2(SIZE * 3 + GAP * 2, SIZE * 2 + GAP)
+	pad.position = _view.position + _view.size - pad.size - Vector2(24, 70)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pad)
+	var keys := [
+		["↶", "left"], ["▲", "forward"], ["↷", "right"],
+		["◀", "strafe_left"], ["▼", "back"], ["▶", "strafe_right"],
+	]
+	for i in keys.size():
+		var b := Button.new()
+		b.text = keys[i][0]
+		b.focus_mode = Control.FOCUS_NONE
+		b.size = Vector2(SIZE, SIZE)
+		b.position = Vector2((i % 3) * (SIZE + GAP), (i / 3) * (SIZE + GAP))
+		b.add_theme_font_size_override("font_size", 52)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(UIStyle.INK, 0.55)
+		sb.border_color = Color(UIStyle.WHITE, 0.6)
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(18)
+		var sb_on := sb.duplicate() as StyleBoxFlat
+		sb_on.bg_color = Color(UIStyle.LIME, 0.85)
+		for st in ["normal", "hover", "focus", "disabled"]:
+			b.add_theme_stylebox_override(st, sb)
+		b.add_theme_stylebox_override("pressed", sb_on)
+		b.add_theme_color_override("font_color", UIStyle.WHITE)
+		b.add_theme_color_override("font_pressed_color", UIStyle.INK)
+		b.button_down.connect(_touch_move.bind(keys[i][1]))
+		pad.add_child(b)
+
+
+func _touch_move(action: String) -> void:
+	if _map == null or _busy or _combat.visible or _status.visible:
+		return
+	if _big_map.visible:
+		_toggle_map()
+	_clear_options()
+	_explorer.act(action)
 
 
 func _on_command(id: String) -> void:

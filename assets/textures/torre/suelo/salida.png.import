@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cssm7l4kmykec"
 path.s3tc="res://.godot/imported/salida.png-320b12be6d1a3804e995acc32ab5793e.s3tc.ctex"
+path.etc2="res://.godot/imported/salida.png-320b12be6d1a3804e995acc32ab5793e.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/textures/torre/suelo/salida.png"
-dest_files=["res://.godot/imported/salida.png-320b12be6d1a3804e995acc32ab5793e.s3tc.ctex"]
+dest_files=["res://.godot/imported/salida.png-320b12be6d1a3804e995acc32ab5793e.s3tc.ctex", "res://.godot/imported/salida.png-320b12be6d1a3804e995acc32ab5793e.etc2.ctex"]
 
 [params]
 

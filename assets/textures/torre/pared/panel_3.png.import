@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://hwdu1lfwmde1"
 path.s3tc="res://.godot/imported/panel_3.png-1e2074e13181aedf5b32a35f335b291f.s3tc.ctex"
+path.etc2="res://.godot/imported/panel_3.png-1e2074e13181aedf5b32a35f335b291f.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/textures/torre/pared/panel_3.png"
-dest_files=["res://.godot/imported/panel_3.png-1e2074e13181aedf5b32a35f335b291f.s3tc.ctex"]
+dest_files=["res://.godot/imported/panel_3.png-1e2074e13181aedf5b32a35f335b291f.s3tc.ctex", "res://.godot/imported/panel_3.png-1e2074e13181aedf5b32a35f335b291f.etc2.ctex"]
 
 [params]
 

@@ -6,6 +6,24 @@ func _ready() -> void:
 	get_tree().root.theme = UIStyle.get_theme()
 
 
+## ¿Se juega con el dedo? (móvil, tableta o navegador del móvil).
+func is_touch() -> bool:
+	return DisplayServer.is_touchscreen_available() or OS.has_feature("mobile") \
+			or OS.has_feature("web_android") or OS.has_feature("web_ios")
+
+
+## Android: el botón «atrás» hace de Esc (cierra menús, mapa, móvil...) en vez
+## de cerrar el juego (application/config/quit_on_go_back = false).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		for pressed in [true, false]:
+			var ev := InputEventKey.new()
+			ev.keycode = KEY_ESCAPE
+			ev.physical_keycode = KEY_ESCAPE
+			ev.pressed = pressed
+			Input.parse_input_event(ev)
+
+
 func version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 
