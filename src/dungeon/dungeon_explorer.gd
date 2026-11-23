@@ -26,6 +26,8 @@ signal moved(cell: Vector2i, dir: int)
 signal encounter(enemy_id: String, cell: Vector2i)
 signal level_changed(level: int)
 signal item_taken(item_id: String, count: int)
+## Algo que el grupo puede comentar: "secret_found", "locked", "switch", "bump".
+signal noticed(kind: String)
 
 const EYE_H := 1.55
 const STEP_TIME := 0.2
@@ -125,6 +127,16 @@ static func _cell_of(n: String) -> Vector2i:
 	return Vector2i(int(p[0]), int(p[1]))
 
 
+## Paredes falsas sin descubrir alrededor de la casilla actual (claves de borde).
+func secrets_near() -> Array[String]:
+	var out: Array[String] = []
+	for d in 4:
+		var k := DungeonMap.edge_key(cell, d)
+		if map.is_secret(k) and not door_open(k) and map.edge_type(cell, d) == DungeonMap.DOOR:
+			out.append(k)
+	return out
+
+
 func door_open(key: String) -> bool:
 	return open_doors.get(key, map.edges.get(key, {}).get("door", {}).get("open", false))
 
@@ -155,7 +167,8 @@ func front() -> Dictionary:
 	if map == null:
 		return {}
 	var ahead := cell + DungeonMap.DIRS[dir]
-	if map.edge_type(cell, dir) == DungeonMap.DOOR:
+	# Una pared falsa no se distingue de las demás (ni cerrada ni ya abierta).
+	if map.edge_type(cell, dir) == DungeonMap.DOOR and not map.is_secret(DungeonMap.edge_key(cell, dir)):
 		var k := DungeonMap.edge_key(cell, dir)
 		var open := door_open(k)
 		return {"kind": "door", "cell": ahead, "key": k, "name": "Puerta %s" % ("abierta" if open else "cerrada"),
@@ -337,7 +350,13 @@ func _interact() -> void:
 		"switch":
 			await _use_switch(t.cell, t.node)
 		_:
-			message.emit("No hay nada delante.")
+			var k := DungeonMap.edge_key(cell, dir)
+			if map.is_secret(k) and not door_open(k):
+				message.emit("Empujas la pared… y cede. ¡Un pasadizo oculto!")
+				noticed.emit("secret_found")
+				await _set_door(k, true)
+			else:
+				message.emit("No hay nada delante.")
 
 
 func _use_door(k: String) -> void:
@@ -347,9 +366,11 @@ func _use_door(k: String) -> void:
 	var req: String = info.get("requires", "")
 	if not is_open and req != "" and GameState.item_count(req) <= 0:
 		message.emit("Está cerrada. Hace falta: %s" % ItemDB.get_item(req).get("name", req))
+		noticed.emit("locked")
 		return
 	if not is_open and info.get("switch_only", false):
 		message.emit("No se abre a mano. Habrá algún mecanismo.")
+		noticed.emit("locked")
 		return
 	await _set_door(k, not is_open)
 
@@ -375,6 +396,7 @@ func _use_switch(c: Vector2i, node: Node3D) -> void:
 	if node:
 		DungeonBuilder.set_switch_on(node, open)
 	message.emit("Se oye un mecanismo: %s." % ("algo se abre" if open else "algo se cierra"))
+	noticed.emit("switch")
 	for k: String in doors:
 		_set_door(k, open)
 	await get_tree().create_timer(0.45).timeout

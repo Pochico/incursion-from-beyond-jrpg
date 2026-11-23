@@ -72,6 +72,8 @@ static func build(map: DungeonMap) -> Node3D:
 			var type := map.edge_type(c, d)
 			if type == DungeonMap.OPEN:
 				continue
+			if type == DungeonMap.DOOR and map.is_secret(DungeonMap.edge_key(c, d)):
+				continue   # la pared falsa va aparte (se hunde al descubrirla)
 			var tex_w := DungeonTextures.resolve(map.theme, "wall", map.face_texture(c, d))
 			_wall_face(_st(structure, tex_w), c, d, type == DungeonMap.DOOR)
 
@@ -89,7 +91,10 @@ static func build(map: DungeonMap) -> Node3D:
 		var cs := DungeonMap.key_cells(k)
 		if map.edges[k].get("type", "") != DungeonMap.DOOR or not map.has_cell(cs[0]) or not map.has_cell(cs[1]):
 			continue
-		doors.add_child(_door(k, map.edges[k].door.get("open", false)))
+		if map.is_secret(k):
+			doors.add_child(_secret_door(map, k, map.edges[k].door.get("open", false)))
+		else:
+			doors.add_child(_door(k, map.edges[k].door.get("open", false)))
 
 	var stairs_node := Node3D.new()
 	stairs_node.name = "Escaleras"
@@ -370,18 +375,37 @@ static func _meshes(groups: Dictionary) -> Node3D:
 	var node := Node3D.new()
 	for tex: Texture2D in groups:
 		var mi := MeshInstance3D.new()
-		mi.mesh = groups[tex].commit()
+		var st: SurfaceTool = groups[tex]
+		st.generate_tangents()   # para el relieve (parallax y normal map)
+		mi.mesh = st.commit()
 		mi.material_override = material(tex)
 		node.add_child(mi)
 	return node
 
 
+## Material de una textura; si tiene relieve (DungeonTextures.relief_for), con
+## parallax y normal map.
 static func material(tex: Texture2D) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
 	m.roughness = 0.95
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var relief := DungeonTextures.relief_for(tex)
+	if not relief.is_empty():
+		apply_relief(m, relief)
 	return m
+
+
+static func apply_relief(m: StandardMaterial3D, relief: Dictionary) -> void:
+	m.heightmap_enabled = true
+	m.heightmap_texture = relief.height
+	m.heightmap_scale = relief.depth
+	m.heightmap_deep_parallax = true
+	m.heightmap_min_layers = 8
+	m.heightmap_max_layers = 24
+	m.normal_enabled = true
+	m.normal_texture = relief.normal
+	m.normal_scale = 1.0
 
 
 static func _door(key: String, open: bool) -> Node3D:
@@ -422,13 +446,35 @@ static func _door(key: String, open: bool) -> Node3D:
 	return node
 
 
-## Mueve la hoja de una puerta (sube al abrirse).
+## Puerta secreta: un tramo de pared entero, con las texturas de sus dos caras,
+## que se hunde en el suelo al descubrirlo.
+static func _secret_door(map: DungeonMap, key: String, open: bool) -> Node3D:
+	var node := Node3D.new()
+	node.name = key
+	node.set_meta("key", key)
+	node.set_meta("secret", true)
+	var cs := DungeonMap.key_cells(key)
+	var d := DungeonMap.N if key.ends_with("N") else DungeonMap.W
+	var groups := {}
+	for side: Array in [[cs[0], d], [cs[1], (d + 2) % 4]]:
+		var tex := DungeonTextures.resolve(map.theme, "wall", map.face_texture(side[0], side[1]))
+		_wall_face(_st(groups, tex), side[0], side[1], false)
+	var leaf := _meshes(groups)
+	leaf.name = "Hoja"
+	leaf.position.y = -wall_h() if open else 0.0
+	node.add_child(leaf)
+	return node
+
+
+## Mueve la hoja de una puerta (sube al abrirse; la pared falsa se hunde).
 static func set_door_open(door_node: Node3D, open: bool, animate: bool = true) -> Tween:
 	var leaf: Node3D = door_node.get_node("Hoja")
 	var y := DOOR_H * 0.5 + (DOOR_H if open else 0.0)
+	if door_node.has_meta("secret"):
+		y = -wall_h() if open else 0.0
 	if not animate:
 		leaf.position.y = y
 		return null
 	var tw := door_node.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(leaf, "position:y", y, 0.45)
+	tw.tween_property(leaf, "position:y", y, 1.1 if door_node.has_meta("secret") else 0.45)
 	return tw

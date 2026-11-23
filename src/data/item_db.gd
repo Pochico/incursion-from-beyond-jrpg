@@ -9,6 +9,11 @@ const ALL := {
 		"heal": 80,
 		"icon": "can",
 	},
+	"tarjeta_torre": {
+		"name": "Tarjeta de acceso",
+		"desc": "Tarjeta magnética con el logo de la Torre medio borrado. Abre alguna puerta de dentro.",
+		"icon": "lock",
+	},
 }
 
 

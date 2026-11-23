@@ -29,6 +29,7 @@ extends Control
 const SELF_PATH := "res://src/tools/editor_mazmorras/editor_mazmorras.tscn"
 const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 const TEXTURE_STUDIO := "res://src/tools/texture_studio/texture_studio.tscn"
+const RELIEF_EDITOR := "res://src/tools/editor_relieve/editor_relieve.tscn"
 const SIDEBAR_W := 560.0
 const PREVIEW_H := 380.0
 const UNDO_MAX := 100
@@ -113,6 +114,7 @@ var _item_opt: OptionButton
 var _item_ids: Array[String] = []
 var _item_count: SpinBox
 var _door_switch_only: CheckBox
+var _door_secret: CheckBox
 var _sel_switch: Dictionary = {}     ## {cell}
 
 
@@ -351,6 +353,15 @@ func _build_sidebar(col: VBoxContainer) -> void:
 		_map.set_door(_sel_edge.cell, _sel_edge.dir, "switch_only", on)
 		_mark_dirty())
 	_door_box.add_child(_door_switch_only)
+	_door_secret = CheckBox.new()
+	_door_secret.text = "Secreta: parece pared hasta que se examina"
+	_door_secret.toggled.connect(func(on: bool) -> void:
+		_push_undo()
+		_map.set_door(_sel_edge.cell, _sel_edge.dir, "secret", on)
+		_mark_dirty()
+		_rebuild_pending = true
+		_plan.queue_redraw())
+	_door_box.add_child(_door_secret)
 	_door_box.visible = false
 
 	# --- Planta ---
@@ -428,6 +439,7 @@ func _build_sidebar(col: VBoxContainer) -> void:
 	_default_btn = _button("Usar como predeterminada del tema", _set_theme_default)
 	col.add_child(_default_btn)
 	col.add_child(_button("Recargar texturas", _reload_textures))
+	col.add_child(_button("Relieve de la textura…", _go_to_relief))
 	col.add_child(_small("Salen del Estudio de texturas (assets/textures/<tema>/suelo, techo o pared). " +
 			"Las casillas sin textura propia usan la predeterminada del tema; si el tema no tiene ninguna, una provisional."))
 
@@ -670,6 +682,7 @@ func _refresh_selection() -> void:
 	_door_state.select(1 if d.get("open", false) else 0)
 	_door_req.text = d.get("requires", "")
 	_door_switch_only.set_pressed_no_signal(d.get("switch_only", false))
+	_door_secret.set_pressed_no_signal(d.get("secret", false))
 	_door_box.visible = true
 
 
@@ -800,6 +813,18 @@ func _go_to_studio() -> void:
 		"dungeon": _map.to_dict(), "dirty": _dirty, "tool": _tool, "paint_surface": _surface,
 	}
 	SceneRouter.go_to(TEXTURE_STUDIO)
+
+
+## Editor de relieve con la textura elegida en la paleta (o la predeterminada).
+func _go_to_relief() -> void:
+	SceneRouter.tool_context = {
+		"back": SELF_PATH,
+		"theme": _map.theme,
+		"surface": DungeonTextures.SURFACE_DIR[_surface],
+		"texture": _paint_tex if _paint_tex != "" else DungeonTextures.default_name(_map.theme, _surface),
+		"dungeon": _map.to_dict(), "dirty": _dirty, "tool": _tool, "paint_surface": _surface,
+	}
+	SceneRouter.go_to(RELIEF_EDITOR)
 
 
 func _set_theme_default() -> void:
@@ -1092,7 +1117,7 @@ func _draw_plan() -> void:
 			if t == DungeonMap.WALL:
 				_plan.draw_line(seg[0], seg[1], UIStyle.WHITE, wall_w)
 			elif d == DungeonMap.N or d == DungeonMap.W:   # cada puerta, una vez
-				_draw_door(seg[0], seg[1], wall_w)
+				_draw_door(seg[0], seg[1], wall_w, _map.is_secret(DungeonMap.edge_key(c, d)))
 	_draw_things()
 	# Selección y cursor
 	if not _sel_edge.is_empty():
@@ -1134,7 +1159,12 @@ func _draw_face_strip(c: Vector2i, d: int, r: Rect2) -> void:
 		_plan.draw_rect(strip, UIStyle.LIME, false, 1.5)
 
 
-func _draw_door(a: Vector2, b: Vector2, w: float) -> void:
+## Puerta: muro con un hueco lima. La secreta, muro entero con trazos violeta.
+func _draw_door(a: Vector2, b: Vector2, w: float, secret := false) -> void:
+	if secret:
+		_plan.draw_line(a, b, UIStyle.WHITE, w)
+		_plan.draw_dashed_line(a, b, UIStyle.VIOLET, w * 0.6, w * 1.6)
+		return
 	var along := (b - a) / 3.0
 	_plan.draw_line(a, a + along, UIStyle.WHITE, w)
 	_plan.draw_line(b - along, b, UIStyle.WHITE, w)

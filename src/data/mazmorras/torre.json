@@ -70,6 +70,26 @@
 					"ceiling": "",
 					"floor": ""
 				},
+				"-6,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-7,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-8,-2": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-8,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-8,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
 				"0,-1": {
 					"ceiling": "",
 					"floor": ""
@@ -145,6 +165,82 @@
 				"1,0": {
 					"ceiling": "",
 					"floor": ""
+				},
+				"2,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-6": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-7": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-9": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-1": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-2": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-3": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-4": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-6": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-7": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-8": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-9": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-6": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-7": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-9": {
+					"ceiling": "",
+					"floor": ""
 				}
 			},
 			"edges": {
@@ -215,7 +311,13 @@
 					"b": "panel_7"
 				},
 				"-5,-3,W": {
-					"a": "panel_5"
+					"a": "panel_5",
+					"door": {
+						"open": false,
+						"requires": "",
+						"secret": true
+					},
+					"type": "door"
 				},
 				"-5,-4,W": {
 					"a": "panel_6"
@@ -224,6 +326,27 @@
 					"a": "panel_6"
 				},
 				"-5,-5,W": {
+					"a": "panel_7"
+				},
+				"-7,-2,W": {
+					"b": "panel_7"
+				},
+				"-7,-3,N": {
+					"a": "panel_6"
+				},
+				"-7,-4,W": {
+					"b": "panel_3"
+				},
+				"-8,-1,N": {
+					"b": "panel_4"
+				},
+				"-8,-2,W": {
+					"a": "panel_3"
+				},
+				"-8,-3,W": {
+					"a": "panel_4"
+				},
+				"-8,-4,W": {
 					"a": "panel_7"
 				},
 				"0,-12,N": {
@@ -287,6 +410,9 @@
 				"1,1,N": {
 					"b": "panel_4"
 				},
+				"2,-1,N": {
+					"a": "panel_3"
+				},
 				"2,-1,W": {
 					"b": "panel_7"
 				},
@@ -299,7 +425,85 @@
 				"2,-12,W": {
 					"b": "panel_4"
 				},
+				"2,0,N": {
+					"b": "panel_3"
+				},
 				"2,0,W": {
+					"b": "panel_6"
+				},
+				"3,-1,N": {
+					"a": "panel_4"
+				},
+				"3,-5,W": {
+					"a": "panel_7"
+				},
+				"3,-6,W": {
+					"a": "panel_4"
+				},
+				"3,-7,N": {
+					"a": "panel_6",
+					"type": "wall"
+				},
+				"3,-7,W": {
+					"a": "panel_7"
+				},
+				"3,-8,N": {
+					"b": "panel_6"
+				},
+				"3,-9,N": {
+					"a": "panel_4"
+				},
+				"3,-9,W": {
+					"a": "panel_7"
+				},
+				"3,0,N": {
+					"b": "panel_6"
+				},
+				"4,-3,W": {
+					"a": "panel_6"
+				},
+				"4,-4,W": {
+					"a": "panel_3"
+				},
+				"4,-7,N": {
+					"door": {
+						"open": false,
+						"requires": "tarjeta_torre"
+					},
+					"type": "door"
+				},
+				"4,-8,W": {
+					"a": "panel_3"
+				},
+				"4,-9,N": {
+					"a": "panel_3"
+				},
+				"4,0,N": {
+					"b": "panel_7"
+				},
+				"5,-1,W": {
+					"b": "panel_4"
+				},
+				"5,-2,W": {
+					"b": "panel_7"
+				},
+				"5,-3,W": {
+					"b": "panel_6"
+				},
+				"5,-7,N": {
+					"a": "panel_4",
+					"type": "wall"
+				},
+				"5,-8,N": {
+					"b": "panel_6"
+				},
+				"5,-8,W": {
+					"b": "panel_3"
+				},
+				"6,-5,W": {
+					"b": "panel_7"
+				},
+				"6,-6,W": {
 					"b": "panel_6"
 				}
 			},
@@ -324,6 +528,16 @@
 					],
 					"type": "switch"
 				},
+				"-8,-2": {
+					"count": 1,
+					"item": "tarjeta_torre",
+					"type": "item"
+				},
+				"-8,-4": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
 				"0,-12": {
 					"dir": 0,
 					"type": "stairs",
@@ -332,6 +546,25 @@
 				"1,-11": {
 					"enemy": "engendro",
 					"type": "enemy"
+				},
+				"3,-9": {
+					"count": 4,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"4,-6": {
+					"enemy": "imp",
+					"type": "enemy"
+				},
+				"5,-7": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"5,-9": {
+					"count": 3,
+					"item": "pochicola",
+					"type": "item"
 				}
 			}
 		},
@@ -358,11 +591,51 @@
 					"ceiling": "",
 					"floor": ""
 				},
+				"0,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-19": {
+					"ceiling": "",
+					"floor": ""
+				},
 				"1,-16": {
 					"ceiling": "",
 					"floor": ""
 				},
+				"1,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-19": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"10,-20": {
+					"ceiling": "",
+					"floor": ""
+				},
 				"2,-16": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-19": {
 					"ceiling": "",
 					"floor": ""
 				},
@@ -417,6 +690,30 @@
 				"6,-18": {
 					"ceiling": "",
 					"floor": ""
+				},
+				"7,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"9,-17": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"9,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"9,-19": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"9,-20": {
+					"ceiling": "",
+					"floor": ""
 				}
 			},
 			"edges": {
@@ -436,10 +733,21 @@
 					"a": "panel_6"
 				},
 				"0,-16,N": {
-					"a": "panel_8"
+					"a": "panel_8",
+					"b": "panel_7",
+					"type": "wall"
 				},
 				"0,-16,W": {
 					"a": "panel_7"
+				},
+				"0,-17,W": {
+					"a": "panel_4"
+				},
+				"0,-19,N": {
+					"a": "panel_7"
+				},
+				"0,-19,W": {
+					"a": "panel_4"
 				},
 				"1,-12,W": {
 					"b": "panel_7"
@@ -454,19 +762,44 @@
 					"b": "panel_3"
 				},
 				"1,-16,N": {
-					"a": "panel_6"
+					"a": "panel_6",
+					"door": {
+						"open": false,
+						"requires": "tarjeta_torre"
+					},
+					"type": "door"
+				},
+				"10,-18,W": {
+					"b": "panel_4"
+				},
+				"10,-19,N": {
+					"b": "panel_4"
+				},
+				"10,-19,W": {
+					"b": "panel_7"
+				},
+				"10,-20,N": {
+					"a": "panel_4"
+				},
+				"11,-20,W": {
+					"b": "panel_3"
 				},
 				"2,-15,N": {
 					"b": "panel_2"
 				},
 				"2,-16,N": {
-					"a": "panel_6"
+					"a": "panel_6",
+					"b": "panel_3",
+					"type": "wall"
 				},
 				"3,-15,N": {
 					"b": "panel_2"
 				},
 				"3,-16,N": {
 					"a": "panel_6"
+				},
+				"3,-17,W": {
+					"b": "panel_4"
 				},
 				"4,-15,W": {
 					"a": "panel_6"
@@ -486,14 +819,37 @@
 				"7,-15,W": {
 					"b": "panel_3"
 				},
+				"7,-16,N": {
+					"b": "panel_4"
+				},
 				"7,-16,W": {
 					"b": "panel_4"
+				},
+				"7,-17,N": {
+					"a": "panel_6"
 				},
 				"7,-17,W": {
 					"b": "panel_5"
 				},
 				"7,-18,W": {
 					"b": "panel_6"
+				},
+				"8,-16,N": {
+					"b": "panel_3"
+				},
+				"9,-19,N": {
+					"door": {
+						"open": false,
+						"requires": "",
+						"secret": true
+					},
+					"type": "door"
+				},
+				"9,-19,W": {
+					"a": "panel_3"
+				},
+				"9,-20,W": {
+					"a": "panel_4"
 				}
 			},
 			"things": {
@@ -501,6 +857,25 @@
 					"dir": 2,
 					"type": "stairs",
 					"up": false
+				},
+				"0,-19": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"1,-18": {
+					"enemy": "engendro",
+					"type": "enemy"
+				},
+				"10,-20": {
+					"count": 5,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"2,-19": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
 				},
 				"5,-16": {
 					"enemy": "oni",
@@ -510,6 +885,10 @@
 					"count": 3,
 					"item": "pochicola",
 					"type": "item"
+				},
+				"9,-17": {
+					"enemy": "imp",
+					"type": "enemy"
 				}
 			}
 		}

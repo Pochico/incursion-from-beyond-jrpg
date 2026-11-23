@@ -16,6 +16,72 @@ static var _cache := {}
 
 static func clear_cache() -> void:
 	_cache.clear()
+	_reliefs.clear()
+
+
+# --- Relieve ----------------------------------------------------------------------------
+# Cada textura puede tener un mapa de relieve en escala de grises (blanco = sale
+# más, negro = hueco) en <superficie>/relieve/<nombre>.png, hecho con el Editor
+# de relieve. Se usa como parallax y, convertido en normal map, para la luz.
+# La profundidad es del tema: "relieve" en tema.json (DEFAULT_RELIEF si falta).
+
+const DEFAULT_RELIEF := 6.0
+static var _reliefs := {}
+
+
+## Ruta del relieve de la textura `tex_path`.
+static func relief_path(tex_path: String) -> String:
+	return "%s/relieve/%s" % [tex_path.get_base_dir(), tex_path.get_file()]
+
+
+## Ruta de los niveles marcados (para seguir editando; el juego no la usa).
+static func levels_path(tex_path: String) -> String:
+	return relief_path(tex_path).get_basename() + ".niveles.png"
+
+
+static func relief_depth(theme: String) -> float:
+	return float(defaults(theme).get("relieve", DEFAULT_RELIEF))
+
+
+static func set_relief_depth(theme: String, depth: float) -> Error:
+	var d := defaults(theme)
+	d["relieve"] = snappedf(depth, 0.1)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_theme_file(theme).get_base_dir()))
+	var f := FileAccess.open(_theme_file(theme), FileAccess.WRITE)
+	if f == null:
+		return FileAccess.get_open_error()
+	f.store_string(JSON.stringify(d, "\t"))
+	return OK
+
+
+## Relieve de una textura cargada con `load_texture`: {height, normal, depth} o vacío.
+static func relief_for(tex: Texture2D) -> Dictionary:
+	if tex == null or not tex.has_meta("path"):
+		return {}
+	var p: String = tex.get_meta("path")
+	if _reliefs.has(p):
+		return _reliefs[p]
+	var out := {}
+	var rp := relief_path(p)
+	var img: Image = null
+	if (live_files or not ResourceLoader.exists(rp)) and FileAccess.file_exists(rp):
+		img = Image.load_from_file(rp)
+	elif ResourceLoader.exists(rp):
+		img = (load(rp) as Texture2D).get_image()
+	if img != null and not img.is_empty():
+		if img.is_compressed():
+			img.decompress()
+		img.clear_mipmaps()
+		img.convert(Image.FORMAT_RGBA8)
+		var normal := img.duplicate()
+		normal.bump_map_to_normal_map(6.0)
+		normal.generate_mipmaps()
+		img.generate_mipmaps()
+		var theme := p.get_base_dir().get_base_dir().get_file()
+		out = {"height": ImageTexture.create_from_image(img), "normal": ImageTexture.create_from_image(normal),
+				"depth": relief_depth(theme)}
+	_reliefs[p] = out
+	return out
 
 
 static func themes() -> Array[String]:
@@ -114,6 +180,8 @@ static func load_texture(p: String) -> Texture2D:
 			tex = ImageTexture.create_from_image(img)
 	elif ResourceLoader.exists(p):
 		tex = load(p)
+	if tex:
+		tex.set_meta("path", p)
 	_cache[p] = tex
 	return tex
 

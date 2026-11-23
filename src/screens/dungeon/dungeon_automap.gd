@@ -78,8 +78,13 @@ func _draw() -> void:
 				DungeonMap.E: a = Vector2(r.end.x, r.position.y); b = r.end
 				DungeonMap.S: a = Vector2(r.position.x, r.end.y); b = r.end
 				_: a = r.position; b = Vector2(r.position.x, r.end.y)
-			if t == DungeonMap.DOOR:
-				var open := explorer.door_open(DungeonMap.edge_key(c, d))
+			var ek := DungeonMap.edge_key(c, d)
+			if t == DungeonMap.DOOR and m.is_secret(ek):
+				if explorer.door_open(ek):
+					continue
+				draw_line(a, b, UIStyle.WHITE, wall_w)
+			elif t == DungeonMap.DOOR:
+				var open := explorer.door_open(ek)
 				draw_line(a, b, Color(UIStyle.LIME, 0.5 if open else 1.0), wall_w + 1.0)
 			else:
 				draw_line(a, b, UIStyle.WHITE, wall_w)

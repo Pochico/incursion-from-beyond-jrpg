@@ -198,7 +198,7 @@ Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en 
 | **Inicio [5]** | Casilla de salida (en la planta que estás editando); clic otra vez para girar la orientación. |
 | **Enemigos [6]** | Pone el enemigo elegido (los de `CharacterDB` con `enemy`) en una casilla; clic derecho lo quita. En el plano sale su cara; en 3D, su retrato de pie. |
 | **Objetos [8]** | Deja en el suelo el objeto elegido (de `ItemDB`) con su cantidad. En el juego se coge desde la casilla de al lado. Clic derecho lo quita. |
-| **Interruptores [9]** | Pone una palanca (bloquea el paso) o la selecciona. Con una seleccionada, clic en una puerta para vincularla o desvincularla: al accionarla, abre o cierra todas sus puertas. Clic derecho la quita. Una puerta puede marcarse como «Solo se abre con una palanca». |
+| **Interruptores [9]** | Pone una palanca (bloquea el paso) o la selecciona. Con una seleccionada, clic en una puerta para vincularla o desvincularla: al accionarla, abre o cierra todas sus puertas. Clic derecho la quita. Una puerta puede marcarse como «Solo se abre con una palanca» o como **«Secreta»**: parece una pared más (en el plano, muro con trazos violeta) hasta que el jugador la examina con Usar; entonces se hunde y deja el paso abierto. |
 | **Escaleras [7]** | Escalera que sube o baja hacia donde apunta la flecha (se entra andando en esa dirección). Crea la planta de arriba o de abajo si no existe, y la escalera de vuelta en la misma casilla. Clic otra vez para girarla, clic derecho la quita (con su pareja). |
 
 - **Plantas**: «Planta» en el panel (▼ ▲, «+ Encima», «+ Debajo», «Borrar planta») o **Re Pág / Av Pág**. La planta de debajo se ve en gris para alinear. Solo se puede borrar la de arriba o la de abajo del todo.
@@ -212,7 +212,11 @@ Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en 
 - Al viajar a **La Torre** sale una escena con dos opciones: **«Entrar en la torre»** o **«Pensarlo mejor»** (cue `torre_llegada` en `general.dialogue`). Si te lo piensas, sigues en la Torre y puedes volver a intentarlo con **«Entrar» [E]** en la barra de abajo.
 - Al entrar empieza el **modo mazmorra** (`DungeonScreen`) con la interfaz del combate: cabecera, visor grande con la vista 3D, automapa en el hueco del minimapa, fichas del grupo, comandos (**Usar, Objetos, Mapa, Salir**) y barra de descripción y registro.
 - **Interactuar**: lo que hay justo delante (la puerta de ese borde, o la criatura, objeto o palanca de la casilla de delante) se recuadra en lima con una etiqueta («Abrir · Puerta cerrada», «Luchar · Imp», «Coger · Pochicola», «Accionar · Palanca»). Se usa con **clic encima**, **Espacio** o el comando **Usar**. Las criaturas también saltan al chocar con ellas; el combate es el de siempre y, si pierdes, retrocedes una casilla.
-- **Controles**: W/S avanzar y retroceder, A/D girar, Q/E de lado, M automapa, Esc salir.
+- **Grupo**: entras con un **compañero al azar** (Kenji, Shiori, Akane o Rika) que aparece en las fichas de la derecha y lucha a tu lado en cada combate. **Clic en una ficha** (o **Tab**) abre su pantalla de estado, la misma del combate.
+- **Comentarios**: el compañero habla de vez en cuando en el registro del visor, con su nombre y su voz: al entrar, al andar, ante una criatura, al coger algo, al cambiar de planta, ante una puerta cerrada, al accionar una palanca y, sobre todo, junto a una pared falsa (es la pista). Las frases están en `src/data/dungeon_banter.gd`.
+- **Paredes falsas**: delante de una, **Usar** la empuja y se abre un pasadizo.
+- **Controles**: W/S avanzar y retroceder, A/D girar, Q/E de lado, M automapa, Tab equipo, Esc salir.
+- **La Torre**: planta 0 con vestíbulo, pasillo con puerta de palanca, sala de la palanca (con un pasadizo secreto en la pared oeste que guarda la **Tarjeta de acceso**), ala este con un almacén y una cámara cerrada con tarjeta, y la sala de la escalera; planta 1 con el pasillo del cartel, la sala del Oni, el laboratorio (cerrado con tarjeta) y un pasillo al este con otro hueco secreto al fondo.
 - El mapa de cada mazmorra es `dungeon_map` en `LocationDB` (La Torre usa `src/data/mazmorras/torre.json`, editable con el editor) y `battle_background` el fondo de sus combates (La Torre: `assets/backgrounds/torre_mazmorra.png`).
 - Texturas de La Torre (tema `torre`): ocho paneles de pared (`panel_1`…`panel_8`; el predeterminado es `panel_1` y el resto se reparte por las caras) y el suelo `salida`, solo en la casilla de delante de cada escalera con la flecha hacia ella. En `tema.json`, `"suelo": ""` indica que el suelo normal no usa ninguna de las del tema (sale el provisional). El progreso (puertas, criaturas vencidas, objetos cogidos y casillas vistas del automapa) se guarda en la partida (`GameState.dungeons`); al volver se empieza en la entrada. Salir pasa a la franja siguiente del día (salvo de noche).
 
@@ -222,11 +226,22 @@ Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en 
 - **«Usar como predeterminada del tema»** la guarda en `assets/textures/<tema>/tema.json`. Las superficies sin textura propia usan la predeterminada; si cambias de tema, cambian con él. Si el tema no tiene texturas, se usan unas provisionales (damero y ladrillo).
 - Cada textura ocupa exactamente una casilla (2 × 2 m) o un tramo de pared (2 × 2,5 m), con las mismas medidas que el Estudio (`TextureFormats`).
 
+### Editor de relieve (`src/tools/editor_relieve/`)
+
+Da un poco de volumen a una textura, como en los juegos antiguos: marcas qué zonas salen y cuáles se meten, y en 3D las placas se desplazan según el ángulo (parallax) y sus bordes cogen luz y sombra (normal map). La pared sigue siendo plana, así que no cuesta geometría.
+
+- **Abrirlo:** botón **«Relieve de la textura…»** bajo la paleta del editor de mazmorras (abre la textura elegida; «Volver» regresa con el mapa como estaba), o `src/tools/editor_relieve/editor_relieve.tscn` con **F6**.
+- **Niveles** [1–4], de dentro a fuera: **Hueco**, **Base**, **Placa** y **Placa saliente**. Clic derecho pone Base (borra).
+- **Herramientas:** **Rellenar zona [F]** (clic en una placa y se rellena lo unido de color parecido; se frena en las juntas y tapa los agujeros del óxido; si se escapa o se queda corto, cambia la tolerancia), **Lazo [L]** (clic a clic pones puntos por el borde; se cierra con clic en el primero, doble clic o Intro y se rellena lo de dentro; clic derecho o Retroceso quita el último punto, Esc cancela), **Rectángulo [R]** y **Pincel [B]**.
+- **«Partir de la imagen»** hace un primer intento según lo claro y lo oscuro; **G** muestra el relieve en grises. A la derecha, una vista previa 3D con la luz en movimiento.
+- **Profundidad** (de todo el tema, `"relieve"` en `tema.json`) y **suavizado** de los bordes.
+- Guarda en `assets/textures/<tema>/<superficie>/relieve/`: `<nombre>.png` (altura en grises, la que usa el juego) y `<nombre>.niveles.png` (los niveles, para seguir editando). Las texturas sin relieve se ven planas como antes.
+
 **Código** (`src/dungeon/`), pensado para usarlo también en el juego:
 - `DungeonMap`: datos y reglas de paso, por plantas. Cada casilla es dueña de sus bordes norte y oeste, así que una puerta es la misma vista desde los dos lados. Enemigos y escaleras son «cosas» de una casilla.
 - `DungeonBuilder`: genera la geometría, con una malla por textura y las UV según la posición en el mundo.
 - `DungeonExplorer`: movimiento por casillas con cola de una acción, choque con los muros, escaleras entre plantas, lo que hay delante (`front()`) y su uso (puertas, palancas, objetos, encuentros con la señal `encounter`), estado guardable y luz del grupo.
-- `DungeonTextures`: temas, paleta y texturas predeterminadas.
+- `DungeonTextures`: temas, paleta, texturas predeterminadas y relieve (`relief_for`). En el juego carga las texturas importadas; el editor activa `live_files` para leer los PNG recién exportados.
 
 ## Cómo añadir contenido
 
@@ -299,6 +314,8 @@ src/
   dialogue/               Diálogos (.dialogue), uno por personaje + general
   tools/
     texture_studio/         Estudio de texturas (suelo, techo, pared)
+    editor_mazmorras/       Editor de mazmorras
+    editor_relieve/         Editor de relieve de las texturas
 docs/
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz

@@ -7,13 +7,18 @@ extends Control
 ##  - Visor grande: la vista 3D (DungeonExplorer). Lo que hay justo delante y se
 ##    puede usar (puerta, palanca, objeto, criatura) se recuadra; clic encima o
 ##    Espacio para usarlo.
-##  - Columna derecha: automapa (en el hueco del minimapa) y fichas del grupo.
+##  - Columna derecha: automapa (en el hueco del minimapa) y fichas del grupo:
+##    Ren y un compañero al azar (de CharacterDB.COMPANIONS) que entra con él y
+##    lucha a su lado. Clic en una ficha (o Tab) abre su pantalla de estado.
 ##  - Fila de comandos: Usar, Objetos, Mapa, Salir.
 ##  - Fila de opciones + descripción / registro.
 ##
 ## El mapa es `dungeon_map` de la ubicación actual (LocationDB). El progreso
 ## (puertas, enemigos vencidos, objetos cogidos, automapa) se guarda en
 ## GameState.dungeons; al volver se empieza otra vez en la entrada.
+##
+## El compañero comenta de vez en cuando en el registro del visor (DungeonBanter):
+## al andar, ante una criatura, junto a una pared falsa, al coger algo…
 
 const WORLD_SCREEN := "res://src/screens/world/world_screen.tscn"
 const VIEWPORT_RECT := Rect2(10, 96, 1418, 782)
@@ -47,6 +52,23 @@ var _target: Dictionary = {}
 var _target_rect := Rect2()
 var _hover_target := false
 var _busy := false          ## combate o salida en curso
+var _status: StatusPanel
+
+# Grupo: Ren y el compañero de esta visita.
+var _companion := ""
+var _companion_skills: Array = []
+var _party_battle: Battle    ## solo para las fichas y la pantalla de estado
+
+# Comentarios del compañero.
+const IDLE_STEPS := Vector2i(9, 17)    ## pasos entre comentarios sueltos
+const COMMENT_GAP := 3                 ## pasos mínimos entre comentarios
+var _log_who := ""
+var _steps := 0
+var _next_idle := 0
+var _last_comment := -99
+var _comment_gen := 0
+var _last_pos := Vector3i(0, 0, -999)    ## (x, y, planta) de la última casilla
+var _remarked := {}                      ## criaturas y paredes falsas ya comentadas
 
 
 func _ready() -> void:
@@ -57,10 +79,14 @@ func _ready() -> void:
 	if _map == null:
 		_log("No se encuentra el mapa «%s» (src/data/mazmorras/)." % _map_id)
 		return
+	_companion = CharacterDB.COMPANIONS.pick_random()
+	_companion_skills = SkillDB.random_skills(2)
+	_next_idle = randi_range(IDLE_STEPS.x, IDLE_STEPS.y)
 	_explorer.setup(_map, GameState.dungeon_state(_map_id))
 	_refresh_party()
 	_set_info(COMMANDS[0].desc)
-	_log("Entras en %s." % LocationDB.display_name(GameState.location_id))
+	_log("Entras en %s con %s." % [LocationDB.display_name(GameState.location_id), CharacterDB.display_name(_companion)])
+	_comment("enter", 1.8, true)
 
 
 # --- Construcción ----------------------------------------------------------------------
@@ -84,6 +110,9 @@ func _build() -> void:
 		_on_moved())
 	_explorer.message.connect(_log)
 	_explorer.encounter.connect(_on_encounter)
+	_explorer.item_taken.connect(func(_id: String, _n: int) -> void: _comment("item", 1.3))
+	_explorer.noticed.connect(func(kind: String) -> void:
+		_comment(kind, 1.6 if kind == "secret_found" else 1.3, kind == "secret_found"))
 
 	# Capa sobre el visor: recuadro de lo de delante, registro y clics.
 	_fx = Control.new()
@@ -113,6 +142,7 @@ func _build() -> void:
 		var card := CombatantCard.new()
 		card.position = Vector2(RIGHT_X, 310 + i * 102)
 		card.size = Vector2(1908 - RIGHT_X, 94)
+		card.pressed.connect(_open_status.bind(i))
 		add_child(card)
 		_cards.append(card)
 
@@ -149,6 +179,10 @@ func _build() -> void:
 	_options.add_theme_constant_override("separation", 18)
 	add_child(_options)
 
+	_status = StatusPanel.new()
+	_status.size = Vector2(1920, 1080)
+	add_child(_status)
+
 	# Combate, por encima de todo.
 	_combat = CombatView.new()
 	_combat.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -158,20 +192,32 @@ func _build() -> void:
 	add_child(_combat)
 
 
-## Ficha de Ren con sus datos de combate (los PV se recuperan al salir de cada combate).
+## Fichas de Ren y del compañero con sus datos de combate (los PV se recuperan
+## al salir de cada combate). El combate «de mentira» sirve a la pantalla de estado.
 func _refresh_party() -> void:
-	var id := CharacterDB.PROTAGONIST
-	var c: Dictionary = CharacterDB.get_character(id).get("combat", {})
-	_cards[0].setup(id, 1, {"level": c.get("level", 1), "pv": c.get("pv", 100), "pv_max": c.get("pv", 100),
-			"pm": c.get("pm_now", c.get("pm", 0)), "pm_max": c.get("pm", 0)})
-	for i in range(1, _cards.size()):
-		_cards[i].setup("", i + 1)
+	_party_battle = Battle.new(CharacterDB.PROTAGONIST, "imp", _companion, _companion_skills)
+	for i in _cards.size():
+		if i < _party_battle.party.size():
+			var f := _party_battle.fighter(_party_battle.party[i])
+			_cards[i].setup(f.id, i + 1, f)
+		else:
+			_cards[i].setup("", i + 1)
+
+
+## Pantalla de estado (la del combate) del miembro de la ficha `slot`.
+func _open_status(slot: int) -> void:
+	if _busy or _combat.visible or _status.visible or _party_battle == null:
+		return
+	if slot >= _party_battle.party.size():
+		return
+	_status.open(_party_battle, _party_battle.party[slot])
 
 
 # --- Estado y entrada -------------------------------------------------------------------
 
 func _on_moved() -> void:
 	_target = _explorer.front()
+	_banter_on_move()
 	_automap.queue_redraw()
 	_big_map.queue_redraw()
 	queue_redraw()
@@ -188,8 +234,16 @@ func _process(_delta: float) -> void:
 		_fx.queue_redraw()
 
 
+func _input(event: InputEvent) -> void:
+	# Tab: estado del grupo (en _input, como en el combate, antes que el foco).
+	if _map != null and not _busy and not _combat.visible and not _status.visible \
+			and event.is_action_pressed("ui_focus_next"):
+		_open_status(0)
+		get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if _map == null or _busy or _combat.visible:
+	if _map == null or _busy or _combat.visible or _status.visible:
 		return
 	var key := event as InputEventKey
 	if key == null or not key.pressed:
@@ -228,7 +282,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_view_input(event: InputEvent) -> void:
-	if _busy or _combat.visible:
+	if _busy or _combat.visible or _status.visible:
 		return
 	if event is InputEventMouseMotion:
 		var inside := _target_rect.has_area() and _target_rect.grow(12).has_point(event.position)
@@ -285,9 +339,10 @@ func _show_items() -> void:
 			continue
 		any = true
 		var name_text: String = ItemDB.get_item(id).get("name", id)
+		var heals: bool = ItemDB.get_item(id).get("heal", 0) > 0
 		_add_option("%s  ×%d" % [name_text, n], func() -> void:
 			_set_info(ItemDB.description(id))
-			_log("%s: mejor guardarlo para un combate." % name_text))
+			_log("%s: %s" % [name_text, "mejor guardarlo para un combate." if heals else "lo llevas encima; abrirá alguna puerta."]))
 	if not any:
 		_log("No llevas nada.")
 
@@ -320,12 +375,10 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 		return
 	_busy = true
 	_clear_options()
-	var ally := ""
-	var ally_skills: Array = []
+	var ally := _companion
+	var ally_skills := _companion_skills
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
-		ally = CharacterDB.COMPANIONS.pick_random()
-		ally_skills = SkillDB.random_skills(2)
 	await SceneRouter.fade_out(0.25)
 	_combat.setup(enemy_id, ally, ally_skills)
 	await SceneRouter.fade_in(0.25)
@@ -346,6 +399,7 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	queue_redraw()
 	_busy = false
 	_on_moved()
+	_comment("victory" if won else "defeat", 1.4, true)
 
 
 ## Vuelta a la calle: salir de la mazmorra cuenta como una actividad (pasa la franja).
@@ -364,7 +418,64 @@ func _exit() -> void:
 
 func _log(text: String) -> void:
 	_log_text = text
+	_log_who = ""
 	_fx.queue_redraw()
+
+
+## El compañero dice `text` (sale en el registro con su nombre).
+func _say(text: String) -> void:
+	_log_text = text
+	_log_who = _companion
+	_fx.queue_redraw()
+
+
+## Comentario del compañero para el momento `event` (DungeonBanter), al cabo de
+## `delay` s para que antes se lea lo que ha pasado. Sin `force`, no comenta si
+## lo ha hecho hace menos de COMMENT_GAP pasos.
+func _comment(event: String, delay: float, force := false) -> void:
+	if _companion == "" or (not force and _steps - _last_comment < COMMENT_GAP):
+		return
+	var text := DungeonBanter.line(_companion, event)
+	if text == "":
+		return
+	_last_comment = _steps
+	_comment_gen += 1
+	var gen := _comment_gen
+	await get_tree().create_timer(delay).timeout
+	if gen != _comment_gen or _busy or _combat.visible:
+		return
+	_say(text)
+
+
+## Al moverse o girar: pared falsa cerca, criatura delante, escaleras o, de vez
+## en cuando, un comentario suelto.
+func _banter_on_move() -> void:
+	if _explorer == null or _explorer.map == null:
+		return
+	var pos := Vector3i(_explorer.cell.x, _explorer.cell.y, _explorer.map.level)
+	var stepped := pos != _last_pos
+	var prev_level := _last_pos.z
+	if stepped:
+		_steps += 1
+	_last_pos = pos
+	if prev_level != -999 and pos.z != prev_level:
+		_comment("level_up" if pos.z > prev_level else "level_down", 1.8, true)
+		return
+	for k in _explorer.secrets_near():
+		var rk := "%d|%s" % [pos.z, k]
+		if not _remarked.has(rk):
+			_remarked[rk] = true
+			_comment("secret_hint", 0.7, true)
+			return
+	if _target.get("kind", "") == "enemy":
+		var ek := "%d|%s" % [pos.z, _target.cell]
+		if not _remarked.has(ek):
+			_remarked[ek] = true
+			_comment("enemy", 0.5)
+			return
+	if stepped and _steps >= _next_idle:
+		_next_idle = _steps + randi_range(IDLE_STEPS.x, IDLE_STEPS.y)
+		_comment("idle", 0.8)
 
 
 func _set_info(text: String) -> void:
@@ -416,7 +527,7 @@ func _draw_info() -> void:
 	var div_x := 960.0
 	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
 	if _options.get_child_count() == 0:
-		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[W A S D] Moverte   [Q E] De lado   [Espacio / clic] Usar   [M] Mapa",
+		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[W A S D] Moverte   [Q E] De lado   [Espacio] Usar   [M] Mapa   [Tab] Equipo",
 				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 21, Color(UIStyle.WHITE, 0.6))
 	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
 	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,
@@ -461,4 +572,10 @@ func _draw_fx() -> void:
 	_fx.draw_colored_polygon(lshape, Color(UIStyle.INK, 0.85))
 	UIStyle.draw_outline(_fx, lshape, UIStyle.LINE, 1.5)
 	_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(26, ty + 14, 8, 24), 6), ACCENT)
-	_fx.draw_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(48, ty + 34), _log_text, HORIZONTAL_ALIGNMENT_LEFT, vs.x - 120, 21, UIStyle.WHITE)
+	var lx := 48.0
+	if _log_who != "":
+		var who := CharacterDB.display_name(_log_who) + ":  "
+		_fx.draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(lx, ty + 34), who, HORIZONTAL_ALIGNMENT_LEFT, -1, 21, CharacterDB.color(_log_who))
+		lx += UIStyle.FONT_BOLD_ITALIC.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
+	var line := "«%s»" % _log_text if _log_who != "" else _log_text
+	_fx.draw_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(lx, ty + 34), line, HORIZONTAL_ALIGNMENT_LEFT, vs.x - lx - 70, 21, UIStyle.WHITE)

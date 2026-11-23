@@ -61,7 +61,8 @@ var ground := 0
 ## Vector2i -> {floor, ceiling} (texturas; vacío = del tema), floor_rot opcional.
 var cells: Dictionary = {}
 ## "x,y,N|W" -> {type (wall/door; sin type = automático), a, b (texturas de cada cara),
-## door: {open (estado inicial), requires (id de objeto necesario)}}
+## door: {open (estado inicial), requires (id de objeto necesario), switch_only,
+## secret (parece pared hasta que se examina; una vez abierta no se cierra)}}
 var edges: Dictionary = {}
 ## Vector2i -> cosa (enemigo o escalera).
 var things: Dictionary = {}
@@ -382,6 +383,12 @@ func set_face_texture(c: Vector2i, dir: int, tex: String) -> void:
 
 func door(c: Vector2i, dir: int) -> Dictionary:
 	return edge(c, dir).get("door", {})
+
+
+## ¿El borde es una puerta secreta (pared falsa)?
+func is_secret(key: String) -> bool:
+	var e: Dictionary = edges.get(key, {})
+	return e.get("type", "") == DOOR and e.get("door", {}).get("secret", false)
 
 
 func set_door(c: Vector2i, dir: int, field: String, value: Variant) -> void:
