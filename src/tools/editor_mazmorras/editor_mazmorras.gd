@@ -34,19 +34,21 @@ const SIDEBAR_W := 560.0
 const PREVIEW_H := 380.0
 const UNDO_MAX := 100
 
-const TOOLS := ["cells", "walls", "doors", "paint", "start", "enemies", "stairs", "items", "switches"]
+const TOOLS := ["cells", "walls", "doors", "paint", "start", "enemies", "stairs", "items", "switches", "extraction", "save"]
 const TOOL_LABELS := {"cells": "Casillas  [1]", "walls": "Muros  [2]", "doors": "Puertas  [3]", "paint": "Texturas  [4]",
 		"start": "Inicio  [5]", "enemies": "Enemigos  [6]", "stairs": "Escaleras  [7]", "items": "Objetos  [8]",
-		"switches": "Interruptores  [9]"}
+		"switches": "Interruptores  [9]", "extraction": "Extracción  [0]", "save": "Guardado"}
 const TOOL_HELP := {
 	"cells": "Clic izquierdo: pintar casillas. Clic derecho: borrar. Se puede arrastrar. Las paredes del contorno salen solas.",
 	"walls": "Clic en el borde entre dos casillas pintadas: muro. Clic derecho: quitarlo. Se puede arrastrar.",
 	"doors": "Clic en el borde entre dos casillas pintadas: puerta (si ya hay una, la selecciona para editarla abajo). Clic derecho: quitarla.",
 	"paint": "Elige superficie y textura. Suelo y techo se pintan por casilla; una pared, por la cara que mira a la casilla donde haces clic. Clic derecho: la del tema. Con «Suelo», R gira el de la casilla bajo el ratón (p. ej. para que una flecha apunte a la escalera).",
 	"start": "Clic en una casilla: punto de inicio (en esta planta). Clic otra vez en la misma: gira la orientación.",
-	"enemies": "Elige el enemigo y haz clic en una casilla. Clic derecho: quitarlo. Al probar el mapa, chocar con él empieza el combate.",
+	"enemies": "Elige el enemigo (y lo que suelta al morir, si algo) y haz clic en una casilla. Clic derecho: quitarlo. Al probar el mapa, chocar con él empieza el combate.",
+	"save": "Clic en una casilla: punto de guardado (terminal; se usa desde la casilla de al lado: guarda la partida y lo conseguido ya no se pierde). Ponle al lado una zona de extracción. Clic derecho: quitarlo.",
 	"stairs": "Clic en una casilla: escalera hacia donde apunta la flecha (se entra andando en esa dirección). Clic otra vez: girarla. Clic derecho: quitarla. Crea la planta y la escalera de vuelta.",
 	"items": "Elige el objeto y la cantidad, y haz clic en una casilla: queda en el suelo y en el juego se coge desde la casilla de al lado. Clic derecho: quitarlo.",
+	"extraction": "Clic en una casilla: zona de extracción segura (saliendo desde ella el jugador se lleva lo que ha conseguido; la casilla de inicio ya lo es). Clic derecho: quitarla.",
 	"switches": "Clic en una casilla: palanca (o la selecciona). Con una seleccionada, clic en una puerta para vincularla o desvincularla: la palanca la abre y la cierra. Clic derecho: quitarla.",
 }
 const SURFACES := ["floor", "ceiling", "wall"]
@@ -108,6 +110,8 @@ var _level_label: Label
 var _level_remove: Button
 var _enemy_opt: OptionButton
 var _enemy_ids: Array[String] = []
+var _drop_opt: OptionButton
+var _drop_ids: Array[String] = []
 var _stairs_opt: OptionButton
 var _stairs_dir := DungeonMap.N
 var _item_opt: OptionButton
@@ -115,6 +119,7 @@ var _item_ids: Array[String] = []
 var _item_count: SpinBox
 var _door_switch_only: CheckBox
 var _door_secret: CheckBox
+var _door_hidden: CheckBox
 var _sel_switch: Dictionary = {}     ## {cell}
 
 
@@ -304,6 +309,14 @@ func _build_sidebar(col: VBoxContainer) -> void:
 			_enemy_opt.add_item(CharacterDB.display_name(eid))
 	_enemy_opt.item_selected.connect(func(_i: int) -> void: _set_tool("enemies"))
 	col.add_child(_field("Enemigo a colocar", _enemy_opt))
+	_drop_opt = OptionButton.new()
+	_drop_opt.add_item("Nada")
+	for iid: String in ItemDB.ALL:
+		if not ItemDB.get_item(iid).has("loot"):
+			_drop_ids.append(iid)
+			_drop_opt.add_item(ItemDB.display_name(iid))
+	_drop_opt.item_selected.connect(func(_i: int) -> void: _set_tool("enemies"))
+	col.add_child(_field("Suelta al morir (se añade al inventario)", _drop_opt))
 	_stairs_opt = OptionButton.new()
 	_stairs_opt.add_item("Sube")
 	_stairs_opt.add_item("Baja")
@@ -362,6 +375,19 @@ func _build_sidebar(col: VBoxContainer) -> void:
 		_rebuild_pending = true
 		_plan.queue_redraw())
 	_door_box.add_child(_door_secret)
+	_door_hidden = CheckBox.new()
+	_door_hidden.text = "Oculta: solo se encuentra con el resonador"
+	_door_hidden.tooltip_text = "Pared secreta que no se puede empujar a ciegas ni la comenta el compañero: hay que hacerla brillar con el pulso del resonador (5 casillas) y luego inspeccionarla."
+	_door_hidden.toggled.connect(func(on: bool) -> void:
+		_push_undo()
+		_map.set_door(_sel_edge.cell, _sel_edge.dir, "hidden", on)
+		if on:
+			_map.set_door(_sel_edge.cell, _sel_edge.dir, "secret", true)
+			_door_secret.set_pressed_no_signal(true)
+		_mark_dirty()
+		_rebuild_pending = true
+		_plan.queue_redraw())
+	_door_box.add_child(_door_hidden)
 	_door_box.visible = false
 
 	# --- Planta ---
@@ -683,6 +709,7 @@ func _refresh_selection() -> void:
 	_door_req.text = d.get("requires", "")
 	_door_switch_only.set_pressed_no_signal(d.get("switch_only", false))
 	_door_secret.set_pressed_no_signal(d.get("secret", false))
+	_door_hidden.set_pressed_no_signal(d.get("hidden", false))
 	_door_box.visible = true
 
 
@@ -1006,7 +1033,8 @@ func _apply_tool(h: Dictionary, primary: bool, first: bool) -> void:
 					return
 				if _map.thing(c).get("type", "") == DungeonMap.STAIRS:
 					_set_status("Ahí hay una escalera.", true)
-				elif _map.set_enemy(c, _enemy_ids[_enemy_opt.selected]):
+				elif _map.set_enemy(c, _enemy_ids[_enemy_opt.selected],
+						_drop_ids[_drop_opt.selected - 1] if _drop_opt.selected > 0 else ""):
 					_changed()
 			elif _map.erase_enemy(c):
 				_changed()
@@ -1019,6 +1047,22 @@ func _apply_tool(h: Dictionary, primary: bool, first: bool) -> void:
 				elif _map.set_item(c, _item_ids[_item_opt.selected], int(_item_count.value)):
 					_changed()
 			elif _map.thing(c).get("type", "") == DungeonMap.ITEM and _map.erase_thing(c):
+				_changed()
+		"extraction":
+			if primary:
+				if _map.thing(c).get("type", "") not in ["", DungeonMap.EXTRACTION]:
+					_set_status("Ahí ya hay algo.", true)
+				elif _map.set_extraction(c):
+					_changed()
+			elif _map.thing(c).get("type", "") == DungeonMap.EXTRACTION and _map.erase_thing(c):
+				_changed()
+		"save":
+			if primary:
+				if _map.thing(c).get("type", "") not in ["", DungeonMap.SAVE]:
+					_set_status("Ahí ya hay algo.", true)
+				elif _map.set_save_point(c):
+					_changed()
+			elif _map.thing(c).get("type", "") == DungeonMap.SAVE and _map.erase_thing(c):
 				_changed()
 		"switches":
 			if not first:
@@ -1208,6 +1252,21 @@ func _draw_things() -> void:
 			else:
 				_plan.draw_circle(center, rad, col)
 			_plan.draw_arc(center, rad, 0, TAU, 32, col, maxf(2.0, _cell_px * 0.06))
+			if th.get("drop", "") != "":
+				# Suelta algo: rombo lima en la esquina.
+				var dc := r.position + Vector2(_cell_px * 0.82, _cell_px * 0.18)
+				var k := _cell_px * 0.13
+				var dia := PackedVector2Array([dc + Vector2(0, -k), dc + Vector2(k, 0), dc + Vector2(0, k), dc + Vector2(-k, 0)])
+				_plan.draw_colored_polygon(dia, UIStyle.LIME)
+				UIStyle.draw_outline(_plan, dia, UIStyle.INK, 1.5)
+		elif th.type == DungeonMap.SAVE:
+			var center := r.get_center()
+			var k := _cell_px * 0.3
+			var dia := PackedVector2Array([center + Vector2(0, -k), center + Vector2(k, 0), center + Vector2(0, k), center + Vector2(-k, 0)])
+			_plan.draw_colored_polygon(dia, UIStyle.CYAN)
+			UIStyle.draw_outline(_plan, dia, UIStyle.INK, 2.0)
+		elif th.type == DungeonMap.EXTRACTION:
+			_plan.draw_arc(r.get_center(), _cell_px * 0.34, 0, TAU, 32, UIStyle.CYAN, maxf(2.0, _cell_px * 0.08), true)
 		elif th.type == DungeonMap.ITEM:
 			var center := r.get_center()
 			var k := _cell_px * 0.26
@@ -1390,6 +1449,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_start_test()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9:
 			_set_tool(TOOLS[key.keycode - KEY_1])
+		KEY_0:
+			_set_tool("extraction")
 		KEY_R when _tool == "paint" and _surface == "floor" and not _hover.is_empty() and _map.has_cell(_hover.cell):
 			_push_undo()
 			_map.set_cell_rot(_hover.cell, _map.cell_rot(_hover.cell) + (3 if key.shift_pressed else 1))

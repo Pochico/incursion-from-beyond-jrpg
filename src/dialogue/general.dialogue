@@ -7,11 +7,36 @@
 # Las reglas «# cuando:» de este archivo valen para cualquier personaje y solo
 # se usan si el personaje no tiene una propia que encaje.
 
+# Despertar de cada mañana (salvo el primer día, que tiene el suyo en capitulo1).
+# Los planes del día llegan después al móvil (ChapterDB.PLANS).
 ~ intro
-Despiertas un día más.
-El mismo techo. La misma grieta junto a la lámpara. El mismo zumbido del frigorífico al otro lado de la pared.
-Anodino. Sin interés. Rutinario.
-Sigue con tu vida.
+if Story.phase("reunion") and not Story.flag("intro_tras_reunion")
+	$> Story.set_flag("intro_tras_reunion")
+	Te despiertas antes que la alarma. Por primera vez en semanas, no te pesa la cabeza.
+	El grupo del móvil ha cambiado de nombre esta noche. Ahora se llama «Cloacas FC». Ha sido Kenji, claro.
+	Shiori ha mandado un documento de once páginas. Rika, un audio de cuatro minutos. Akane, un pulgar.
+	Ren: Vale. Esto va en serio.
+elif Story.phase("incursion_1") and not Story.flag("intro_tras_incursion")
+	$> Story.set_flag("intro_tras_incursion")
+	No sabes si has dormido. El techo es el mismo, pero lo miras como si pudiera abrirse.
+	El móvil no ha parado en toda la noche. Noventa y siete mensajes en el grupo. Un vídeo borroso de {{Story.incursion_place()}} con doscientas mil reproducciones.
+	En las noticias de la mañana hablan de «un escape de gas» y de «una actuación callejera no autorizada».
+	Ren: Escape de gas. Ya.
+	Te miras las manos. Siguen temblando un poco.
+elif Story.flag("dia_2")
+	Martes. La alarma suena y, por una vez, la apagas a la primera.
+	Te duelen las piernas de las camas elásticas. Es un dolor raro. Casi agradable.
+	En la nevera hay una nota de tu madre: «Turno doble. Hay lentejas. Come algo verde. Te quiero, pesado».
+	Ren: Algo verde... Las lentejas son marrones.
+elif Story.flag("dia_3")
+	Miércoles. Llueve fino, de ese que no moja pero se queda en el pelo.
+	Anoche soñaste con una pantalla que se encendía sola. No recuerdas qué ponía. Solo que era tu nombre.
+	Ren: Mitad de semana. Se puede.
+else
+	Despiertas un día más.
+	El mismo techo. La misma grieta junto a la lámpara. El mismo zumbido del frigorífico al otro lado de la pared.
+	Anodino. Sin interés. Rutinario.
+	Sigue con tu vida.
 => END
 
 # --- Casa -------------------------------------------------------------------------
@@ -170,4 +195,27 @@ Ren: ¿Entro?
 - Pensarlo mejor
 	$> Story.set_flag("entrar_mazmorra", false)
 	Ren: Hoy no. Mejor me lo pienso.
+=> END
+
+# --- Citas (respaldo para quien no tenga las suyas) -------------------------------
+
+~ generico_cita_no
+# cuando: cita_pide, resultado = no|pareja|animo|gustos|afecto
+% {{Story.speaker}}: ¿Una cita? No, gracias.
+% {{Story.speaker}}: (Se ríe.) Qué gracioso eres. No.
+=> END
+
+~ generico_cita_si
+# cuando: cita_pide, resultado = acepta|rompe
+{{Story.speaker}}: Vale. Nos vemos en {{Story.date_place()}}.
+=> END
+
+~ generico_cita
+# cuando: cita
+Pasáis un buen rato en {{Story.date_place()}}. Habláis de todo y de nada.
+=> END
+
+~ generico_deja_a_ren
+# cuando: deja_a_ren
+{{Story.speaker}}: Lo siento, Ren. Lo dejamos.
 => END

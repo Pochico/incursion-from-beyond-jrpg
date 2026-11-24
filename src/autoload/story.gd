@@ -23,7 +23,7 @@ const SEEN_PREFIX := "visto:"
 const CRITERION_WEIGHTS := {"once": 3, "mood": 2}
 
 ## Acción del menú -> momento del selector.
-const ACTION_MOMENTS := {"talk": "hablar", "flirt": "ligar", "fight": "luchar", "message": "movil"}
+const ACTION_MOMENTS := {"talk": "hablar", "flirt": "ligar", "fight": "luchar", "message": "movil", "date": "cita"}
 ## Nombre del interlocutor actual, para las frases genéricas de general.dialogue:
 ##   {{Story.speaker}}: Ahora no me apetece hablar.
 var speaker := ""
@@ -103,6 +103,87 @@ func text(who: String, message: String) -> void:
 
 func persona_name() -> String:
 	return CharacterDB.display_name(persona) if persona != "" else ""
+
+
+## Dónde fue la primera incursión («Colinas», «Bowls»...), para los diálogos.
+func incursion_place() -> String:
+	return str(GameState.get_flag("lugar_incursion", "la calle"))
+
+
+## Día de la partida (1 = el primer lunes).
+## Sitio de la cita en curso (o de la última pedida): «Westfield Parquesur».
+func date_place() -> String:
+	return LocationDB.display_name(String(GameState.get_flag(Romance.PLACE_FLAG, "")))
+
+
+## Cuánto le gusta a `who` el sitio de la cita (> 0 le gusta, < 0 no).
+func date_taste(who: String) -> float:
+	return Romance.place_taste(who, String(GameState.get_flag(Romance.PLACE_FLAG, "")))
+
+
+## Sitio que más le gusta a `who` para una cita (nombre para mostrar).
+func favourite_place(who: String) -> String:
+	return LocationDB.display_name(Romance.favourite_place(who))
+
+
+## Por qué ha dejado la pareja a Ren: "descuido", "infiel" o "frio".
+func dump_reason() -> String:
+	return String(GameState.get_flag("deja_a_ren_motivo", ""))
+
+
+## Resultado de la última mentira de Ren ([#miente=tema], ver Lies):
+## "delatado", "cubierto" o "creido".
+func lie_result() -> String:
+	return Lies.last.get("result", "")
+
+
+## Quien acaba de delatar o cubrir a Ren (nombre, para «{{Story.lie_witness()}}: ...»).
+func lie_witness() -> String:
+	return CharacterDB.display_name(Lies.last.get("witness", ""))
+
+
+## ¿Es `who` quien acaba de delatar o cubrir a Ren?
+func lie_witness_is(who: String) -> bool:
+	return Lies.last.get("witness", "") == who
+
+
+## ¿Lo último que descubrió `who` (por un chivato) era una mentira de Ren?
+func lied_to(who: String) -> bool:
+	return bool(GameState.get_flag("pillado_mentira_" + who))
+
+
+## Ren confiesa a `who` todo lo que le ocultaba.
+func confess(who: String) -> void:
+	Lies.confess(who)
+
+
+## Quién le contó a `who` lo que Ren ocultaba (nombre).
+func snitch(who: String) -> String:
+	return CharacterDB.display_name(String(GameState.get_flag("chivato_" + who, "")))
+
+
+## Pareja de `who` ("" si no tiene). En los diálogos: if Story.partner("yuna") == "ren".
+func partner(who: String) -> String:
+	return Romance.partner_of(who)
+
+
+## ¿Aceptaría `who` salir en serio con Ren ahora? (al final de una cita)
+func can_be_partner(who: String) -> bool:
+	return Romance.can_be_partner(who)
+
+
+func become_partner(who: String) -> void:
+	Romance.become_partner(who)
+
+
+## Ren deja a su pareja.
+func break_up_with(who: String) -> void:
+	if Romance.ren_partner() == who:
+		Romance.break_up(CharacterDB.PROTAGONIST, who, "ren_deja")
+
+
+func day() -> int:
+	return GameState.day_number()
 
 
 func enemy_name() -> String:

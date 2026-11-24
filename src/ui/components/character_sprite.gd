@@ -5,7 +5,8 @@ extends Control
 ##
 ## - En escenarios: interactivo, con silueta y brillo del color del personaje.
 ##   Solo responde al ratón sobre píxeles opacos.
-## - En conversación: sin brillo, con `dim` para atenuar a quien no habla.
+## - En conversación: sin brillo, con `dim` para atenuar a quien no habla, y
+##   `change_texture` para cambiar de gesto con un fundido breve.
 
 signal activated
 
@@ -62,11 +63,19 @@ const GLOW_MARGIN := 40.0
 		mouse_filter = Control.MOUSE_FILTER_STOP if value else Control.MOUSE_FILTER_IGNORE
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if value else Control.CURSOR_ARROW
 
+## Desplazamientos breves al cambiar de gesto (salto, sacudida).
+enum Motion { NONE, HOP, SHAKE }
+
 var _glow := 0.0
 var _time := 0.0
 var _image: Image
 var _head_px := Vector2(-1, -1)
 var _tween: Tween
+## Gesto anterior mientras dura el fundido (`_fade` de 0 a 1).
+var _old_texture: Texture2D
+var _fade := 1.0
+var _jolt := Vector2.ZERO
+var _change_tween: Tween
 
 
 func _init() -> void:
@@ -121,48 +130,94 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+# --- Cambio de gesto -----------------------------------------------------------
+
+## Cambia la imagen con un fundido corto y, si se pide, un salto o una sacudida.
+func change_texture(tex: Texture2D, motion: Motion = Motion.NONE) -> void:
+	if tex == texture:
+		return
+	if _change_tween:
+		_change_tween.kill()
+	_old_texture = texture
+	texture = tex
+	_jolt = Vector2.ZERO
+	_change_tween = create_tween().set_parallel(true)
+	_change_tween.tween_method(_set_fade, 0.0, 1.0, 0.22)
+	match motion:
+		Motion.HOP:
+			_change_tween.tween_method(_set_jolt, Vector2.ZERO, Vector2(0, -22), 0.1) \
+					.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			_change_tween.tween_method(_set_jolt, Vector2(0, -22), Vector2.ZERO, 0.16).set_delay(0.1) \
+					.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		Motion.SHAKE:
+			var steps: Array[float] = [10.0, -8.0, 5.0, -2.0, 0.0]
+			for i in steps.size():
+				var from := Vector2(steps[i - 1] if i > 0 else 0.0, 0)
+				_change_tween.tween_method(_set_jolt, from, Vector2(steps[i], 0), 0.05).set_delay(i * 0.05)
+	_change_tween.chain().tween_callback(func() -> void: _old_texture = null)
+
+
+func _set_fade(v: float) -> void:
+	_fade = v
+	queue_redraw()
+
+
+func _set_jolt(v: Vector2) -> void:
+	_jolt = v
+	queue_redraw()
+
+
 # --- Geometría -----------------------------------------------------------------
 
 ## Rectángulo (en coordenadas locales) donde se dibuja la imagen, sin margen.
 ## Ocupa toda la altura salvo que la imagen sea más ancha que el control
 ## (p. ej. criaturas apaisadas): entonces se ajusta al ancho, apoyada abajo.
-func image_rect() -> Rect2:
-	if texture == null:
+func image_rect(tex: Texture2D = texture) -> Rect2:
+	if tex == null:
 		return Rect2()
 	if stretch:
-		return Rect2(Vector2(slide, 0.0), size)
-	var tex_size := texture.get_size()
-	var s := _scale()
+		return Rect2(Vector2(slide, 0.0) + _jolt, size)
+	var tex_size := tex.get_size()
+	var s := _scale(tex)
 	var w := tex_size.x * s
 	var h := tex_size.y * s
-	return Rect2(Vector2((size.x - w) * 0.5 + slide, size.y - h), Vector2(w, h))
+	return Rect2(Vector2((size.x - w) * 0.5 + slide, size.y - h) + _jolt, Vector2(w, h))
 
 
 ## Escala por eje entre la textura y la pantalla.
-func _scale2() -> Vector2:
-	if stretch and texture:
-		return size / texture.get_size()
-	return Vector2.ONE * _scale()
+func _scale2(tex: Texture2D = texture) -> Vector2:
+	if stretch and tex:
+		return size / tex.get_size()
+	return Vector2.ONE * _scale(tex)
 
 
-func _scale() -> float:
-	if texture == null:
+func _scale(tex: Texture2D = texture) -> float:
+	if tex == null:
 		return 1.0
-	var tex_size := texture.get_size()
+	var tex_size := tex.get_size()
 	return minf(size.y / tex_size.y, size.x / tex_size.x) if size.x > 0.0 else size.y / tex_size.y
 
 
 func _draw() -> void:
-	if texture == null:
+	# Durante un cambio de gesto, el anterior se desvanece mientras aparece el nuevo.
+	if _old_texture != null and _fade < 1.0:
+		_draw_image(_old_texture, clampf(2.0 * (1.0 - _fade), 0.0, 1.0))
+		_draw_image(texture, clampf(2.0 * _fade, 0.0, 1.0))
+	else:
+		_draw_image(texture, 1.0)
+
+
+func _draw_image(tex: Texture2D, alpha: float) -> void:
+	if tex == null:
 		return
-	var rect := image_rect()
-	var s := _scale2()
+	var rect := image_rect(tex)
+	var s := _scale2(tex)
 	var m := GLOW_MARGIN
 	# Dibujamos un rectángulo más grande (salvo por abajo) con UV fuera de rango:
 	# el shader los trata como transparentes y ahí pinta el halo.
 	var draw_rect_big := Rect2(rect.position - Vector2(m, m), rect.size + Vector2(m * 2.0, m))
 	var src := Rect2(Vector2(-m, -m) / s, (rect.size + Vector2(m * 2.0, m)) / s)
-	draw_texture_rect_region(texture, draw_rect_big, src, Color.WHITE, false, false)
+	draw_texture_rect_region(tex, draw_rect_big, src, Color(1, 1, 1, alpha), false, false)
 
 
 ## Punto aproximado de la coronilla (en coordenadas locales), calculado a partir

@@ -1,5 +1,231 @@
 # YUNA — novia de Kenji, de su misma clase. Tranquila; muy cariñosa con Kenji.
+# Está en Colinas (plaza) con Kenji y Rika, y en las Cloacas tras la incursión.
 # Ficha: src/data/characters/yuna.json
+
+# =====================================================================================
+# HABLAR — antes de la incursión
+# =====================================================================================
+
+~ yuna_hablar_primera
+# cuando: hablar, una vez, fase = rutina
+Yuna: Hola, Ren. Kenji no está. Ha ido a por pipas. Lleva veinte minutos. Creo que se ha perdido en el quiosco.
+- ¿Le esperamos juntos? [#cariñoso]
+	Yuna: Vale. Pero no hace falta que hables si no quieres. Yo tampoco hablo mucho.
+- Se habrá entretenido hablando con alguien. [#bromista]
+	Yuna: Seguro. Con el quiosquero. Le estará contando su vida. O la tuya.
+- Vale, ya le veré luego. [#reservado]
+	Yuna: Espera. Ya que estás.
+Yuna: ¿Puedo pedirte una cosa? Kenji duerme poco. Se queda grabando de noche y dice que oye cosas en los cascos.
+Yuna: A mí me lo cuenta en broma. Pero a ti te lo cuenta en serio. Si te dice algo raro... avísame. Aunque sea una tontería.
+- Te lo prometo. [#protector, #franco]
+	Yuna: Gracias. Sabía que podía contar contigo. Él dice que eres su hermano. Yo le creo.
+	$> Story.change("yuna", "confianza", 3)
+- Seguro que no es nada. [#pragmático]
+	Yuna: Ojalá. Pero cuando algo le preocupa de verdad, se ríe más. Y últimamente se ríe muchísimo.
+- No quiero espiarle. [#independiente]
+	Yuna: No es espiar. Es cuidar. Pero vale. Lo entiendo.
+	$> Story.change("yuna", "afecto", -1)
+=> END
+
+~ yuna_hablar_rutina
+# cuando: hablar, fase = rutina
+%
+	Yuna: Estoy haciendo una lista de canciones para Kenji. Para cuando esté de bajón. Tiene treinta y dos. Todas de los noventa.
+	- ¿Por qué de los noventa? [#curioso]
+		Yuna: Porque son las que ponía su padre en el coche. Él no lo sabe, pero cuando suenan se le ablanda la cara.
+	- Eres muy buena con él. [#cariñoso]
+		Yuna: Es fácil serlo. Es buena persona. Solo hace mucho ruido.
+%
+	Yuna: ¿Has comido? Tengo una mandarina de sobra. Siempre llevo una de sobra. Por si acaso.
+	- Gracias, me la como. [#franco]
+		Yuna: Toma. Está un poco blanda, pero es de las buenas.
+		$> Story.change("yuna", "afecto", 1)
+	- No, guárdala para Kenji. [#cariñoso, #alude=kenji]
+		Yuna: Kenji ya se ha comido dos. Esta era la tuya desde el principio.
+%
+	Yuna: A veces pienso que la gente habla demasiado. Y luego me acuerdo de que salgo con Kenji. Y me río sola.
+=> END
+
+~ yuna_hablar_otra_vez_hoy
+# cuando: hablar, hoy >= 2, no flag kenji_yuna_rotos
+% Yuna: ¿Otra vez por aquí? Kenji sigue sin volver de las pipas.
+% Yuna: Hola de nuevo. Si buscas conversación, Kenji tiene para los dos.
+% Yuna: Te noto con ganas de hablar hoy. Me gusta. No es lo normal en ti.
+=> END
+
+~ yuna_hablar_con_kenji
+# cuando: hablar, presente kenji, una vez, visto yuna_hablar_primera, no flag kenji_yuna_rotos
+Kenji: ¿Qué cuchicheáis? ¿Habláis de mí? ¿Bien o mal?
+Yuna: De ti, osito. Siempre de ti.
+Kenji: ¿Ves, Ren? Esto es amor. Que hablen de ti a tus espaldas y siempre bien.
+Yuna: No he dicho que fuera bien.
+Kenji: ...Ren, ¿fue bien?
+- Fue muy bien. [#cariñoso, #alude=kenji]
+	Kenji: Lo sabía. Soy un partidazo.
+	Yuna: (A ti, bajito.) Gracias.
+- Prefiero no comentarlo. [#bromista, #provocador]
+	Kenji: ¡Tío! ¡Que eres mi mejor amigo!
+	Yuna: Déjale, que es broma. ...Creo.
+=> END
+
+~ yuna_hablar_martes
+# cuando: hablar, flag dia_2, no hoy >= 2, fase = rutina
+Yuna: Tengo el vídeo del mortal de Kenji desde dos ángulos. Lo he visto doce veces. Es lo más bonito que he visto en mi vida.
+Yuna: No se lo digas. Se lo cree demasiado.
+- ¿Me lo pasas? [#bromista]
+	Yuna: Ni loca. Es material sensible. Pero te enseño el segundo ángulo. Es el mejor.
+- Estáis hechos el uno para el otro. [#cariñoso, #idealista]
+	Yuna: ...Gracias. Su madre dice lo mismo. Y la mía dice que «ya se le pasará». No se me pasa.
+	$> Story.change("yuna", "afecto", 2)
+=> END
+
+~ yuna_hablar_miercoles
+# cuando: hablar, flag dia_3, no hoy >= 2, fase = rutina
+Yuna: Kenji no ha dormido. Ha estado grabando hasta las cuatro. Hoy en clase se ha dormido encima del examen.
+Yuna: La profesora le ha despertado con mucha delicadeza. Y le ha puesto un cero, también con mucha delicadeza.
+- Hablaré con él. [#protector]
+	Yuna: Gracias. A ti te escucha. A mí me da la razón y luego hace lo que quiere.
+	$> Story.change("yuna", "confianza", 2)
+- Ya se le pasará. [#pragmático]
+	Yuna: Eso espero. Pero esta vez es distinto. Lo noto.
+=> END
+
+# =====================================================================================
+# HABLAR — después de la incursión
+# =====================================================================================
+
+~ yuna_hablar_tras_incursion
+# cuando: hablar, fase >= incursion_1, sabe incursion_1, una vez
+Yuna: Ren. Kenji me lo ha contado todo. Bueno, me lo ha contado tres veces y cada vez la criatura era más grande.
+Yuna: ¿Estás bien? De verdad. No me digas «bien» por decir.
+- No. Estoy asustado. [#franco]
+	Yuna: Vale. Gracias por decirlo. Kenji también lo está, aunque haga chistes.
+	$> Story.change("yuna", "confianza", 3)
+- Estoy bien. Preocúpate por Kenji. [#protector, #alude=kenji]
+	Yuna: Me preocupo por los dos. Tengo para todos. Es mi superpoder.
+- Ya pasó. [#reservado, #evasivo]
+	Yuna: Ya. Eso dice Kenji. Y luego no duerme.
+Yuna: Toma. Una mandarina. No arregla nada, pero por algo se empieza.
+=> END
+
+~ yuna_hablar_rumores
+# cuando: hablar, fase >= incursion_1, no sabe incursion_1, una vez
+Yuna: ¿Has visto el vídeo de {{Story.incursion_place()}}? Kenji no deja de ponérmelo. Dice que eres tú el del fondo.
+- Sí. Era yo. Y era real. [#franco]
+	$> Story.tell("yuna", "incursion_1")
+	Yuna: ...Vale.
+	Yuna: Vale. Entonces no es una broma de Kenji. Necesito sentarme.
+	$> Story.change("yuna", "confianza", 2)
+- No sé de qué me hablas. [#evasivo]
+	Yuna: Ya. Tú tampoco sabes mentir, ¿eh? Kenji y tú sois iguales.
+=> END
+
+~ yuna_hablar_post
+# cuando: hablar, fase >= incursion_1
+% Yuna: Le he cosido a Kenji un bolsillo secreto en la chaqueta. Dentro hay tiritas, una linterna y una foto mía. Por si se asusta.
+% Yuna: Ya no vuelvo sola a casa. Kenji me acompaña. Luego le acompaño yo a él. Damos muchas vueltas.
+% Yuna: Mi madre pregunta por qué estoy tan callada. Más de lo normal, quiero decir.
+=> END
+
+~ yuna_hablar_reunion
+# cuando: hablar, fase >= reunion, una vez
+Yuna: Lo dije en las Cloacas y lo digo otra vez. Yo no entro en La Torre. Pero estaré fuera. Siempre.
+Yuna: Y si Kenji entra, tú entras con él. Prométemelo.
+- Te lo prometo. [#protector, #franco]
+	Yuna: Gracias. Ya puedo dormir un poco mejor.
+	$> Story.change("yuna", "confianza", 3)
+	$> Story.change("yuna", "afecto", 2)
+- Kenji sabe cuidarse solo. [#independiente]
+	Yuna: No, Ren. No sabe. Por eso te lo pido a ti.
+	$> Story.change("yuna", "confianza", -1)
+=> END
+
+~ yuna_hablar_tras_reunion
+# cuando: hablar, fase >= reunion, no hoy >= 2
+%
+	Yuna: He hecho un botiquín para el grupo. Kenji ha elegido las tiritas. Son de dinosaurios. No había otras, dice.
+%
+	Yuna: Tengo la ubicación de todos activada en el móvil. Si alguno se mete donde no debe, lo sabré. Os lo aviso para que no os enfadéis.
+%
+	Yuna: Shiori me ha pasado su cuaderno para que lo pase a limpio. Tiene una letra preciosa. Y da mucho miedo lo que pone.
+=> END
+
+# =====================================================================================
+# LIGAR, LUCHAR, CANSANCIO
+# =====================================================================================
+
+~ yuna_ligar
+# cuando: ligar
+Ren: Hoy estás muy guapa, Yuna.
+Yuna: Gracias, Ren. Pero ya sabes que yo estoy con Kenji. Y se lo voy a contar, porque le va a hacer gracia.
+Yuna: (Sonriendo un poco.) Aunque igual le da un poco de celos. Eso también me hace gracia.
+=> END
+
+~ yuna_ligar_otra_vez
+# cuando: ligar, veces >= 2
+Yuna: Ren. Dos veces. Ya vale, ¿eh? Kenji te quiere mucho, pero hasta cierto punto.
+=> END
+
+~ yuna_luchar
+# cuando: luchar
+Ren: ¿Echamos un combate? Para entrenar.
+Yuna: ¿Yo? Vale. Pero no me hagas daño en las manos, que tengo que pasar apuntes.
+Yuna: Y no se lo cuentes a Kenji si gano. Se deprime.
+=> END
+
+~ yuna_luchar_gana
+# cuando: luchar_fin, resultado = gana
+Yuna: Vale, has ganado. Lo sabía. Yo no soy de pelear. Soy de curar a los que pelean.
+=> END
+
+~ yuna_luchar_pierde
+# cuando: luchar_fin, resultado = pierde
+Yuna: Ay, perdona. ¿Te he hecho daño? Es que he visto mucho a Kenji jugar al Tekken. Se pega.
+=> END
+
+~ yuna_harto_hablar
+# cuando: harto_hablar
+Yuna: Ren, me caes muy bien. Pero ya hemos hablado mucho hoy. Me voy a callar un rato. Es mi forma de descansar.
+=> END
+
+~ yuna_harto_ligar
+# cuando: harto_ligar
+Yuna: Ya está, Ren. No tiene gracia la tercera vez.
+=> END
+
+~ yuna_harto_luchar
+# cuando: harto_luchar
+Yuna: No más. Me duelen los brazos. Y la dignidad.
+=> END
+
+~ yuna_no_quiere
+# cuando: no_quiere
+Yuna: Hoy no, Ren. Perdona. Mañana estoy mejor.
+=> END
+
+# =====================================================================================
+# PRIMERA INCURSIÓN
+# =====================================================================================
+
+~ yuna_alarma
+# cuando: alarma
+Yuna: ¿Qué ha sido eso? Ren, ¿dónde está Kenji? ¿Dónde está Kenji? [#cara=incomodo]
+Ren: Quédate detrás de mí.
+=> END
+
+~ yuna_tras_incursion_gana
+# cuando: tras_incursion, resultado = gana
+Yuna: Ren... Tú... ¿Cómo has hecho eso?
+Yuna: No. No me lo expliques. Primero tengo que llamar a Kenji. Y luego tengo que sentarme.
+$> Story.set_mood("yuna", "ansioso", 60)
+=> END
+
+~ yuna_tras_incursion_pierde
+# cuando: tras_incursion, resultado = pierde
+Yuna: ¡Ren! Ren, mírame. ¿Estás bien? Se ha ido. Se ha ido sin más.
+Yuna: Voy a llamar a Kenji. Y a tu madre no, tranquilo. Pero a Kenji sí.
+$> Story.set_mood("yuna", "ansioso", 60)
+=> END
 
 # =====================================================================================
 # MÓVIL — Ren le escribe desde Contactos o Mensajes (solo saludo, de momento)
@@ -32,4 +258,195 @@
 # cuando: movil, tramo <= fria
 Ren: Hola.
 Yuna: Hola.
+=> END
+
+
+~ yuna_movil_tras_incursion
+# cuando: movil, fase >= incursion_1, sabe incursion_1
+Ren: ¿Cómo estás?
+Yuna: Bien. Kenji está aquí. Está componiendo para no pensar. Es su forma de tener miedo.
+Yuna: Gracias por estar pendiente, Ren.
+=> END
+
+# --- Citas y parejas (Romance) ----------------------------------------------------
+
+~ yuna_cita_acepta
+# cuando: cita_pide, resultado = acepta
+if Story.partner("yuna") == "ren"
+	Yuna: ¿Me estás pidiendo una cita a mí? ¿Tu novia? Qué formal. Me gusta.
+	Yuna: {{Story.date_place()}}. Voy en chándal. Es mi chándal de cita, que lo sepas.
+else
+	Yuna: (Te mira un buen rato, sin sonreír.) Vale.
+	Yuna: {{Story.date_place()}}. No le digas nada a nadie todavía.
+=> END
+
+~ yuna_cita_rompe
+# cuando: cita_pide, resultado = rompe
+Yuna se queda muy quieta. Luego guarda el móvil en el bolsillo, como quien guarda una decisión.
+Yuna: Llevo semanas mirándote cuando no miras, Ren. Y ya no puedo hacer como que no.
+Yuna: Voy a hablar con Kenji. Hoy. Se lo merece. Y luego... luego voy contigo a {{Story.date_place()}}.
+Yuna: No me preguntes si estoy segura. Si lo pienso, no lo hago.
+=> END
+
+~ yuna_cita_pareja
+# cuando: cita_pide, resultado = pareja
+Yuna: ¿Una cita? Ren. Salgo con tu mejor amigo. Que es Kenji. Que está ahí.
+Yuna: Voy a hacer como que no lo has dicho. Por ti, más que nada.
+=> END
+
+~ yuna_cita_animo
+# cuando: cita_pide, resultado = animo
+Yuna: Hoy no. Hoy no aguanto ni mi propia voz.
+Yuna: No es por ti. Bueno, un poco sí, por preguntar hoy.
+=> END
+
+~ yuna_cita_gustos
+# cuando: cita_pide, resultado = gustos
+Yuna: ¿A {{Story.date_place()}}? Ni de broma. Allí hay demasiada gente o demasiada humedad.
+Yuna: Si fuera {{Story.favourite_place("yuna")}}... a lo mejor.
+=> END
+
+~ yuna_cita_afecto
+# cuando: cita_pide, resultado = afecto
+Yuna: No, Ren. Pero gracias por preguntar con esa cara.
+=> END
+
+~ yuna_cita
+# cuando: cita
+if Story.partner("yuna") == "ren"
+	Yuna aparece con dos napolitanas de chocolate y te da la más pequeña.
+	Yuna: La grande es mía. Es la base de esta relación. No la cuestiones.
+else
+	Yuna llega puntual, cosa que no hace nunca. Lleva el pelo suelto, cosa que tampoco.
+	Yuna: No me mires así. Me he peinado. Pasa a veces.
+if Story.date_taste("yuna") > 0
+	Yuna: Aquí se está bien. Nadie grita. Bueno, casi nadie.
+elif Story.date_taste("yuna") < 0
+	Yuna: Has elegido el sitio fatal. Te lo perdono porque has venido tú.
+- ¿Te puedo hacer una foto? [#atrevido]
+	Yuna: Solo si luego me dejas grabarte haciendo el tonto.
+	Te graba haciendo el tonto. Te graba mucho rato.
+	$> Story.change("yuna", "afecto", 3)
+- Gracias por venir, Yuna. [#cariñoso]
+	Yuna: Para de dar las gracias. Pareces un cajero.
+	$> Story.change("yuna", "confianza", 2)
+- Hoy estás muy guapa. [#coqueto]
+	Yuna: Lo sé. Pero dilo otra vez, que me ha gustado.
+	$> Story.change("yuna", "atraccion", 3)
+if Story.partner("yuna") != "ren" and Story.can_be_partner("yuna")
+	Yuna: Ren. ¿Qué somos? Y no me digas «amigos», que te tiro la napolitana.
+	- Quiero que seas mi novia. [#franco, #decidido]
+		Yuna: ...Vale. Sí. Pero no me cojas de la mano por la calle. Todavía.
+		$> Story.become_partner("yuna")
+	- No lo sé todavía. [#dubitativo]
+		Yuna: Pues averígualo pronto. No soy de esperar.
+	- Amigos. [#prudente]
+		Yuna te tira la napolitana. Te da en el pecho.
+		$> Story.change("yuna", "afecto", -2)
+Yuna: Me lo he pasado bien. No te acostumbres a oírmelo.
+=> END
+
+~ yuna_deja_a_ren
+# cuando: deja_a_ren
+Un mensaje de voz de Yuna. Lo pones. Suena a que lleva despierta toda la noche.
+if Story.dump_reason() == "infiel"
+	Yuna: Ya sé lo de ayer. Todo Leganés lo sabe. ¿De verdad pensabas que no me iba a enterar?
+	Yuna: Dejé a alguien que me quería por ti, Ren. Y tú vas y haces eso.
+	Yuna: Se acabó. No me escribas.
+elif Story.dump_reason() == "descuido"
+	Yuna: No me has escrito. No me has buscado. No has venido.
+	Yuna: Yo no persigo a nadie, Ren. Nunca lo he hecho. No voy a empezar contigo.
+	Yuna: Lo dejamos.
+else
+	Yuna: Esto no está funcionando. Lo noto cada vez que te miro y no me miras.
+	Yuna: Lo dejamos. Ya está.
+=> END
+
+~ yuna_hablar_pareja
+# cuando: hablar, flag pareja_yuna, no hoy >= 2
+% Yuna: Hola, novio. (Lo dice bajito, como si fuera una palabrota.)
+% Yuna: Te he guardado media napolitana. La otra media me la he comido pensando en ti. Cuenta.
+% Yuna: Kenji todavía no me mira a la cara. Ya se le pasará. Creo.
+- Me alegro de verte. [#cariñoso]
+	Yuna: Ya. Se te nota. Tienes cara de tonto.
+	$> Story.change("yuna", "afecto", 2)
+- Yuna, creo que deberíamos dejarlo. [#franco]
+	Yuna: (Se queda mirándote.) ¿En serio? ¿Después de todo?
+	Yuna: Vale. Vale. Vete, Ren. Vete antes de que diga algo de lo que me arrepienta.
+	$> Story.break_up_with("yuna")
+- Estoy cansado, luego hablamos. [#evasivo]
+	Yuna: Siempre luego. Apúntatelo, que «luego» llega.
+	$> Story.change("yuna", "afecto", -1)
+=> END
+
+~ yuna_hablar_ex
+# cuando: hablar, flag ex_yuna, una vez
+Yuna: Ah. Eres tú.
+Yuna: No te preocupes, no voy a montar una escena. No grito, ¿recuerdas? Odio a la gente que grita.
+Yuna: Solo... dame espacio. Mucho espacio.
+=> END
+
+~ yuna_hablar_rotos_dejada
+# cuando: hablar, flag dejado_por_ren_yuna, una vez
+Yuna: Kenji me ha dejado. Dice que es por ti. Que siente cosas por ti.
+Yuna: Tres años grabándole haciendo el tonto, Ren. Tengo dos mil vídeos en el móvil. ¿Qué hago ahora con ellos?
+- Lo siento mucho, Yuna. [#franco, #conciliador]
+	Yuna: No lo sientas. Haz algo que no te dé vergüenza, y ya.
+- Yo no le pedí nada. [#evasivo]
+	Yuna: No hacía falta pedirlo. Con existir te ha bastado.
+	$> Story.change("yuna", "resentimiento", 8)
+=> END
+
+~ yuna_hablar_rotos_deja
+# cuando: hablar, flag dejado_por_ren_kenji, una vez
+Yuna: Lo he hecho. He dejado a Kenji.
+Yuna: Ha llorado. No le había visto llorar nunca. Ni cuando se rompió el brazo.
+Yuna: No me digas nada bonito ahora, Ren. Ahora no.
+=> END
+
+~ yuna_hablar_tras_rotos
+# cuando: hablar, flag kenji_yuna_rotos, no hoy >= 2
+% Yuna: Ya no tengo a quién grabar haciendo el tonto. Es más triste de lo que parece.
+% Yuna: Kenji y yo nos saludamos con la cabeza. Como dos vecinos. Qué asco.
+% Yuna: Estoy bien. Mejor que bien no. Pero bien.
+=> END
+
+
+# --- Mentiras y secretos (Lies) -----------------------------------------------------
+
+~ yuna_hablar_sospecha
+# cuando: hablar, flag pareja_yuna, flag sospecha_yuna
+$> Story.set_flag("sospecha_yuna", false)
+Yuna: ¿Dónde estuviste ayer? Y no me digas «por ahí», que te conozco.
+- Quedé con alguien. Una cita. Lo siento. [#franco]
+	$> Story.confess("yuna")
+	Yuna: (Se le cae la cara.) Al menos me lo dices tú. Que conste que eso lo valoro. Lo demás, no.
+- En casa. Toda la tarde. Estaba reventado. [#miente=cita, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿En casa? Ren... te vi quedar. Lo siento, pero no.
+		% {{Story.lie_witness()}}: No me miréis así. Yo le vi salir con alguien. No pienso callarme.
+		Yuna: ¿En casa? (Se gira hacia {{Story.lie_witness()}}.) Gracias. En serio. Alguien tiene que decirme la verdad.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad. Le escribí y me dijo que estaba muerto en el sofá.
+		% {{Story.lie_witness()}}: Sí, sí, estaba en casa. Le vi el estado del móvil. «Desconectado».
+		Yuna: Vale. Perdona. Me he rayado.
+	else
+		Yuna: Vale. (Te mira un rato largo.) Vale.
+- Por ahí. ¿Qué más da? [#evasivo, #reservado]
+	Yuna: «Por ahí». Ya. Muy bien.
+	$> Story.change("yuna", "confianza", -2)
+=> END
+
+~ yuna_hablar_pillado
+# cuando: hablar, flag pillado_yuna
+$> Story.set_flag("pillado_yuna", false)
+if Story.lied_to("yuna")
+	Yuna: Me lo ha contado {{Story.snitch("yuna")}}. Todo. Hasta lo de que me mentiste.
+	Yuna: No grito, Ren. Pero esto me lo voy a acordar mucho tiempo.
+else
+	Yuna: Me he enterado por {{Story.snitch("yuna")}}. Por otra persona. ¿Tan difícil era decírmelo?
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	$> Story.change("yuna", "resentimiento", -3)
+- ¿Y {{Story.snitch("yuna")}} qué sabrá? [#provocador]
+	$> Story.change("yuna", "confianza", -3)
 => END

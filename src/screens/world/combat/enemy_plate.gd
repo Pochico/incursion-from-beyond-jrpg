@@ -28,7 +28,7 @@ func setup(fighter: Dictionary) -> void:
 	level = fighter.level
 	pv_max = fighter.pv_max
 	pv = fighter.pv
-	attack_text = "%s · %d de daño" % [fighter.attack, fighter.damage]
+	attack_text = fighter.attack
 	for skill_id: String in fighter.get("skills", []):
 		attack_text += " · " + SkillDB.display_name(skill_id)
 	var nature: String = fighter.get("nature", "")

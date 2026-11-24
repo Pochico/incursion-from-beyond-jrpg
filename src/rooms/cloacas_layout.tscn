@@ -1,0 +1,74 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://src/rooms/room_layout.gd" id="1_layout"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/cloacas.png" id="2_fondo"]
+[ext_resource type="Texture2D" path="res://assets/escenas/cloacas/kenji.png" id="3_kenji"]
+[ext_resource type="Texture2D" path="res://assets/escenas/cloacas/shiori.png" id="4_shiori"]
+[ext_resource type="Texture2D" path="res://assets/escenas/cloacas/rika.png" id="5_rika"]
+[ext_resource type="Texture2D" path="res://assets/escenas/cloacas/akane.png" id="6_akane"]
+[ext_resource type="Texture2D" path="res://assets/escenas/cloacas/yuna.png" id="7_yuna"]
+
+[node name="CloacasLayout" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1670.0
+offset_bottom = 942.0
+mouse_filter = 2
+script = ExtResource("1_layout")
+
+[node name="Fondo" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 1670.0
+offset_bottom = 942.0
+mouse_filter = 2
+texture = ExtResource("2_fondo")
+
+[node name="kenji" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 434.0
+offset_top = 289.0
+offset_right = 625.0
+offset_bottom = 566.0
+mouse_filter = 2
+texture = ExtResource("3_kenji")
+expand_mode = 1
+
+[node name="shiori" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 342.0
+offset_top = 488.0
+offset_right = 517.0
+offset_bottom = 738.0
+mouse_filter = 2
+texture = ExtResource("4_shiori")
+expand_mode = 1
+
+[node name="rika" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 951.0
+offset_top = 456.0
+offset_right = 1138.0
+offset_bottom = 703.0
+mouse_filter = 2
+texture = ExtResource("5_rika")
+expand_mode = 1
+
+[node name="akane" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1107.0
+offset_top = 301.0
+offset_right = 1339.0
+offset_bottom = 572.0
+mouse_filter = 2
+texture = ExtResource("6_akane")
+expand_mode = 1
+
+[node name="yuna" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 1255.0
+offset_top = 550.0
+offset_right = 1418.0
+offset_bottom = 817.0
+mouse_filter = 2
+texture = ExtResource("7_yuna")
+expand_mode = 1

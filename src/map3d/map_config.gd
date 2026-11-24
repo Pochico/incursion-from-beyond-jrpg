@@ -41,6 +41,9 @@ const DEFAULTS := {
 	# Nombres y descripciones cambiados en el editor (id -> texto).
 	"names": {},
 	"descs": {},
+	# Personajes que puede haber a la vez en cada ubicación (id -> número),
+	# cambiado en el editor. Sin entrada: el de LocationDB.
+	"capacity": {},
 	# Ubicaciones nuevas creadas en el editor (ids).
 	"custom": [],
 	# Ubicaciones borradas del mapa en el editor (ids de LocationDB).

@@ -83,9 +83,9 @@ Momentos:
 | `una vez` | No se ha visto este cue nunca. |
 | `visto CUE` | Ya se vio ese cue. |
 | `sabe EVENTO` | El personaje conoce ese acontecimiento. |
-| `flag NOMBRE` | El indicador está activo. |
+| `flag NOMBRE` | El indicador está activo. `flag dia_N` es verdad si hoy es el día N de la partida (`dia_2` = martes); no se guarda. Planes (`ChapterDB.PLANS`): `flag plan_invitado:ID` (te lo propusieron) y `flag plan_hecho:ID` (fuiste). |
 | `presente ID` | Ese personaje está en la escena. |
-| `fase >= X` | Punto de la historia (`=`, `!=`, `<`, `>`, `<=`, `>=`). |
+| `fase >= X` | Punto de la historia (`=`, `!=`, `<`, `>`, `<=`, `>=`): `rutina` → `incursion_1` (primera incursión) → `reunion` (reunión del grupo en las Cloacas). |
 | `tramo >= X` | Relación con Ren: `hostil`, `fria`, `neutral`, `cercana`, `intima`. |
 | `ánimo = a\|b` | Ánimo actual (`!=` para negar). |
 | `hoy >= N` | Interacciones de cualquier tipo hoy con él o ella, incluida la actual. |
@@ -178,3 +178,72 @@ Las relaciones no pueden subirse repitiendo la misma acción. El registro ya per
 Lista común para todos los personajes, enlazada con las expresiones de las ilustraciones: alegre, tranquilo, curioso, irritado, ansioso, triste. Tiene una intensidad de 0 a 100. Cada día se sortea según los pesos de la ficha, y los acontecimientos importantes tienen prioridad sobre el sorteo.
 
 El ánimo multiplica las reacciones. Si alguien está triste, lo *sarcástico* duele más. Si está alegre y confía en Ren, puede tomarlo como broma. Ligar con alguien enfadado suele empeorarlo.
+
+## Citas y parejas
+
+**[DEFINIDO]** (petición del usuario): a cualquier personaje se le puede pedir una cita. Acepta o no según sus gustos, lo que siente por Ren y su ánimo. Kenji y Yuna empiezan saliendo juntos: si uno de los dos siente bastante por Ren, puede dejar al otro. Si Ren tiene pareja y la descuida (no la ve, no va a sus planes, queda con otra persona), le pueden dejar.
+
+**[PROPUESTA]** Cómo funciona ahora. Los valores son provisionales y están todos en `src/systems/romance.gd`:
+
+- **Pedir la cita.** Menú del personaje → *Cita* → sitio (Westfield Parquesur, Bowls, Colinas, Egaleo, Cloacas). No se puede pedir durante el guion, de noche ni si ya has tenido una cita ese día.
+- **Respuesta.** La puntuación es 0,4·afecto + 0,6·atracción + 0,2·confianza − 0,5·(resentimiento + asco), más el gusto por el sitio (`citas.lugares` de la ficha, de −10 a +15), más el ánimo (alegre +10 … irritado −20, según la intensidad), más 30 si ya es la pareja de Ren. Acepta con 30 o más.
+  - Si dice que no, el motivo sale en `resultado` del momento `cita_pide`:
+    - `pareja`: tiene pareja y no la dejaría;
+    - `animo`: con otro ánimo habría dicho que sí;
+    - `gustos`: en otro sitio habría dicho que sí, y propone su favorito con `Story.favourite_place`;
+    - `afecto`: no siente lo suficiente;
+    - `no`: es una persona adulta (las madres).
+- **Dejar a su pareja por Ren** (`rompe`). Afecto por Ren ≥ 50 y atracción por Ren ≥ atracción por su pareja − 15. Rompen, se activa `flag kenji_yuna_rotos`, y quien se queda sin pareja tiene `flag dejado_por_ren_<id>`: le sube mucho el resentimiento hacia Ren y hacia su ex.
+- **La cita.** Fundido al sitio y conversación del momento `cita`. Cada personaje la tiene con variantes:
+  - si ya es pareja de Ren;
+  - si le gusta el sitio (`Story.date_taste`).
+
+  Al terminar suben afecto, confianza y atracción, y pasa la franja.
+- **Salir en serio.** Al final de una cita, si `Story.can_be_partner(id)` (afecto ≥ 45, atracción ≥ 40, confianza ≥ 25 y al menos una cita), el personaje pregunta «¿qué somos?» y Ren puede pedirle salir (`Story.become_partner`). Se activa `flag pareja_<id>`. Si Ren ya tenía pareja, la deja.
+- **Quedar a espaldas de la pareja.** Si tu pareja está delante cuando pides la cita, se entera en el momento. Si no, queda como secreto (ver «Mentiras y secretos») y activa `flag sospecha_<id>`: tu pareja te pregunta dónde estuviste.
+- **Con pareja**, cada mañana (`Romance.morning`):
+  - le escribe para proponer una cita (indicador `cita_propuesta:N`);
+  - un día sin verse ni escribirse suma un día de descuido y baja el afecto; si os veis, el descuido baja uno;
+  - no quedar el día que te lo pidió y no ir a sus planes también bajan el afecto;
+  - cuando se entera de una cita con otra persona, son cuernos: bajan mucho la confianza y el afecto;
+  - ligar con otra persona delante de tu pareja cuenta como media cita con otra.
+- **Te deja** si se cumple alguna de estas:
+  - tres días de descuido (`resultado = descuido`);
+  - dos infidelidades o la confianza por debajo de 0 (`infiel`);
+  - afecto < 25 o resentimiento ≥ 40 (`frio`).
+
+  Al día siguiente, después del despertar, se juega el momento `deja_a_ren` y luego se activa `flag ex_<id>`.
+- **Ren corta.** En la charla de pareja (`<id>_hablar_pareja`) hay una opción para dejarlo (`Story.break_up_with`).
+- **Estado.** `GameState.partners` (id → id, en los dos sentidos) se guarda en la partida. Las citas quedan en el registro como `date` y las rupturas como `breakup`.
+
+**[PENDIENTE]**:
+- Las escenas de los planes de los días 2 y 3 todavía dan por hecho que Kenji y Yuna salen juntos.
+- No hay celos entre otros personajes del grupo.
+
+## Mentiras y secretos
+
+**[DEFINIDO]** (petición del usuario): Ren puede mentir. Los presentes que saben la verdad le cubren si sienten más por Ren que por la persona engañada; si no, le delatan.
+
+**[PROPUESTA]** Cómo funciona ahora. Los valores son provisionales y están en `src/systems/lies.gd`:
+
+- **Mentir.** Una opción de Ren con `[#miente=TEMA]` es una mentira al interlocutor. El tema dice qué verdad se tapa:
+  - `cita`: las citas de Ren con otra persona que el engañado no sabe;
+  - `ayer` o `dia_N`: dónde estuvo Ren ese día, fuera de casa.
+
+  Quién sabe la verdad sale del registro de acontecimientos: quien lo presenció o a quien se lo contaron.
+- **Afinidad** de A por B: afecto + 0,5·confianza + 0,3·respeto − resentimiento − asco.
+- **Testigos presentes que lo saben.**
+  - Si alguno tiene más afinidad por el engañado que por Ren, le delata (`resultado = delatado`). El engañado se entera; Ren pierde confianza y afecto y gana resentimiento; el delator gana confianza.
+  - Si no, el que más aprecia a Ren le cubre (`cubierto`).
+  - Sin testigos, cuela (`creido`).
+  - En el diálogo: `if Story.lie_result() == "delatado"` y `{{Story.lie_witness()}}: ...` para quien delata o cubre.
+- **Secretos.** Lo que cuela, y las citas a espaldas de la pareja, quedan en `GameState.secrets`. Cada mañana (`Lies.morning`), quien lo sabe y prefiere al engañado por 10 puntos o más se lo cuenta:
+  - el engañado le escribe a Ren y se activa `flag pillado_<id>`; su charla `<id>_hablar_pillado` usa `Story.snitch(id)` y `Story.lied_to(id)`;
+  - si Ren había mentido, cuesta más que si solo calló;
+  - quien le cubrió pierde la confianza del engañado.
+- **Confesar** (`Story.confess(id)`): el engañado se entera de todo lo pendiente, sin el castigo de la mentira.
+- **Dónde se usa ahora:**
+  - la sospecha de la pareja (`<id>_hablar_sospecha`): confesar, mentir o evadir;
+  - las conversaciones de «me dejaste plantado» de Kenji, Rika, Shiori y Akane: «me puse malo» con `#miente=dia_N`.
+
+**[PENDIENTE]**: más situaciones de mentira en la historia; que los testigos ausentes hablen solo a veces (ahora es determinista).

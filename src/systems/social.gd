@@ -20,6 +20,8 @@ const DIMENSIONS := {
 	"atraccion": Vector2(0, 100), "miedo": Vector2(0, 100), "asco": Vector2(0, 100),
 	"resentimiento": Vector2(0, 100),
 }
+## Dimensiones en las que subir es bueno para Ren (en las demás, lo malo es subir).
+const GOOD_DIMENSIONS: Array[String] = ["afecto", "confianza", "respeto", "atraccion"]
 const MOODS: Array[String] = ["alegre", "tranquilo", "curioso", "irritado", "ansioso", "triste"]
 const NEGATIVE_MOODS: Array[String] = ["irritado", "ansioso", "triste"]
 
@@ -111,7 +113,9 @@ static func set_mood(id: String, mood_id: String, intensity: float) -> void:
 
 ## Quién está en la escena ahora mismo (Ren incluido).
 static func present() -> Array:
-	# Durante el guion, los presentes son los de la escena (ver ChapterDB).
+	# Durante el guion y los planes, los presentes son los de la escena (ver ChapterDB).
+	if not GameState.scene_cast.is_empty():
+		return [CharacterDB.PROTAGONIST] + GameState.scene_cast
 	if GameState.story_step != "":
 		var step := ChapterDB.step(GameState.story_step)
 		var here: bool = step.get("target", "") == GameState.location_id
@@ -181,12 +185,13 @@ static func begin_interaction(target: String, action: String, force: bool = fals
 ## Los mencionados (`mentions`) que están presentes se dan por aludidos y
 ## reaccionan del todo, como el interlocutor. Si no están, no se enteran.
 ## Opción: {styles: ["franco", ...], stance: {tema: postura}, mentions: ["rika"]}.
-static func on_choice(target: String, choice: Dictionary) -> void:
+static func on_choice(target: String, choice: Dictionary) -> Dictionary:
+	var out := {}
 	var styles: Array = choice.get("styles", [])
 	var stance: Dictionary = choice.get("stance", {})
 	var mentions: Array = choice.get("mentions", [])
 	if styles.is_empty() and stance.is_empty() and mentions.is_empty():
-		return
+		return out
 	GameState.record("choice", CharacterDB.PROTAGONIST, target,
 			{"styles": styles, "stance": stance, "mentions": mentions, "persona": choice.get("persona", ""),
 			"text": choice.get("text", "")}, present())
@@ -204,7 +209,21 @@ static func on_choice(target: String, choice: Dictionary) -> void:
 		for topic: String in stance:
 			_add(deltas, _for_mood(reactions.get("stances", {}).get(topic, {}).get(stance[topic], {}), mood_id))
 		var weight := factor if who == target else (1.0 if who in mentions else OBSERVER_WEIGHT)
-		_apply(who, deltas, weight, "opción «%s»" % choice.get("text", ""))
+		var final := _apply(who, deltas, weight, "opción «%s»" % choice.get("text", ""))
+		if not final.is_empty():
+			out[who] = final
+	return out
+
+
+## Cuánto le ha sentado mal algo a alguien (0 = nada), a partir de los cambios
+## que devuelve on_choice: lo que baja de afecto, confianza, respeto o atracción
+## más lo que sube de resentimiento, asco o miedo.
+static func displeasure(deltas: Dictionary) -> float:
+	var bad := 0.0
+	for dim: String in deltas:
+		var d: float = deltas[dim]
+		bad += maxf(-d, 0.0) if dim in GOOD_DIMENSIONS else maxf(d, 0.0)
+	return bad
 
 
 ## ¿Es `tag` un filtro de una opción «por persona»?
@@ -300,9 +319,10 @@ static func change(from: String, to: String, deltas: Dictionary, weight: float =
 
 ## Lo que siente `who` por Ren cambia según `deltas`, modulado por su ánimo:
 ## con un ánimo negativo lo malo pesa más (según su sensibilidad) y lo bueno menos.
-static func _apply(who: String, deltas: Dictionary, weight: float, reason: String) -> void:
+## Devuelve los cambios aplicados (ya multiplicados por `weight`).
+static func _apply(who: String, deltas: Dictionary, weight: float, reason: String) -> Dictionary:
 	if deltas.is_empty() or weight == 0.0:
-		return
+		return {}
 	var m := mood(who)
 	var sensitivity: float = CharacterDB.profile(who).get("traits", {}).get("sensibilidad", 50)
 	var negative: bool = m.id in NEGATIVE_MOODS
@@ -310,13 +330,17 @@ static func _apply(who: String, deltas: Dictionary, weight: float, reason: Strin
 	var final := {}
 	for dim: String in deltas:
 		var d: float = deltas[dim]
-		var bad := d < 0.0 if dim in ["afecto", "confianza", "respeto", "atraccion"] else d > 0.0
+		var bad := d < 0.0 if dim in GOOD_DIMENSIONS else d > 0.0
 		if negative:
 			d *= (1.0 + sensitivity / 100.0 * k) if bad else (1.0 - 0.5 * k)
 		final[dim] = d
 	change(who, CharacterDB.PROTAGONIST, final, weight)
 	if OS.is_debug_build():
 		print("[Social] %s → ren (%s, %s %d, ×%.2f): %s" % [who, reason, m.id, m.intensity, weight, final])
+	var applied := {}
+	for dim: String in final:
+		applied[dim] = final[dim] * weight
+	return applied
 
 
 ## Si la entrada depende del ánimo, la variante de ese ánimo o "default".

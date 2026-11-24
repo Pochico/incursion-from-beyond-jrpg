@@ -16,16 +16,16 @@
 	const DIALOGUE_DIR = "src/dialogue";
 	const LS = "editor-dialogos:";
 	const MOMENTS = ["hablar", "ligar", "luchar", "luchar_fin", "harto_hablar", "harto_ligar", "harto_luchar",
-		"no_quiere", "alarma", "tras_incursion", "movil"];
+		"no_quiere", "alarma", "tras_incursion", "movil", "cita_pide", "cita", "deja_a_ren"];
+	// Valores de «resultado» según el momento (combates, citas y rupturas: ver Romance).
+	const RESULTS = ["gana", "pierde", "acepta", "rompe", "pareja", "animo", "gustos", "afecto", "no", "descuido", "infiel", "frio"];
 	const KINDS = [
 		["once", "Primera vez (una vez)"], ["seen", "Ya vio otro cue (visto)"], ["knows", "Sabe un suceso (sabe)"],
 		["flag", "Indicador (flag)"], ["present", "Está presente (presente)"], ["phase", "Fase de la historia"],
 		["tier", "Tramo de relación"], ["mood", "Ánimo"], ["today", "Interacciones hoy (hoy)"],
-		["times", "Veces hoy esta acción (veces)"], ["dim", "Dimensión de la relación"], ["context", "Resultado del combate"],
+		["times", "Veces hoy esta acción (veces)"], ["dim", "Dimensión de la relación"], ["context", "Resultado (combate, cita, ruptura)"],
 	];
 	const KIND_NAME = Object.fromEntries(KINDS);
-	const STORY_FUNCS = ["tier", "mood", "knows", "tell", "phase", "flag", "set_flag", "present", "today", "value",
-		"change", "set_mood", "text", "enemy_name", "seen", "speaker"];
 
 	// --- Estado -------------------------------------------------------------------------------
 
@@ -118,7 +118,8 @@
 		const dialogueFiles = list.filter((e) => e.type === "file" && e.name.endsWith(".dialogue"));
 		const src = {};
 		const srcPaths = { gameState: "src/autoload/game_state.gd", social: "src/systems/social.gd",
-			story: "src/autoload/story.gd", characterDb: "src/data/character_db.gd" };
+			story: "src/autoload/story.gd", characterDb: "src/data/character_db.gd",
+			conversation: "src/screens/world/conversation_view.gd" };
 		await Promise.all(Object.entries(srcPaths).map(async ([k, p]) => {
 			try { src[k] = (await ghFile(p)).text; } catch (e) { src[k] = ""; }
 		}));
@@ -292,8 +293,21 @@
 			if (per && !o.body.includes(PERSON_PH)) out.push(["warn", "Opción por persona sin {persona}: «" + o.body + "»."]);
 			if (!per && o.body.includes(PERSON_PH)) out.push(["info", "«" + o.body + "» usa {persona} sin ser por persona: dirá la última persona elegida."]);
 		}
+		// Gestos
+		for (const raw of cue.body.split("\n")) {
+			const t = raw.trim();
+			if (!/^(%\d*\s+)?[^-#=~$%\s]/.test(t) || F.kind(t.replace(/^%\d*\s+/, "")) !== "line") continue;
+			const p = F.parseLine(t);
+			const face = splitFace(F.tagList(p.tags)).face;
+			if (!face || face === "normal") continue;
+			if (!p.speaker) out.push(["warn", "Gesto «" + face + "» en una narración: no tiene retrato."]);
+			else if (p.speaker === renName()) out.push(["info", renName() + " no cambia de cara: se ignora «" + face + "»."]);
+			else if (!facesFor(p.speaker).includes(face)) out.push(["warn", p.speaker + " no tiene el gesto «" + face + "»: saldrá con la cara normal."]);
+		}
 		// Menciones
 		for (const m of cue.body.matchAll(/#alude=([^\],\s]+)/g)) for (const w of m[1].split("|")) if (!charInfo(w)) out.push(["warn", "Menciona a «" + w + "», que no es un personaje."]);
+		// Mentiras: [#miente=cita|ayer|dia_N] (Lies.truth_events)
+		for (const m of cue.body.matchAll(/#miente=([^\],\s]+)/g)) if (!/^(cita|ayer|dia_\d+)$/.test(m[1])) out.push(["warn", "Mentira sobre «" + m[1] + "»: el juego solo entiende cita, ayer o dia_N."]);
 		for (const m of cue.body.matchAll(/Story\.present\("([^"]+)"\)/g)) if (!charInfo(m[1])) out.push(["warn", "Story.present(\"" + m[1] + "\"): no es un personaje."]);
 		// Texto
 		const lines = cue.body.split("\n");
@@ -301,7 +315,7 @@
 			const t = raw.trim();
 			const jump = t.match(/^=>\s*(\S+)/) || t.match(/^=><\s*(\S+)/);
 			if (jump && !["END", "END!"].includes(jump[1]) && !cueNames.has(jump[1])) out.push(["err", "Línea " + (i + 1) + ": salta a «" + jump[1] + "», que no existe."]);
-			for (const m of t.matchAll(/Story\.([a-z_]+)/g)) if (!STORY_FUNCS.includes(m[1])) out.push(["warn", "Línea " + (i + 1) + ": Story." + m[1] + " no existe."]);
+			for (const m of t.matchAll(/Story\.([a-z_]+)/g)) if (!S.cfg.storyApi.includes(m[1])) out.push(["warn", "Línea " + (i + 1) + ": Story." + m[1] + " no existe."]);
 			const sp = t.match(/^(?:%\s*)?([^:#\-=~$%\[\]{}][^:]{0,30}?):\s/);
 			if (sp && !t.startsWith("if ") && !t.startsWith("elif") && !speakers.has(sp[1].trim())) out.push(["warn", "Línea " + (i + 1) + ": «" + sp[1].trim() + "» no es un personaje conocido."]);
 		});
@@ -671,6 +685,44 @@
 		return c ? c.color : (name.includes("speaker") ? "#c6f432" : "#f2f2f4");
 	}
 	const renName = () => charName(S.cfg.protagonist);
+
+	// --- Gestos de los retratos ([#cara=enfado]; ver ConversationView en el juego) ---------------
+
+	const charByName = (name) => S.cfg.characters.find((c) => c.name === name) || null;
+	/** Miniatura de un retrato (caras/<archivo>.webp, ver tools/editor_dialogos/miniaturas.sh). */
+	const thumbOf = (path) => (path ? "caras/" + path.split("/").pop().replace(/\.[a-z]+$/, "") + ".webp" : "");
+	/** Gestos que puede poner quien habla: los suyos, o todos si es {{Story.speaker}}. Ren, ninguno. */
+	function facesFor(speaker) {
+		if (!speaker || speaker === renName()) return [];
+		const c = charByName(speaker);
+		if (!c) return speaker.includes("speaker") ? S.cfg.faces.slice() : [];
+		return Object.keys(c.faces || {});
+	}
+	/** Separa la etiqueta de gesto del resto: {face, rest: [etiquetas]}. */
+	function splitFace(list) {
+		const pre = S.cfg.faceTag + "=";
+		const f = list.find((t) => t.startsWith(pre));
+		return { face: f ? f.slice(pre.length) : "", rest: list.filter((t) => !t.startsWith(pre)) };
+	}
+	function faceImg(speaker, face, cls) {
+		const c = charByName(speaker);
+		if (!c || !c.portrait) return "";
+		const src = thumbOf((face && c.faces[face]) || c.portrait);
+		return `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
+	}
+	/** Selector de gesto del formulario de una línea. */
+	function facePickerHTML(speaker, face) {
+		const list = facesFor(speaker);
+		if (!list.length) {
+			const why = !speaker ? "La narración no lleva retrato." : speaker === renName() ? renName() + " no cambia de cara (por ahora)." : "Este personaje aún no tiene gestos.";
+			return `<div class="small muted">${esc(why)}</div><input type="hidden" name="face" value="${esc(face)}">`;
+		}
+		const opt = (v, label) => `<span class="chip small face ${v === face ? "on" : ""}" data-op="face" data-v="${esc(v)}">${faceImg(speaker, v, "fthumb")}${esc(label)}</span>`;
+		const auto = opt("", "Según su ánimo");
+		return `<div class="small muted">Cara en esta línea (si no eliges, la decide su ánimo o cómo le ha sentado lo último)</div>
+			<div class="chips faces">${auto}${opt("normal", "Normal")}${list.map((f) => opt(f, f)).join("")}</div>
+			<input type="hidden" name="face" value="${esc(face)}">`;
+	}
 	function npcName(cue) { return charInfo(cue.file) ? charName(cue.file) : "{{Story.speaker}}"; }
 
 	/** Etiquetas de estilo usadas en las opciones de todos los diálogos (las más frecuentes primero). */
@@ -769,9 +821,12 @@
 		ctx.step++;
 		if (p.speaker) ctx.lastSpeaker = p.speaker;
 		const cls = !p.speaker ? "narr" : p.speaker === renName() ? "ren" : "npc";
-		const tags = F.tagList(p.tags).map((t) => `<span class="ftag">${esc(t)}</span>`).join("");
+		const sf = splitFace(F.tagList(p.tags));
+		const tags = sf.rest.map((t) => `<span class="ftag">${esc(t)}</span>`).join("") +
+			(sf.face ? `<span class="ftag face">cara: ${esc(sf.face)}</span>` : "");
+		const img = cls === "npc" ? faceImg(p.speaker, sf.face, "favatar") : "";
 		return `<div class="fcard ${cls}" data-path="${key}" style="--c:${colorOfName(p.speaker)}">
-			<div class="fhead"><span class="fstep">${ctx.step}</span><span class="fname">${esc(p.speaker || "Narración")}</span>${tags}</div>
+			<div class="fhead">${img}<span class="fstep">${ctx.step}</span><span class="fname">${esc(p.speaker || "Narración")}</span>${tags}</div>
 			<div class="ftext">${esc(withPersona(F.unescape(p.body), ctx))}</div></div>`;
 	}
 
@@ -861,9 +916,11 @@
 			const p = F.parseLine(n.text);
 			const names = speakerNames();
 			if (p.speaker && !names.includes(p.speaker)) names.push(p.speaker);
+			const sf = splitFace(F.tagList(p.tags));
 			fields = `<select class="input" name="speaker"><option value="">Narración</option>${names.map((nm) => `<option ${nm === p.speaker ? "selected" : ""}>${esc(nm)}</option>`).join("")}</select>
 				<textarea class="input" name="body" placeholder="Lo que se dice…">${esc(F.unescape(p.body))}</textarea>
-				<input class="input" name="tags" value="${esc(p.tags)}" placeholder="Etiquetas (opcional) [#…]">`;
+				<div class="facepick">${facePickerHTML(p.speaker, sf.face)}</div>
+				<input class="input" name="tags" value="${esc(F.tagsFromList(sf.rest))}" placeholder="Otras etiquetas (opcional) [#…]">`;
 			return `<div class="fform" data-path="${key}" data-kind="line">${fields}${reactHTML(p.body, false)}${buttons(
 				`<button class="btn sm" data-op="add-after">+ Línea debajo</button><button class="btn sm" data-op="add-options">+ Respuestas de ${esc(renName())}</button>`)}</div>`;
 		}
@@ -935,6 +992,11 @@
 		const st = flowState(cue);
 		container.onchange = (e) => {
 			if (e.target.name === "per") { const box = e.target.closest(".fform").querySelector(".pbox"); box.style.display = e.target.checked ? "flex" : "none"; }
+			if (e.target.name === "speaker") {
+				const pick = e.target.closest(".fform").querySelector(".facepick");
+				const face = pick.querySelector('[name="face"]').value;
+				pick.innerHTML = facePickerHTML(e.target.value, facesFor(e.target.value).includes(face) || face === "normal" ? face : "");
+			}
 		};
 		container.onclick = (e) => {
 			const op = e.target.closest("[data-op]");
@@ -975,6 +1037,12 @@
 			el.style.borderColor = el.classList.contains("on") ? "" : charColor(el.dataset.v);
 			return;
 		}
+		if (op === "face") {
+			const pick = el.closest(".facepick");
+			pick.querySelectorAll('[data-op="face"]').forEach((x) => x.classList.toggle("on", x === el));
+			pick.querySelector('[name="face"]').value = el.dataset.v;
+			return;
+		}
 		if (op === "goto") { const c = allCues().find((x) => x.name === el.dataset.cue); if (c) selectCue(c.name, c.file, true); else toast("No existe ese diálogo", true); return; }
 		if (op === "tag") {
 			const form = el.closest(".fform");
@@ -1005,7 +1073,11 @@
 			let text;
 			if (form.dataset.kind === "line") {
 				const prev = F.parseLine(node.text);
-				text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: val("tags") });
+				const tags = splitFace(F.tagList(val("tags"))).rest;
+				// El gesto solo vale si quien habla lo tiene.
+				const face = val("face");
+				if (face && (face === "normal" || facesFor(val("speaker")).includes(face))) tags.unshift(S.cfg.faceTag + "=" + face);
+				text = F.buildLine({ prefix: prev.prefix, speaker: val("speaker"), body: val("body") || "…", tags: F.tagsFromList(tags) });
 			} else if (form.dataset.kind === "option") {
 				const tags = val("tags").split(",").map((t) => t.trim()).filter(Boolean);
 				const per = form.querySelector('[name="per"]');
@@ -1302,7 +1374,7 @@
 			<div class="param"><label>Ánimo</label><div class="chips" id="s-mood">${cfg.moods.map((m) => `<span class="chip small ${m === sim.mood ? "on" : ""}" data-v="${m}">${m}</span>`).join("")}</div></div>
 			<div class="param"><label>Hoy</label><div class="stepper" data-k="today"><button>−</button><span>${sim.today}</span><button>+</button><span class="muted small">interacciones</span></div></div>
 			<div class="param"><label>Veces</label><div class="stepper" data-k="times"><button>−</button><span>${sim.times}</span><button>+</button><span class="muted small">${mapped ? "esta acción hoy" : "no aplica a este momento"}</span></div></div>
-			<div class="param"><label>Resultado</label><div class="chips" id="s-res">${["", "gana", "pierde"].map((r) => `<span class="chip small ${r === sim.resultado ? "on" : ""}" data-v="${r}">${r || "—"}</span>`).join("")}</div></div>
+			<div class="param"><label>Resultado</label><div class="chips" id="s-res">${[""].concat(RESULTS).map((r) => `<span class="chip small ${r === sim.resultado ? "on" : ""}" data-v="${r}">${r || "—"}</span>`).join("")}</div></div>
 
 			<h2>Relación con Ren · <span style="color:var(--lime)">${tier}</span></h2>
 			<div class="chips" style="margin-bottom:10px">${cfg.tiers.map((t) => `<span class="chip small ${t === tier ? "on" : ""}" data-tier="${t}">${t}</span>`).join("")}</div>

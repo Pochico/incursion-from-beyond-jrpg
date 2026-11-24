@@ -261,7 +261,7 @@ Shiori: Necesito estar sola. No es contigo.
 
 ~ shiori_alarma
 # cuando: alarma
-Shiori: Eso no ha sido un terremoto. Los terremotos no hacen parpadear las luces al ritmo de un pulso.
+Shiori: Eso no ha sido un terremoto. Los terremotos no hacen parpadear las luces al ritmo de un pulso. [#cara=sorpresa]
 Ren: Algo viene.
 => END
 
@@ -274,7 +274,7 @@ $> Story.set_mood("shiori", "ansioso", 55)
 
 ~ shiori_tras_incursion_pierde
 # cuando: tras_incursion, resultado = pierde
-Shiori: Ren, mírame. Respira. ...Se ha ido. No lo has vencido, pero se ha ido. Y eso también me preocupa.
+Shiori: Ren, mírame. Respira. ...Se ha ido. No lo has vencido, pero se ha ido. Y eso también me preocupa. [#cara=sorpresa]
 Ren: A mí también.
 $> Story.set_mood("shiori", "ansioso", 55)
 => END
@@ -324,4 +324,260 @@ Shiori: Recibido.
 Ren: ¿Estás bien?
 Shiori: Físicamente, sí. Llevo toda la noche buscando casos parecidos al de la estación.
 Shiori: Hay más de los que debería. Mañana te enseño lo que he encontrado.
+=> END
+
+# =====================================================================================
+# DÍAS 2 Y 3, PLANES Y REUNIÓN DE LAS CLOACAS
+# (no dependen de lo que se hablara el primer día)
+# =====================================================================================
+
+~ shiori_hablar_charla
+# cuando: hablar, fase = rutina
+%
+	Shiori: Estoy leyendo un libro de 1974 sobre fantasmas de la línea C5. El autor jura que el último tren de la noche lleva un vagón de más.
+	- ¿Lo has comprobado? [#curioso]
+		Shiori: Una vez. Conté los vagones dos veces. La segunda salió uno más. Puede que me equivocara. Puede.
+	- Eso es imposible. [#pragmático]
+		Shiori: «Imposible» es lo que dice la gente justo antes de que algo pase. Estadísticamente.
+%
+	Shiori: ¿Sabías que en Leganés hay tres calles con el mismo nombre? Bueno, casi el mismo. Una tiene una tilde de más.
+	Shiori: Nadie lo sabe porque nadie mira los carteles. Yo sí.
+	- Me parece fascinante. [#curioso, #cariñoso]
+		Shiori: ...No te burles.
+		Ren: No me burlo.
+		Shiori: Ah. Vale. Pues... gracias.
+		$> Story.change("shiori", "afecto", 2)
+	- ¿Y para qué te sirve saberlo? [#franco]
+		Shiori: Para nada. Por eso me gusta. Las cosas útiles ya las sabe todo el mundo.
+%
+	Shiori: He terminado el libro de las diecinueve leyendas. Ahora lo estoy leyendo otra vez, desde el final. Se entiende distinto.
+=> END
+
+~ shiori_hablar_martes
+# cuando: hablar, flag dia_2, no hoy >= 2, fase = rutina
+Shiori: Ayer te reíste en las camas elásticas. Kenji lo ha apuntado como «hito histórico». Yo lo he apuntado como «dato».
+- ¿Por qué apuntas esas cosas? [#curioso]
+	Shiori: Porque si no las apunto se olvidan. Y luego nadie se acuerda de que fueron verdad.
+- Vaya, me tenéis vigilado. [#bromista]
+	Shiori: Vigilado no. Observado. Es distinto. Vigilar implica intención.
+Shiori: Hoy a mediodía hay una charla en Egaleo. Por si te interesa. Que seguramente no.
+=> END
+
+~ shiori_hablar_miercoles
+# cuando: hablar, flag dia_3, no hoy >= 2, fase = rutina
+Shiori: Anoche volví a contar los pisos de La Torre. Catorce. Esta vez hice una foto.
+Shiori: En la foto salen trece.
+- A lo mejor la cámara no lo capta. [#curioso, #idealista]
+	Shiori: Esa es mi hipótesis. Hay cosas que solo se ven si las miras tú. Con tus ojos. Sin pantalla de por medio.
+	$> Story.change("shiori", "respeto", 2)
+- O a lo mejor te equivocaste al contar. [#pragmático, #provocador]
+	Shiori: Conté seis veces, Ren. Seis.
+	$> Story.change("shiori", "respeto", -1)
+- No vuelvas sola de noche. [#protector]
+	Shiori: Eso ya me lo dijiste. O me lo dirás. Da igual. ...No volví sola. Me acompañó mi padre. Se aburrió mucho.
+=> END
+
+~ shiori_hablar_plantada_charla
+# cuando: hablar, flag plan_invitado:charla_shiori, no flag plan_hecho:charla_shiori, no flag dia_2, una vez
+Shiori: La charla de Egaleo estuvo bien. Había doce sillas. Once ocupadas.
+Shiori: No lo digo por nada. Es un dato.
+- La próxima voy. [#conciliador]
+	Shiori: No hace falta prometer. Pero lo apunto.
+- No me apetecía. [#franco]
+	Shiori: Es una respuesta honesta. Me gustan más que las excusas.
+- Me puse malo. Me quedé en casa todo el día. [#miente=dia_2, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿Malo? Pero si te vi por ahí ese día, Ren. Tan pancho.
+		% {{Story.lie_witness()}}: Uf. No me metáis en esto... Vale, sí: le vi en la calle. No estaba en casa.
+		% {{Story.lie_witness()}}: Perdona, Ren, pero no. Ese día estuviste conmigo. No voy a mentir por ti.
+		Shiori: (Se ajusta las gafas.) Entonces no estabas malo.
+		Shiori: Prefería «no me apetecía». Era peor excusa, pero era verdad.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad, estaba fatal. Le vi yo. Daba pena.
+		% {{Story.lie_witness()}}: (Te mira un segundo de más.) Sí, sí. Hecho polvo estaba. Pobrecito.
+		% {{Story.lie_witness()}}: Doy fe. Parecía un zombi. Un zombi con fiebre.
+		Shiori: Ya. (No parece del todo convencida, pero no insiste.) Que te mejores. Con retraso.
+	else
+		Shiori: Lo siento. Hay una leyenda sobre la fiebre de noviembre en Leganés. Te la cuento cuando estés mejor.
+=> END
+
+~ shiori_hablar_tras_charla
+# cuando: hablar, flag plan_hecho:charla_shiori, una vez, no hoy >= 2
+Shiori: He escrito al ponente de la charla. Me ha contestado. Dice que nadie le había hecho nunca una pregunta tan buena.
+Shiori: También me ha pedido que no vuelva a escribirle a las tres de la mañana.
+=> END
+
+~ shiori_hablar_reunion
+# cuando: hablar, fase >= reunion, una vez
+Shiori: He pasado a limpio lo de las Cloacas. Las reglas, lo que sabemos y lo que no. Lo que no sabemos ocupa tres páginas más.
+Shiori: Hay una cosa que no dije allí abajo. La criatura apareció cuando tú estabas cerca. Siempre cerca de ti.
+- ¿Crees que vienen por mí? [#dubitativo, #franco]
+	Shiori: Creo que algo te reconoce. La máquina de Akane escribió tu nombre. Eso no es casualidad.
+	Shiori: No te lo digo para asustarte. Te lo digo porque prefiero que lo sepas.
+	$> Story.change("shiori", "confianza", 2)
+- Entonces debería ir yo delante. [#protector, #decidido]
+	Shiori: O detrás de todos. Depende de si eres el cebo o la llave. Todavía no lo sé.
+- Me da igual. Lo vamos a averiguar. [#decidido]
+	Shiori: Bien. Sigue pensando así. Pero apúntalo todo. Todo.
+=> END
+
+~ shiori_hablar_tras_reunion
+# cuando: hablar, fase >= reunion, no hoy >= 2
+%
+	Shiori: He hecho un mapa de La Torre desde fuera. Cuarenta y dos ventanas por fachada. De noche, cuarenta y tres.
+%
+	Shiori: Kenji me ha pasado el audio de las 3\:33. Lo he ralentizado. Detrás de «abre» hay otra voz. Más baja. Dice tu nombre.
+	Shiori: ...O lo parece. Puede que me lo esté imaginando. Lo apunto igual.
+%
+	Shiori: «Cloacas FC». Sigo sin votarlo. Pero he hecho un logotipo. Por si acaso.
+=> END
+
+~ shiori_movil_reunion
+# cuando: movil, fase >= reunion, sabe incursion_1
+Ren: ¿Qué haces?
+Shiori: Releer mis notas. Hay un patrón y no lo veo. Odio no ver los patrones.
+Shiori: Buenas noches, Ren. Regla tres, a las doce en casa.
+=> END
+
+# --- Citas y parejas (Romance) ----------------------------------------------------
+
+~ shiori_cita_acepta
+# cuando: cita_pide, resultado = acepta
+if Story.partner("shiori") == "ren"
+	Shiori: Somos pareja. Las citas se dan por supuestas. Pero me gusta que lo preguntes.
+	Shiori: {{Story.date_place()}}. Llevo té.
+else
+	Shiori: (Cierra el libro. Lo hace despacio, marcando la página.) Una cita.
+	Shiori: Acepto. Con una condición: si me aburro, me llevo el libro.
+	Shiori: {{Story.date_place()}}. No llegues tarde. Odio esperar casi tanto como que me interrumpan.
+=> END
+
+~ shiori_cita_animo
+# cuando: cita_pide, resultado = animo
+Shiori: Hoy no soy buena compañía. Ni siquiera para mí.
+Shiori: No es un no. Es un «hoy no». Hay diferencia.
+=> END
+
+~ shiori_cita_gustos
+# cuando: cita_pide, resultado = gustos
+Shiori: ¿{{Story.date_place()}}? Ruido, gente y luces. Mi idea del infierno.
+Shiori: Pregúntamelo con {{Story.favourite_place("shiori")}} y lo reconsidero.
+=> END
+
+~ shiori_cita_afecto
+# cuando: cita_pide, resultado = afecto
+Shiori: No.
+Shiori: (Una pausa.) Ha sido brusco. Lo siento. Pero sigue siendo no.
+=> END
+
+~ shiori_cita
+# cuando: cita
+if Story.partner("shiori") == "ren"
+	Shiori te da un termo antes de saludarte.
+	Shiori: Té de jazmín. Lo he hecho yo. Si no te gusta, miente.
+else
+	Shiori ya está allí, sentada, leyendo. No levanta la vista hasta acabar el párrafo.
+	Shiori: Perdona. Era un buen párrafo. Ya estoy.
+if Story.date_taste("shiori") > 0
+	Shiori: ¿Sabes que aquí pasó algo en 1987? Nadie lo recuerda. Yo sí. Te lo cuento si quieres.
+elif Story.date_taste("shiori") < 0
+	Shiori: Hay mucho ruido. Háblame más cerca. No es una excusa. O sí.
+- Cuéntame esa leyenda. [#curioso]
+	Shiori te la cuenta. Tarda cuarenta minutos. No te aburres ni uno.
+	Shiori: Eres la primera persona que no mira el móvil mientras hablo.
+	$> Story.change("shiori", "afecto", 3)
+- ¿Qué estás leyendo? [#curioso, #prudente]
+	Shiori: Un libro de segunda mano. Alguien subrayó todas las frases tristes. Me pregunto quién.
+	$> Story.change("shiori", "confianza", 3)
+- Me gustas cuando hablas así. [#coqueto, #franco]
+	Shiori: (Se le suben los colores hasta las orejas.) Eso... no estaba en el plan.
+	$> Story.change("shiori", "atraccion", 3)
+if Story.partner("shiori") != "ren" and Story.can_be_partner("shiori")
+	Shiori: Ren. Una pregunta bien hecha merece una respuesta clara. ¿Qué somos?
+	- Me gustaría que fuéramos pareja. [#franco, #decidido]
+		Shiori: Bien. Era la respuesta correcta.
+		Shiori: (Bajito.) Me alegro mucho.
+		$> Story.become_partner("shiori")
+	- No lo sé todavía. [#dubitativo]
+		Shiori: Respuesta honesta. Me sirve. Por ahora.
+	- Amigos. Buenos amigos. [#prudente]
+		Shiori: Entendido. Lo anoto.
+		$> Story.change("shiori", "afecto", -2)
+Shiori: Ha sido una buena tarde. Lo digo pocas veces. Tómatelo como un cumplido.
+=> END
+
+~ shiori_deja_a_ren
+# cuando: deja_a_ren
+Te llega un correo de Shiori. Un correo. Con asunto\: «Nosotros».
+if Story.dump_reason() == "infiel"
+	Shiori: «He contrastado tres fuentes. Las tres coinciden. No necesito una cuarta».
+	Shiori: «Lo dejamos. No me busques para explicarlo: ya lo he entendido».
+elif Story.dump_reason() == "descuido"
+	Shiori: «Una relación es una conversación. Llevamos días sin hablar».
+	Shiori: «No voy a seguir hablando sola. Lo dejamos».
+else
+	Shiori: «He pensado mucho en esto. Lo he escrito tres veces. No funciona».
+	Shiori: «Lo dejamos. Te deseo lo mejor. Lo digo en serio, aunque suene a fórmula».
+=> END
+
+~ shiori_hablar_pareja
+# cuando: hablar, flag pareja_shiori, no hoy >= 2
+% Shiori: He subrayado una frase pensando en ti. No te diré cuál. Búscala.
+% Shiori: Hola. (Te coge la manga un segundo. Luego la suelta, como si no hubiera pasado.)
+% Shiori: Rika me pregunta cosas sobre nosotros. Le contesto con citas de libros. La vuelve loca.
+- Me encanta estar contigo. [#cariñoso]
+	Shiori: Lo sé. Pero dilo más. Es un dato que me gusta confirmar.
+	$> Story.change("shiori", "afecto", 2)
+- Shiori, creo que deberíamos dejarlo. [#franco]
+	Shiori: (Se quita las gafas y las limpia, aunque están limpias.) De acuerdo.
+	Shiori: Gracias por no hacerlo por mensaje. Ahora vete, por favor.
+	$> Story.break_up_with("shiori")
+- Ahora no tengo tiempo. [#evasivo]
+	Shiori: Nadie tiene tiempo. Se saca. Tú verás de dónde.
+	$> Story.change("shiori", "afecto", -1)
+=> END
+
+~ shiori_hablar_ex
+# cuando: hablar, flag ex_shiori, una vez
+Shiori: Hola, Ren. Podemos hablar de leyendas. De nosotros, todavía no.
+=> END
+
+
+# --- Mentiras y secretos (Lies) -----------------------------------------------------
+
+~ shiori_hablar_sospecha
+# cuando: hablar, flag pareja_shiori, flag sospecha_shiori
+$> Story.set_flag("sospecha_shiori", false)
+Shiori: Ayer no contestaste en todo el día. Tengo una hipótesis. Prefiero que me la confirmes o me la desmientas tú.
+- Quedé con alguien. Una cita. Lo siento. [#franco]
+	$> Story.confess("shiori")
+	Shiori: Gracias por la honestidad. Ahora necesito pensar. Sola.
+- En casa. Toda la tarde. Estaba reventado. [#miente=cita, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿En casa? Ren... te vi quedar. Lo siento, pero no.
+		% {{Story.lie_witness()}}: No me miréis así. Yo le vi salir con alguien. No pienso callarme.
+		Shiori: Interesante. {{Story.lie_witness()}} dice otra cosa. Y {{Story.lie_witness()}} no tiene motivos para mentir. Tú sí.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad. Le escribí y me dijo que estaba muerto en el sofá.
+		% {{Story.lie_witness()}}: Sí, sí, estaba en casa. Le vi el estado del móvil. «Desconectado».
+		Shiori: Hipótesis descartada. Me alegro de haberme equivocado.
+	else
+		Shiori: De acuerdo. Lo anoto. (No dice dónde.)
+- Por ahí. ¿Qué más da? [#evasivo, #reservado]
+	Shiori: Eso no es una respuesta. Es una evasiva. Conozco la diferencia.
+	$> Story.change("shiori", "confianza", -2)
+=> END
+
+~ shiori_hablar_pillado
+# cuando: hablar, flag pillado_shiori
+$> Story.set_flag("pillado_shiori", false)
+if Story.lied_to("shiori")
+	Shiori: {{Story.snitch("shiori")}} me ha contado lo de ayer. He contrastado. Era verdad. Y tú me mentiste.
+	Shiori: Las mentiras se pagan con confianza, Ren. Y tú ya no tienes mucha.
+else
+	Shiori: Me lo ha contado {{Story.snitch("shiori")}}. Habría preferido saberlo por ti. Es un dato.
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	$> Story.change("shiori", "resentimiento", -3)
+- ¿Y {{Story.snitch("shiori")}} qué sabrá? [#provocador]
+	$> Story.change("shiori", "confianza", -3)
 => END

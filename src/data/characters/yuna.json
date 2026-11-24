@@ -184,5 +184,9 @@
 			"confianza": 10,
 			"respeto": 20
 		}
+	},
+
+	"citas": {
+		"lugares": {"galeria": 10, "plaza": 5, "parque": 0, "campus": -10, "cloacas": -10}
 	}
 }

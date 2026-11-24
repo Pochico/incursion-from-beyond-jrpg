@@ -107,8 +107,12 @@
 
 	"gear": {"arma": "Enciclopedia de tapa dura", "accesorio": "Gafas de lectura", "modulo": ""},
 	"combat": {
-		"level": 14, "pv": 190, "pm": 100, "attack": "Tapa dura", "damage": 30,
+		"level": 1, "attack": "Tapa dura",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 14, "TEC": 18, "INT": 26, "VOL": 24, "RES": 16, "AGI": 16}
+		"stats": {"FUE": 7, "TEC": 10, "INT": 13, "VOL": 12, "RES": 9, "AGI": 9}
+	},
+
+	"citas": {
+		"lugares": {"campus": 15, "cloacas": 10, "galeria": -10, "parque": -5, "plaza": 0}
 	}
 }

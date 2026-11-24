@@ -6,7 +6,8 @@ extends Control
 ##
 ## - `Fondo` es la imagen de la ubicación a su tamaño real (1 unidad = 1 píxel).
 ## - Cada otro hijo es un TextureRect cuyo nombre es el id del objeto (ver
-##   LocationDB `props`). Muévelo y redimensiónalo con el ratón; el juego usa
+##   LocationDB `props`) o del personaje con pose en esa ubicación (ver
+##   LocationDB `pose`). Muévelo y redimensiónalo con el ratón; el juego usa
 ##   su rectángulo tal cual (se estira si cambias las proporciones).
 ## - El orden de los hijos no importa: el de dibujo lo marca LocationDB.
 ## - `opacidad_objetos` solo sirve para comparar con el fondo mientras editas.

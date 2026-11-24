@@ -105,8 +105,12 @@
 
 	"gear": {"arma": "Bolso de cadena", "accesorio": "Pulsera de abalorios", "modulo": ""},
 	"combat": {
-		"level": 14, "pv": 220, "pm": 95, "attack": "Bolsazo", "damage": 33,
+		"level": 1, "attack": "Bolsazo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 18, "TEC": 20, "INT": 18, "VOL": 22, "RES": 18, "AGI": 22}
+		"stats": {"FUE": 9, "TEC": 11, "INT": 10, "VOL": 12, "RES": 9, "AGI": 11}
+	},
+
+	"citas": {
+		"lugares": {"galeria": 15, "plaza": 5, "parque": 5, "campus": -5, "cloacas": -10}
 	}
 }

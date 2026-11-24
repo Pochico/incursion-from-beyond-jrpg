@@ -54,7 +54,7 @@ func _draw() -> void:
 
 	var wall_w := maxf(2.0, px * 0.1)
 	for c: Vector2i in m.cells:
-		if not explorer.is_visited(lvl, c):
+		if not explorer.is_visited(lvl, c) and not _seen_save_point(m, lvl, c):
 			continue
 		var r: Rect2 = to_px.call(c)
 		if not area.encloses(r):
@@ -67,6 +67,12 @@ func _draw() -> void:
 						HORIZONTAL_ALIGNMENT_LEFT, -1, int(px * 0.7), UIStyle.LIME if th.up else UIStyle.VIOLET)
 			DungeonMap.SWITCH:
 				draw_rect(r.grow(-px * 0.3), UIStyle.VIOLET)
+			DungeonMap.SAVE:
+				var k := px * 0.3
+				var cc := r.get_center()
+				draw_colored_polygon(PackedVector2Array([cc + Vector2(0, -k), cc + Vector2(k, 0), cc + Vector2(0, k), cc + Vector2(-k, 0)]), UIStyle.CYAN)
+		if m.is_extraction(c):
+			draw_arc(r.get_center(), px * 0.32, 0, TAU, 24, UIStyle.CYAN, maxf(1.5, px * 0.08), true)
 		for d in 4:
 			var t := m.edge_type(c, d)
 			if t == DungeonMap.OPEN:
@@ -97,3 +103,13 @@ func _draw() -> void:
 	var k := px * 0.42
 	draw_colored_polygon(PackedVector2Array([pc + f * k, pc - f * k * 0.7 + side * k * 0.75, pc - f * k * 0.7 - side * k * 0.75]),
 			UIStyle.LIME)
+
+
+## Un punto de guardado no se pisa: sale en el mapa si se ha estado al lado.
+func _seen_save_point(m: DungeonMap, lvl: int, c: Vector2i) -> bool:
+	if m.thing(c).get("type", "") != DungeonMap.SAVE:
+		return false
+	for d in DungeonMap.DIRS:
+		if explorer.is_visited(lvl, c + d):
+			return true
+	return false
