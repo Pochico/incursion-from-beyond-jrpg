@@ -11,7 +11,10 @@ const ACTIONS := [
 	{"id": "talk", "label": "Hablar", "icon": "speech", "desc": "Conversar con calma."},
 	{"id": "fight", "label": "Luchar", "icon": "swords", "desc": "Proponer un combate."},
 	{"id": "flirt", "label": "Ligar", "icon": "heart", "desc": "Probar suerte."},
+	{"id": "date", "label": "Cita", "icon": "sparkle", "desc": "Pedirle una cita (elige el sitio)."},
 ]
+## Prefijo de las opciones del menú de sitios de una cita: «cita:galeria».
+const DATE_PREFIX := "cita:"
 const OBJECT_ACTIONS := [
 	{"id": "examine", "label": "Examinar", "icon": "antenna", "desc": "Fijarte en ello un momento."},
 ]

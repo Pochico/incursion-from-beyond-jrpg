@@ -35,13 +35,19 @@ var messages: Dictionary = {}
 ## Progreso en cada mazmorra: id del mapa -> estado de DungeonExplorer (puertas,
 ## enemigos vencidos, objetos cogidos, casillas visitadas).
 var dungeons: Dictionary = {}
+## Nivel y experiencia de Ren y los compañeros: id -> {level, xp} (xp = la que
+## lleva dentro del nivel actual). Sin entrada = nivel de su ficha, 0 EXP.
+var levels: Dictionary = {}
 
-const START_INVENTORY := {"pochicola": 3}
+const START_INVENTORY := {"pochicola": 3, "resonador": 1}
+## Lo que Ren siempre lleva (se añade también a las partidas anteriores).
+const ALWAYS_CARRIED := ["resonador"]
 
 ## Puntos de la historia, en orden. Los diálogos comparan con `phase_at_least`.
 const PHASES: Array[String] = [
 	"rutina",         ## Día normal: nadie sabe nada de las criaturas.
 	"incursion_1",    ## Tras la primera incursión.
+	"reunion",        ## Tras la reunión del grupo en las Cloacas (ChapterDB.PLANS).
 ]
 
 ## Franjas del día. Las actividades (ir a clase, las camas elásticas, una
@@ -62,12 +68,19 @@ const SAVE_VERSION := 1
 var phase: String = PHASES[0]
 ## Indicadores de historia: nombre -> valor (bool, número o texto).
 var flags: Dictionary = {}
+## Parejas: id -> id, en los dos sentidos (ver Romance). Kenji y Yuna empiezan juntos.
+var partners: Dictionary = {}
+## Secretos de Ren (ver Lies): [{target, events, lied, accomplices}].
+var secrets: Array = []
 ## Qué ha pasado y quién lo sabe.
 var events := EventLog.new()
 ## La introducción ya se ha visto (al continuar partida no se repite).
 var intro_done := false
 ## Paso del guion en curso (ver ChapterDB). Vacío = juego libre.
 var story_step := ""
+## Quién está en la escena de un plan en curso (ChapterDB.PLANS), para que
+## reaccionen a las opciones de Ren (Social.present). No se guarda.
+var scene_cast: Array = []
 
 ## Primera incursión: al hablar con el segundo personaje distinto aparece una
 ## de estas criaturas, elegida al azar al empezar cada partida.
@@ -99,8 +112,11 @@ func new_game() -> void:
 	inventory = START_INVENTORY.duplicate()
 	messages = {}
 	dungeons = {}
+	levels = {}
 	phase = PHASES[0]
 	flags = {}
+	partners = Romance.START_PARTNERS.duplicate()
+	secrets = []
 	events = EventLog.new()
 	intro_done = false
 	story_step = ChapterDB.FIRST_STEP
@@ -136,6 +152,63 @@ func item_count(item_id: String) -> int:
 func add_item(item_id: String, count: int = 1) -> void:
 	inventory[item_id] = item_count(item_id) + count
 	changed.emit()
+
+
+# --- Niveles y experiencia (fórmulas en ProgressionDB) -------------------------------
+
+## Quiénes suben de nivel: Ren y los compañeros que pueden luchar con él.
+static func levelled_ids() -> Array[String]:
+	var out: Array[String] = [CharacterDB.PROTAGONIST]
+	out.append_array(CharacterDB.COMPANIONS)
+	return out
+
+
+func level_of(id: String) -> int:
+	if levels.has(id):
+		return levels[id].level
+	return maxi(int(CharacterDB.get_character(id).get("combat", {}).get("level", 1)), 1)
+
+
+func xp_of(id: String) -> int:
+	return levels.get(id, {}).get("xp", 0)
+
+
+## Suma EXP a `id` y sube los niveles que toque. Devuelve {id, xp, from, to}.
+func add_xp(id: String, amount: int) -> Dictionary:
+	var from := level_of(id)
+	var lv := from
+	var xp := xp_of(id) + maxi(amount, 0)
+	while lv < ProgressionDB.MAX_LEVEL and xp >= ProgressionDB.xp_to_next(lv):
+		xp -= ProgressionDB.xp_to_next(lv)
+		lv += 1
+	if lv >= ProgressionDB.MAX_LEVEL:
+		xp = 0
+	levels[id] = {"level": lv, "xp": xp}
+	changed.emit()
+	return {"id": id, "xp": amount, "from": from, "to": lv}
+
+
+## Reparte `amount` a quienes participan (`ids`) y BENCH_SHARE al resto de los que
+## suben de nivel. Devuelve los resultados (add_xp) de todos, participantes primero.
+func grant_xp(ids: Array, amount: int) -> Array:
+	var out: Array = []
+	for id: String in ids:
+		if id in levelled_ids():
+			out.append(add_xp(id, amount))
+	var share := roundi(amount * ProgressionDB.BENCH_SHARE)
+	for id: String in levelled_ids():
+		if not id in ids and share > 0:
+			out.append(add_xp(id, share))
+	return out
+
+
+## Texto de las subidas de nivel de unos resultados de grant_xp ("" si no hay).
+static func level_up_text(results: Array) -> String:
+	var parts: Array[String] = []
+	for r: Dictionary in results:
+		if r.to > r.from:
+			parts.append("¡%s sube al nivel %d!" % [CharacterDB.display_name(r.id), r.to])
+	return "  ".join(parts)
 
 
 ## Estado guardado de la mazmorra `map_id` (se crea vacío; se modifica en sitio).
@@ -202,8 +275,21 @@ func set_flag(id: String, value: Variant = true) -> void:
 	flags[id] = value
 
 
+## `dia_N` no se guarda: es true si hoy es el día N de la partida (dia_1 = el
+## primer lunes). Sirve en las reglas: «# cuando: hablar, flag dia_2». (Si hay
+## un indicador guardado con ese nombre, manda él: así lo simula el editor web.)
 func get_flag(id: String, default: Variant = false) -> Variant:
+	if not flags.has(id) and id.begins_with(DAY_FLAG) and id.substr(DAY_FLAG.length()).is_valid_int():
+		return day_number() == int(id.substr(DAY_FLAG.length()))
 	return flags.get(id, default)
+
+
+const DAY_FLAG := "dia_"
+
+
+## Día de la partida: 1 el primer día (START_DATE), 2 el siguiente...
+func day_number() -> int:
+	return roundi((_date_to_unix(date) - _date_to_unix(START_DATE)) / 86400.0) + 1
 
 
 ## Atajo para registrar acontecimientos (ver EventLog.record).
@@ -223,8 +309,9 @@ func save_game() -> void:
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
 		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
+		"levels": levels,
 		"relations": relations, "moods": moods,
-		"phase": phase, "flags": flags, "events": events.to_dict(), "intro_done": intro_done,
+		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
 		"incursion": {"enemy": incursion_enemy, "done": incursion_done,
 			"first_creature_fight_done": first_creature_fight_done, "talked_to": talked_to},
@@ -250,13 +337,23 @@ func load_game() -> bool:
 	time_slot = int(data.get("time_slot", 0))
 	money = int(data.get("money", START_MONEY))
 	location_id = data.get("location", LocationDB.HOME)
+	if LocationDB.get_location(location_id).is_empty():
+		location_id = LocationDB.HOME   # ubicación borrada o renombrada en el editor del mapa
 	relations = data.get("relations", relations)
 	moods = data.get("moods", moods)
 	inventory = _ints(data.get("inventory", START_INVENTORY))
+	for id: String in ALWAYS_CARRIED:
+		inventory[id] = maxi(item_count(id), 1)
 	messages = data.get("messages", {})
 	dungeons = data.get("dungeons", {})
+	levels = {}
+	for id: String in data.get("levels", {}):
+		var v: Dictionary = data.levels[id]
+		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0))}
 	phase = data.get("phase", PHASES[0])
 	flags = data.get("flags", {})
+	partners = data.get("partners", partners)
+	secrets = data.get("secrets", [])
 	events = EventLog.from_dict(data.get("events", {}))
 	intro_done = data.get("intro_done", false)
 	story_step = data.get("story_step", "")

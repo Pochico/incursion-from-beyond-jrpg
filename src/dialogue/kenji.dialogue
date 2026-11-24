@@ -254,7 +254,7 @@ Kenji: Hoy no, tío. De verdad. Mañana te cuento.
 
 ~ kenji_alarma
 # cuando: alarma
-Kenji: ¿Lo has notado? Eso no ha sido un camión, tío. Eso ha sonado... como un archivo rompiéndose.
+Kenji: ¿Lo has notado? Eso no ha sido un camión, tío. Eso ha sonado... como un archivo rompiéndose. [#cara=sorpresa]
 if Story.flag("kenji_voz_abre")
 	Kenji: Es el mismo ruido. El de las 3\:33. Ren, es el mismo.
 Ren: Algo viene.
@@ -269,7 +269,7 @@ $> Story.set_mood("kenji", "ansioso", 60)
 
 ~ kenji_tras_incursion_pierde
 # cuando: tras_incursion, resultado = pierde
-Kenji: ¡Ren! ¿Estás bien? Se ha ido sin más, como si alguien le hubiera dado a «cerrar sesión».
+Kenji: ¡Ren! ¿Estás bien? Se ha ido sin más, como si alguien le hubiera dado a «cerrar sesión». [#cara=sorpresa]
 Ren: Va a volver. Lo sé.
 $> Story.set_mood("kenji", "ansioso", 60)
 => END
@@ -319,4 +319,316 @@ Kenji: Hola.
 Ren: ¿Cómo estás?
 Kenji: Vivo. Que no es poco después de lo de la estación.
 Kenji: No dejo de oír ese ruido al dormirme. Si te pasa a ti también, dímelo y no me sentiré tan loco.
+=> END
+
+# =====================================================================================
+# DÍAS 2 Y 3, PLANES Y REUNIÓN DE LAS CLOACAS
+# (no dependen de lo que se hablara el primer día)
+# =====================================================================================
+
+~ kenji_hablar_charla
+# cuando: hablar, fase = rutina
+%
+	Kenji: Tío, mi madre ha hecho croquetas para un regimiento. Literalmente. Ha llamado a mi tía para preguntarle cuántos soldados hay en un regimiento.
+	- ¿Y cuántos hay? [#curioso]
+		Kenji: No lo sabía nadie. Así que ha hecho ciento veinte. Pásate, que me ahogo.
+	- Guárdame diez. [#desenfadado]
+		Kenji: Diez es mucho. Te guardo ocho y te digo que eran diez. Así funciona la amistad.
+%
+	Kenji: Estoy componiendo una canción para Yuna. Se llama «Media napolitana». No te rías.
+	- Es un título precioso. [#cariñoso]
+		Kenji: ¿Verdad? Es sobre que alguien te guarde la mitad de su desayuno. Eso es amor, Ren. Lo demás son películas.
+	- (Reírte.) [#bromista]
+		Kenji: Te he dicho que no te rías. Ya verás cuando sea número uno en Spotify. En Leganés. Un martes.
+%
+	Kenji: ¿Te acuerdas de cuando nos colamos en la piscina municipal en agosto? Estaba vacía. Sin agua. Y nos tiramos igual.
+	Kenji: Mi codo todavía se acuerda.
+	- Fue idea tuya. [#franco, #bromista]
+		Kenji: Mentira. Fue idea tuya y yo la mejoré. Que es peor, lo reconozco.
+	- Fue el mejor verano. [#cariñoso, #idealista]
+		Kenji: ...Sí. Lo fue. Tenemos que tener otro así. Con agua esta vez, a ser posible.
+=> END
+
+~ kenji_hablar_martes
+# cuando: hablar, flag dia_2, no hoy >= 2, fase = rutina
+Kenji: Martes, tío. El día más inútil de la semana. No es lunes, que por lo menos tiene drama. No es viernes. Es... martes.
+- A mí los martes me gustan. [#provocador]
+	Kenji: Eso es porque eres un raro. Te quiero igual, pero eres un raro.
+- Esta tarde hay Bowls, ¿no? [#curioso]
+	Kenji: ¡Exacto! Ves, el martes se salva por la tarde. Trae ganas. Y si puedes, un bocadillo. El mío siempre se lo come Yuna.
+	Kenji: Mentira. Me lo como yo y luego digo que ha sido ella.
+Kenji: Por cierto, anoche no oí la voz. Primera noche en semanas. Dormí como un bebé. Me da más miedo que oírla.
+=> END
+
+~ kenji_hablar_miercoles
+# cuando: hablar, flag dia_3, no hoy >= 2, fase = rutina
+Kenji: ¿Sabes qué me ha dicho Yuna esta mañana? Que nota que estoy nervioso. Que muevo la pierna.
+Kenji: Y es verdad. Llevo tres días con la pierna así. Como si el cuerpo supiera algo que yo no.
+- Será el examen de mates. [#pragmático]
+	Kenji: Ojalá. El examen me da igual. Es otra cosa. Como cuando va a llover y te duelen las rodillas.
+- Te pasa algo. Cuéntamelo. [#protector, #franco]
+	Kenji: No es nada, de verdad. Es... la ciudad. Suena rara. Como una canción con una nota desafinada que solo oigo yo.
+	Kenji: Gracias por preguntar, tío. En serio.
+	$> Story.change("kenji", "confianza", 2)
+- Bebe menos café. [#bromista]
+	Kenji: Eso es como decirle a un pez que nade menos. Imposible y cruel.
+=> END
+
+~ kenji_hablar_plantado_bowls
+# cuando: hablar, flag plan_invitado:bowls, no flag plan_hecho:bowls, no flag dia_2, una vez
+Kenji: Ayer en Bowls te guardamos un bocadillo. Se lo comió un perro. Bueno, Yuna. Bueno, yo.
+- Lo siento, no pude ir. [#franco, #conciliador]
+	Kenji: Tranqui. Ya irás. El hormigón no se va a ningún lado.
+- Se me pasó. [#desenfadado]
+	Kenji: «Se me pasó». Vale. Pero la próxima te paso a buscar a casa. Con el altavoz. A todo volumen.
+	$> Story.change("kenji", "afecto", -1)
+- Me puse malo. Me quedé en casa todo el día. [#miente=dia_2, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿Malo? Pero si te vi por ahí ese día, Ren. Tan pancho.
+		% {{Story.lie_witness()}}: Uf. No me metáis en esto... Vale, sí: le vi en la calle. No estaba en casa.
+		% {{Story.lie_witness()}}: Perdona, Ren, pero no. Ese día estuviste conmigo. No voy a mentir por ti.
+		Kenji: (Se queda callado mucho rato.) ¿Me estás mintiendo a mí, Ren? ¿A mí?
+		Kenji: Si no querías venir, me lo dices. Me jode más esto que el plantón.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad, estaba fatal. Le vi yo. Daba pena.
+		% {{Story.lie_witness()}}: (Te mira un segundo de más.) Sí, sí. Hecho polvo estaba. Pobrecito.
+		% {{Story.lie_witness()}}: Doy fe. Parecía un zombi. Un zombi con fiebre.
+		Kenji: Hostia, tío, ¿y no me dijiste nada? Te habría llevado sopa. Sopa de sobre, pero sopa.
+	else
+		Kenji: ¿Malo? Haberlo dicho, hombre. Te habría llevado sopa. Sopa de sobre, pero sopa.
+=> END
+
+~ kenji_hablar_tras_bowls
+# cuando: hablar, flag plan_hecho:bowls, una vez, no hoy >= 2
+Kenji: Lo de ayer en Bowls fue top. Akane dice que patinas como una jirafa recién nacida, pero con actitud.
+Kenji: Viniendo de ella es casi una declaración de amor. No se lo digas, que me mata.
+=> END
+
+~ kenji_hablar_reunion
+# cuando: hablar, fase >= reunion, una vez
+Kenji: Ey. Cloacas FC. Suena bien, ¿eh? Shiori dice que es un nombre «infantil y antihigiénico». Pero lo ha dejado puesto.
+Kenji: Oye, Ren. Lo que dijiste allí abajo... Gracias. Me sentía solo con lo de la voz. Ahora no.
+- Nunca has estado solo. [#cariñoso, #protector]
+	Kenji: ...Para, tío. Que tengo la lágrima fácil desde que tengo novia.
+	$> Story.change("kenji", "afecto", 3)
+- Ahora somos un grupo. Raro, pero un grupo. [#bromista, #idealista]
+	Kenji: Raro es nuestro segundo nombre. Bueno, el tercero. El segundo es Cloacas.
+- Y si la voz es real, la encontraremos. [#decidido]
+	Kenji: Eso. Y le diré cuatro cosas por hacerme perder horas de sueño.
+	$> Story.change("kenji", "confianza", 2)
+=> END
+
+~ kenji_hablar_tras_reunion
+# cuando: hablar, fase >= reunion, no hoy >= 2
+%
+	Kenji: He grabado otra vez a las 3\:33. Ahora la voz dice dos palabras. «Abre» y algo que suena a «arriba». Shiori está como loca.
+%
+	Kenji: Yuna me ha hecho un botiquín para La Torre. Tiene tiritas de dinosaurios. Dice que son para la moral.
+%
+	Kenji: Si entramos en La Torre, yo llevo el altavoz. Si hay monstruos, les pongo reguetón. Algo tiene que funcionar.
+=> END
+
+~ kenji_movil_reunion
+# cuando: movil, fase >= reunion, sabe incursion_1
+Ren: ¿Todo bien?
+Kenji: Todo bien, socio. He puesto la foto de la cascada de fondo del grupo. Shiori dice que da hongos solo con verla.
+Kenji: Mañana nos vemos. Nadie entra solo, ¿eh? Ni en La Torre ni en el baño de Parquesur, que también da miedo.
+=> END
+
+# --- Citas y parejas (Romance) ----------------------------------------------------
+# cita_pide: responde a la cita (resultado = acepta | rompe | pareja | animo | gustos | afecto).
+# cita: la cita en sí. deja_a_ren: si era la pareja de Ren y le deja.
+
+~ kenji_cita_acepta
+# cuando: cita_pide, resultado = acepta
+if Story.partner("kenji") == "ren"
+	Kenji: ¿Una cita? ¿Conmigo? ¿Con tu novio? Hombre, ya era hora de que me lo pidieras como Dios manda.
+	Kenji: {{Story.date_place()}}. Me pongo la chaqueta buena. La que no tiene mostaza.
+else
+	Kenji: ¿Una cita? ¿En plan... cita?
+	Kenji: (Se rasca la nuca.) Vale. No sé qué es esto, pero vale. {{Story.date_place()}}. Invitas tú.
+=> END
+
+~ kenji_cita_rompe
+# cuando: cita_pide, resultado = rompe
+Kenji: ...
+Kenji: Ren, llevo días pensando en algo y no me atrevía a decirlo en voz alta.
+Kenji: Lo de Yuna... la quiero, de verdad. Pero cuando tú y yo estamos juntos siento algo que con ella no.
+Kenji: Voy a hablar con ella. Hoy. Ahora. Y luego vamos a {{Story.date_place()}}. Antes de que me raje.
+=> END
+
+~ kenji_cita_pareja
+# cuando: cita_pide, resultado = pareja
+Kenji: Jajaja. Tío. Que tengo novia. Que es Yuna. Que la conoces.
+Kenji: Como colegas, a {{Story.date_place()}} cuando quieras. Pero llámalo «quedar», que si Yuna lee «cita» en mi móvil me entierra en el parque.
+=> END
+
+~ kenji_cita_animo
+# cuando: cita_pide, resultado = animo
+Kenji: Hoy no, tío. No estoy para nadie. Ni para mí.
+Kenji: Pregúntamelo otro día, ¿vale? Otro día te digo que sí.
+=> END
+
+~ kenji_cita_gustos
+# cuando: cita_pide, resultado = gustos
+Kenji: ¿A {{Story.date_place()}}? ¿Qué se me ha perdido a mí allí?
+Kenji: Si me dices {{Story.favourite_place("kenji")}}, hablamos.
+=> END
+
+~ kenji_cita_afecto
+# cuando: cita_pide, resultado = afecto
+Kenji: Ren... te quiero un montón, tío. Pero no así.
+Kenji: No te rayes, ¿eh? Esto no cambia nada. Mañana te paso a buscar igual.
+=> END
+
+~ kenji_cita
+# cuando: cita
+if Story.partner("kenji") == "ren"
+	Kenji llega diez minutos tarde, con dos cafés de máquina y cara de haber corrido.
+	Kenji: Uno es tuyo. El otro también, si quieres. Yo ya me he tomado tres.
+else
+	Kenji está esperando con los cascos al cuello. Al verte se los quita del todo, como si fuera importante.
+	Kenji: Vale. Esto es raro. Bueno. Raro bien.
+if Story.date_taste("kenji") > 0
+	Kenji: Me encanta este sitio. Aquí la ciudad suena bien. Escucha.
+	Te quedas callado. Tiene razón\: debajo del ruido hay algo parecido a una canción.
+elif Story.date_taste("kenji") < 0
+	Kenji: No es mi sitio favorito, pero contigo cualquier sitio tiene banda sonora.
+- Gracias por venir. Lo digo en serio. [#cariñoso, #franco]
+	Kenji: ¿Gracias? Ren, si me llamas a las tres de la mañana para mirar una farola, voy.
+	$> Story.change("kenji", "confianza", 2)
+- ¿Me pones algo de lo que escuchas? [#curioso]
+	Te pasa un auricular. Es un vinilo viejo, rayado, con una voz de mujer que no conoces.
+	Kenji: Era de mi padre. No se lo pongo a nadie.
+	$> Story.change("kenji", "afecto", 3)
+- Estás guapo hoy. Para variar. [#coqueto, #bromista]
+	Kenji: ¿«Para variar»? Retira lo de «para variar».
+	Kenji: ...No, espera. Lo de «guapo» déjalo.
+	$> Story.change("kenji", "atraccion", 3)
+if Story.partner("kenji") != "ren" and Story.can_be_partner("kenji")
+	Kenji: Oye, Ren. ¿Esto qué es? Porque yo ya no sé qué es.
+	- Quiero salir contigo. En serio. [#franco, #decidido]
+		Kenji: ...
+		Kenji: Vale. Sí. Joder. Sí.
+		$> Story.become_partner("kenji")
+		Kenji: Voy a ponerte una canción en el grupo y nadie va a entender por qué.
+	- Lo que tú quieras que sea. [#evasivo]
+		Kenji: Eso no es una respuesta, tío. Pero me vale por hoy.
+	- Somos colegas. Los mejores. [#prudente]
+		Kenji: Ya. Claro. Los mejores.
+		$> Story.change("kenji", "afecto", -2)
+Kenji: Esto lo repetimos. No es una pregunta.
+=> END
+
+~ kenji_deja_a_ren
+# cuando: deja_a_ren
+Te llega una llamada de Kenji a primera hora. No suele llamar nunca.
+if Story.dump_reason() == "infiel"
+	Kenji: Me lo ha contado medio Leganés, Ren. Medio Leganés. ¿Sabes lo que es enterarte así?
+	Kenji: Tú eras la única persona con la que nunca tenía que estar alerta.
+	Kenji: Se acabó. Lo nuestro, digo. Lo otro... no sé. Ya veremos.
+elif Story.dump_reason() == "descuido"
+	Kenji: Llevo días escribiéndote y me contestas con pegatinas. Cuando me contestas.
+	Kenji: No quiero ser el novio pesado. Prefiero volver a ser tu amigo. Ahí al menos sé dónde estoy.
+	Kenji: Lo dejamos, Ren. Sin dramas. Bueno, con un poco de drama. Déjame un día.
+else
+	Kenji: He estado pensando. Esto no funciona. Tú lo sabes, yo lo sé.
+	Kenji: Lo dejamos. Y no me pidas que te lo explique, que no me sale.
+Cuelga antes de que puedas decir nada.
+=> END
+
+~ kenji_hablar_pareja
+# cuando: hablar, flag pareja_kenji, no hoy >= 2
+% Kenji: Mi novio. Mi novio, Ren. Todavía me suena rarísimo. Me encanta.
+% Kenji: He hecho una lista de canciones para ti. Tiene tres horas. Tienes deberes.
+% Kenji: Yuna me ha mirado raro hoy. Pero bueno, Yuna mira raro a todo el mundo.
+- Te he echado de menos. [#cariñoso]
+	Kenji: ¿Desde esta mañana? Qué intenso. Sigue.
+	$> Story.change("kenji", "afecto", 2)
+- Kenji, tenemos que hablar. Creo que deberíamos dejarlo. [#franco]
+	Kenji: ...
+	Kenji: Ah. Vale. Ya. Vale.
+	Kenji: No, no pasa nada. Lo entiendo. Dame... dame un rato, ¿vale?
+	$> Story.break_up_with("kenji")
+- Hoy no estoy muy hablador. [#reservado]
+	Kenji: Normal. Te estás guardando para mí. Lo entiendo.
+=> END
+
+~ kenji_hablar_ex
+# cuando: hablar, flag ex_kenji, una vez
+Kenji: Hola. Eh... hola.
+Kenji: Esto es lo raro, ¿no? Lo de después. Nadie te dice cómo se hace.
+- ¿Seguimos siendo amigos? [#conciliador]
+	Kenji: Somos amigos desde los seis años, Ren. No me vas a echar tan fácil.
+	$> Story.change("kenji", "resentimiento", -5)
+- Lo siento. [#franco]
+	Kenji: Ya. Yo también. Venga, no me hagas llorar en la plaza.
+=> END
+
+~ kenji_hablar_rotos_dejado
+# cuando: hablar, flag dejado_por_ren_kenji, una vez
+Kenji no se quita los cascos. Tarda en mirarte.
+Kenji: Yuna me ha dejado. Por ti. Me lo ha dicho ella, con esas palabras. «Por Ren».
+Kenji: Llevamos tres años. Tres. Y tú eras mi mejor amigo.
+- No lo planeé, Kenji. Lo siento. [#franco, #conciliador]
+	Kenji: «No lo planeé». Ya. Las cosas no se planean, pasan. Me sé la canción.
+	Kenji: Déjame en paz un tiempo, Ren. No te lo digo enfadado. Te lo digo cansado.
+- Ella decidió. No es culpa mía. [#provocador]
+	Kenji: Lárgate.
+	$> Story.change("kenji", "resentimiento", 10)
+=> END
+
+~ kenji_hablar_rotos_deja
+# cuando: hablar, flag dejado_por_ren_yuna, una vez
+Kenji: He dejado a Yuna. Ya lo sabrás. Medio grupo lo sabe.
+Kenji: Me ha dicho cosas que me merecía. Todas.
+Kenji: No me arrepiento. Pero me duele igual. No sabía que se podían las dos cosas a la vez.
+=> END
+
+~ kenji_hablar_tras_rotos
+# cuando: hablar, flag kenji_yuna_rotos, no hoy >= 2
+% Kenji: Yuna ha borrado todas nuestras fotos. Las del parque también. Esas me gustaban.
+% Kenji: Estoy bien. Te lo digo antes de que preguntes. Estoy bien. Más o menos.
+% Kenji: He puesto la misma canción cuarenta veces. Es terapia. No me juzgues.
+=> END
+
+
+# --- Mentiras y secretos (Lies) -----------------------------------------------------
+
+~ kenji_hablar_sospecha
+# cuando: hablar, flag pareja_kenji, flag sospecha_kenji
+$> Story.set_flag("sospecha_kenji", false)
+Kenji: Oye, Ren. Ayer te escribí tres veces y no contestaste. ¿Dónde estabas?
+Kenji: No es un interrogatorio. Bueno, un poco sí.
+- Quedé con alguien. Una cita. Lo siento. [#franco]
+	$> Story.confess("kenji")
+	Kenji: ...Vale. Gracias por decírmelo tú. Duele igual, pero gracias.
+- En casa. Toda la tarde. Estaba reventado. [#miente=cita, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿En casa? Ren... te vi quedar. Lo siento, pero no.
+		% {{Story.lie_witness()}}: No me miréis así. Yo le vi salir con alguien. No pienso callarme.
+		Kenji: ¿En casa? (Mira a {{Story.lie_witness()}} y luego a ti.) Ya. Claro. En casa.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad. Le escribí y me dijo que estaba muerto en el sofá.
+		% {{Story.lie_witness()}}: Sí, sí, estaba en casa. Le vi el estado del móvil. «Desconectado».
+		Kenji: Vale. Perdona. Me estoy volviendo un pesado.
+	else
+		Kenji: Vale. Te creo. (Lo dice como si quisiera creerte.)
+- Por ahí. ¿Qué más da? [#evasivo, #reservado]
+	Kenji: «Por ahí». Muy bien. Me encanta «por ahí».
+	$> Story.change("kenji", "confianza", -2)
+=> END
+
+~ kenji_hablar_pillado
+# cuando: hablar, flag pillado_kenji
+$> Story.set_flag("pillado_kenji", false)
+if Story.lied_to("kenji")
+	Kenji: {{Story.snitch("kenji")}} me lo ha contado todo, Ren.
+	Kenji: Lo peor no es lo que hiciste. Es que me miraste a la cara y me dijiste otra cosa.
+else
+	Kenji: Me he enterado por {{Story.snitch("kenji")}}. Por otra persona, Ren. ¿Por qué no me lo dijiste tú?
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	$> Story.change("kenji", "resentimiento", -3)
+- ¿Y {{Story.snitch("kenji")}} qué sabrá? [#provocador]
+	$> Story.change("kenji", "confianza", -3)
 => END

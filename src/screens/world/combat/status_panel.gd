@@ -128,20 +128,21 @@ func _load_member() -> void:
 	var f := _fighter()
 	_skill = 0
 	_entries.clear()
+	var who := _party[_index]
 	_entries.append({
 		"name": f.attack, "icon": "slash", "cost": 0,
-		"desc": "Ataque básico que inflige daño físico al rival.",
-		"power": "%d ± %d" % [f.damage, f.variance] if f.variance > 0 else str(f.damage),
-		"target": "1", "cd": 0,
+		"desc": "Ataque básico: golpe físico (FUE contra RES), sin coste ni recarga.",
+		"power": "~%d" % _battle.attack_preview(who),
+		"target": SkillDB.TARGET_NAMES.enemy, "cd": 0,
 	})
 	for id: String in f.skills:
 		var sk := SkillDB.get_skill(id)
-		var preview := _battle.skill_preview(_party[_index], id)
+		var tier: String = (" (tier %d)" % sk.tier) if sk.get("tier", 0) > 0 else ""
 		_entries.append({
 			"name": sk.name, "icon": sk.get("icon", "sparkle"),
-			"cost": _battle.skill_cost(_party[_index], id), "desc": sk.desc,
-			"power": ("+%d PV" if sk.target == "self" else "~%d") % preview,
-			"target": "Uno mismo" if sk.target == "self" else "1",
+			"cost": _battle.skill_cost(who, id), "desc": sk.desc + tier,
+			"power": _battle.skill_summary(who, id),
+			"target": SkillDB.TARGET_NAMES.get(sk.target, "—"),
 			"cd": sk.cd, "nature": sk.nature,
 		})
 	var tex := CharacterDB.portrait(f.id)
@@ -481,7 +482,7 @@ func _draw_statuses(c: Control, f: Dictionary) -> void:
 	for status: String in statuses:
 		var name_: String = SkillDB.STATUS_NAMES.get(status, status)
 		pills.append({"text": "%s · %d t." % [name_, statuses[status].turns], "icon": "sparkle", "on": true,
-			"color": UIStyle.VIOLET, "status": status})
+			"color": UIStyle.VIOLET if SkillDB.status(status).get("debuff", false) else UIStyle.LIME, "status": status})
 	_status_rects.clear()
 	var x := 600.0
 	for pill: Dictionary in pills:
@@ -519,7 +520,9 @@ func _draw_status_tooltip(c: Control, f: Dictionary) -> void:
 	var desc: String = SkillDB.STATUS_DESC.get(status, "")
 	var turns := "Quedan %d turno%s." % [st.turns, "" if st.turns == 1 else "s"]
 	if st.get("tick", 0) > 0:
-		turns = "Pierdes %d PV por turno. %s" % [st.tick, turns]
+		turns = "Pierdes ~%d PV por turno. %s" % [st.tick, turns]
+	elif st.get("regen", 0) > 0:
+		turns = "Recuperas %d PV por turno. %s" % [st.regen, turns]
 	var w := 460.0
 	var body_w := w - 44
 	var font := UIStyle.FONT_REGULAR
@@ -550,6 +553,10 @@ func _draw_story(c: Control, f: Dictionary) -> void:
 	var nature: String = SkillDB.NATURE_NAMES.get(f.nature, "—")
 	_draw_pair(c, Vector2(624, 560), "Naturaleza:", nature)
 	_draw_pair(c, Vector2(624, 606), "Nivel:", str(f.level))
+	if f.id in GameState.levelled_ids():
+		var next := ProgressionDB.xp_to_next(f.level)
+		_draw_pair(c, Vector2(624, 652), "Experiencia:",
+				"%d / %d para el nivel %d" % [GameState.xp_of(f.id), next, f.level + 1] if next > 0 else "Nivel máximo")
 
 
 # --- Iconos pequeños ----------------------------------------------------------------------

@@ -34,6 +34,10 @@
 					"ceiling": "",
 					"floor": ""
 				},
+				"-2,0": {
+					"ceiling": "",
+					"floor": ""
+				},
 				"-3,-3": {
 					"ceiling": "",
 					"floor": ""
@@ -43,6 +47,10 @@
 					"floor": ""
 				},
 				"-3,-5": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"-3,0": {
 					"ceiling": "",
 					"floor": ""
 				},
@@ -272,7 +280,14 @@
 					"b": "panel_7"
 				},
 				"-1,0,W": {
-					"a": "panel_2"
+					"a": "panel_2",
+					"door": {
+						"hidden": true,
+						"open": false,
+						"requires": "",
+						"secret": true
+					},
+					"type": "door"
 				},
 				"-1,1,N": {
 					"b": "panel_4"
@@ -515,6 +530,11 @@
 				},
 				"-1,-2": {
 					"count": 1,
+					"item": "batido",
+					"type": "item"
+				},
+				"-3,0": {
+					"count": 3,
 					"item": "pochicola",
 					"type": "item"
 				},
@@ -548,8 +568,8 @@
 					"type": "enemy"
 				},
 				"3,-9": {
-					"count": 4,
-					"item": "pochicola",
+					"count": 1,
+					"item": "caja",
 					"type": "item"
 				},
 				"4,-6": {
@@ -562,8 +582,8 @@
 					"type": "item"
 				},
 				"5,-9": {
-					"count": 3,
-					"item": "pochicola",
+					"count": 2,
+					"item": "granada",
 					"type": "item"
 				}
 			}
@@ -672,6 +692,10 @@
 					"floor": ""
 				},
 				"5,-18": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-19": {
 					"ceiling": "",
 					"floor": ""
 				},
@@ -816,6 +840,12 @@
 				"4,-18,W": {
 					"a": "panel_2"
 				},
+				"5,-19,W": {
+					"a": "panel_7"
+				},
+				"6,-19,W": {
+					"b": "panel_7"
+				},
 				"7,-15,W": {
 					"b": "panel_3"
 				},
@@ -868,27 +898,863 @@
 					"type": "enemy"
 				},
 				"10,-20": {
-					"count": 5,
-					"item": "pochicola",
+					"count": 2,
+					"item": "caja",
 					"type": "item"
 				},
 				"2,-19": {
 					"count": 2,
-					"item": "pochicola",
+					"item": "batido",
 					"type": "item"
 				},
 				"5,-16": {
 					"enemy": "oni",
 					"type": "enemy"
 				},
+				"5,-19": {
+					"dir": 0,
+					"type": "stairs",
+					"up": true
+				},
 				"6,-18": {
-					"count": 3,
-					"item": "pochicola",
+					"count": 2,
+					"item": "granada",
 					"type": "item"
 				},
 				"9,-17": {
 					"enemy": "imp",
 					"type": "enemy"
+				}
+			}
+		},
+		{
+			"cells": {
+				"2,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-19": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-20": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-21": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-22": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-23": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-29": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-28": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-24": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-25": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-26": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-27": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-28": {
+					"ceiling": "",
+					"floor": ""
+				}
+			},
+			"edges": {
+				"2,-23,N": {
+					"b": "panel_6"
+				},
+				"2,-24,W": {
+					"a": "panel_7"
+				},
+				"2,-25,W": {
+					"a": "panel_6"
+				},
+				"2,-26,W": {
+					"a": "panel_7"
+				},
+				"2,-27,W": {
+					"a": "panel_6"
+				},
+				"2,-28,N": {
+					"a": "panel_4"
+				},
+				"2,-28,W": {
+					"a": "panel_7"
+				},
+				"3,-26,N": {
+					"a": "panel_7",
+					"type": "wall"
+				},
+				"3,-27,N": {
+					"a": "panel_4",
+					"b": "panel_7",
+					"type": "wall"
+				},
+				"3,-28,N": {
+					"a": "panel_3"
+				},
+				"4,-23,N": {
+					"b": "panel_6"
+				},
+				"4,-25,W": {
+					"a": "panel_4",
+					"b": "panel_3",
+					"type": "wall"
+				},
+				"4,-26,W": {
+					"type": "wall"
+				},
+				"4,-28,N": {
+					"a": "panel_4"
+				},
+				"5,-21,W": {
+					"a": "panel_3"
+				},
+				"5,-22,W": {
+					"a": "panel_6"
+				},
+				"5,-26,N": {
+					"a": "panel_3",
+					"b": "panel_6",
+					"type": "wall"
+				},
+				"5,-28,N": {
+					"door": {
+						"open": false,
+						"requires": "",
+						"switch_only": true
+					},
+					"type": "door"
+				},
+				"6,-21,W": {
+					"b": "panel_3"
+				},
+				"6,-22,W": {
+					"b": "panel_4"
+				},
+				"6,-23,W": {
+					"b": "panel_3"
+				},
+				"6,-28,N": {
+					"a": "panel_4"
+				},
+				"7,-23,N": {
+					"b": "panel_7"
+				},
+				"7,-25,W": {
+					"b": "panel_4",
+					"type": "wall"
+				},
+				"7,-26,N": {
+					"a": "panel_7",
+					"type": "wall"
+				},
+				"7,-26,W": {
+					"a": "panel_4",
+					"type": "wall"
+				},
+				"7,-27,N": {
+					"b": "panel_3",
+					"type": "wall"
+				},
+				"7,-28,N": {
+					"a": "panel_7"
+				},
+				"8,-28,N": {
+					"a": "panel_4"
+				},
+				"9,-24,W": {
+					"b": "panel_3"
+				},
+				"9,-25,W": {
+					"b": "panel_6"
+				},
+				"9,-26,W": {
+					"b": "panel_3"
+				},
+				"9,-27,W": {
+					"b": "panel_4"
+				},
+				"9,-28,W": {
+					"b": "panel_3"
+				}
+			},
+			"things": {
+				"2,-25": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"2,-28": {
+					"doors": [
+						"5,-28,N"
+					],
+					"type": "switch"
+				},
+				"3,-28": {
+					"enemy": "crawler",
+					"type": "enemy"
+				},
+				"5,-19": {
+					"dir": 2,
+					"type": "stairs",
+					"up": false
+				},
+				"5,-29": {
+					"dir": 0,
+					"type": "stairs",
+					"up": true
+				},
+				"7,-24": {
+					"enemy": "turbina",
+					"type": "enemy"
+				},
+				"8,-28": {
+					"count": 1,
+					"item": "caja",
+					"type": "item"
+				}
+			}
+		},
+		{
+			"cells": {
+				"0,-32": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"0,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-32": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"1,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-32": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-35": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-36": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"2,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-35": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-29": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-30": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-35": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-38": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-35": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-37": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-31": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-32": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-33": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-34": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-35": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-36": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"8,-37": {
+					"ceiling": "",
+					"floor": ""
+				}
+			},
+			"edges": {
+				"2,-32,W": {
+					"door": {
+						"open": false,
+						"requires": "tarjeta_roja"
+					},
+					"type": "door"
+				},
+				"2,-34,W": {
+					"a": "panel_3"
+				},
+				"2,-35,W": {
+					"a": "panel_4"
+				},
+				"2,-36,W": {
+					"a": "panel_7"
+				},
+				"2,-37,N": {
+					"a": "panel_7"
+				},
+				"3,-31,N": {
+					"a": "panel_4"
+				},
+				"3,-32,W": {
+					"b": "panel_3"
+				},
+				"3,-33,W": {
+					"b": "panel_4"
+				},
+				"3,-36,N": {
+					"b": "panel_4"
+				},
+				"3,-36,W": {
+					"b": "panel_7"
+				},
+				"3,-37,N": {
+					"a": "panel_6"
+				},
+				"4,-30,N": {
+					"b": "panel_3"
+				},
+				"4,-31,N": {
+					"a": "panel_3"
+				},
+				"4,-32,N": {
+					"b": "panel_3"
+				},
+				"4,-35,N": {
+					"a": "panel_3"
+				},
+				"4,-35,W": {
+					"a": "panel_4"
+				},
+				"4,-37,N": {
+					"a": "panel_7"
+				},
+				"5,-31,N": {
+					"a": "panel_6"
+				},
+				"5,-35,N": {
+					"a": "panel_6"
+				},
+				"6,-30,N": {
+					"b": "panel_3"
+				},
+				"6,-31,N": {
+					"a": "panel_3"
+				},
+				"6,-36,N": {
+					"b": "panel_7"
+				},
+				"6,-37,N": {
+					"a": "panel_3"
+				},
+				"7,-30,N": {
+					"b": "panel_4"
+				},
+				"7,-31,N": {
+					"a": "panel_6"
+				},
+				"7,-33,N": {
+					"b": "panel_3"
+				},
+				"7,-33,W": {
+					"b": "panel_4"
+				},
+				"7,-34,N": {
+					"a": "panel_7"
+				},
+				"7,-37,N": {
+					"a": "panel_6"
+				},
+				"8,-33,W": {
+					"a": "panel_4"
+				},
+				"8,-34,W": {
+					"door": {
+						"open": false,
+						"requires": "",
+						"secret": true
+					},
+					"type": "door"
+				},
+				"8,-36,W": {
+					"a": "panel_3"
+				},
+				"8,-37,N": {
+					"a": "panel_3"
+				},
+				"9,-32,W": {
+					"b": "panel_7"
+				},
+				"9,-34,W": {
+					"b": "panel_7"
+				},
+				"9,-35,W": {
+					"b": "panel_6"
+				},
+				"9,-36,W": {
+					"b": "panel_3"
+				}
+			},
+			"things": {
+				"0,-32": {
+					"type": "save"
+				},
+				"1,-32": {
+					"type": "extraction"
+				},
+				"1,-33": {
+					"count": 3,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"2,-34": {
+					"enemy": "troyano",
+					"type": "enemy"
+				},
+				"2,-37": {
+					"count": 2,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"4,-35": {
+					"count": 2,
+					"item": "caja",
+					"type": "item"
+				},
+				"5,-29": {
+					"dir": 2,
+					"type": "stairs",
+					"up": false
+				},
+				"5,-34": {
+					"enemy": "tiranosaurio",
+					"type": "enemy"
+				},
+				"5,-38": {
+					"dir": 0,
+					"type": "stairs",
+					"up": true
+				},
+				"6,-33": {
+					"count": 2,
+					"item": "batido",
+					"type": "item"
+				},
+				"8,-36": {
+					"enemy": "querubin",
+					"type": "enemy"
+				}
+			}
+		},
+		{
+			"cells": {
+				"3,-41": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-42": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-43": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"3,-44": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-41": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-42": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-43": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"4,-44": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-38": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-39": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-40": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-41": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-42": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-43": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"5,-44": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-41": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-42": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-43": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"6,-44": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-41": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-42": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-43": {
+					"ceiling": "",
+					"floor": ""
+				},
+				"7,-44": {
+					"ceiling": "",
+					"floor": ""
+				}
+			},
+			"edges": {
+				"3,-41,W": {
+					"a": "panel_7"
+				},
+				"3,-43,W": {
+					"a": "panel_3"
+				},
+				"3,-44,N": {
+					"a": "panel_3"
+				},
+				"4,-40,N": {
+					"b": "panel_3"
+				},
+				"4,-42,N": {
+					"b": "panel_3",
+					"type": "wall"
+				},
+				"4,-44,N": {
+					"a": "panel_6"
+				},
+				"5,-40,W": {
+					"a": "panel_4"
+				},
+				"5,-44,N": {
+					"a": "panel_7"
+				},
+				"6,-42,N": {
+					"b": "panel_3",
+					"type": "wall"
+				},
+				"6,-44,N": {
+					"a": "panel_6"
+				},
+				"7,-44,N": {
+					"a": "panel_3"
+				},
+				"8,-41,W": {
+					"b": "panel_3"
+				},
+				"8,-42,W": {
+					"b": "panel_6"
+				},
+				"8,-43,W": {
+					"b": "panel_7"
+				},
+				"8,-44,W": {
+					"b": "panel_6"
+				}
+			},
+			"things": {
+				"3,-44": {
+					"count": 3,
+					"item": "pochicola",
+					"type": "item"
+				},
+				"5,-38": {
+					"dir": 2,
+					"type": "stairs",
+					"up": false
+				},
+				"5,-43": {
+					"drop": "tarjeta_roja",
+					"enemy": "oni",
+					"type": "enemy"
+				},
+				"7,-44": {
+					"count": 3,
+					"item": "granada",
+					"type": "item"
 				}
 			}
 		}

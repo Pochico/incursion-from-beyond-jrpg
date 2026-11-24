@@ -19,6 +19,10 @@ extends RefCounted
 ##
 ## Construye la planta activa del mapa (`map.set_level`).
 
+## Grosor de muros y tabiques (m). Cada cara se mete la mitad en su casilla y en
+## cada esquina o extremo hay un pilar, así que un tabique suelto en mitad de una
+## sala se ve como un bloque y no como una lámina.
+const WALL_THICK := 0.3
 const DOOR_W := 1.2
 const DOOR_H := 2.1
 const DOOR_THICK := 0.12
@@ -76,6 +80,7 @@ static func build(map: DungeonMap) -> Node3D:
 				continue   # la pared falsa va aparte (se hunde al descubrirla)
 			var tex_w := DungeonTextures.resolve(map.theme, "wall", map.face_texture(c, d))
 			_wall_face(_st(structure, tex_w), c, d, type == DungeonMap.DOOR)
+	_posts(map, _st(structure, DungeonTextures.resolve(map.theme, "wall", "")))
 
 	var structure_node := _meshes(structure)
 	structure_node.name = "Estructura"
@@ -108,6 +113,9 @@ static func build(map: DungeonMap) -> Node3D:
 	var switches := Node3D.new()
 	switches.name = "Interruptores"
 	root.add_child(switches)
+	var saves := Node3D.new()
+	saves.name = "Guardado"
+	root.add_child(saves)
 	for c: Vector2i in map.things:
 		if not map.has_cell(c):
 			continue
@@ -118,10 +126,53 @@ static func build(map: DungeonMap) -> Node3D:
 		elif th.type == DungeonMap.ENEMY:
 			enemies.add_child(_enemy(c, th.enemy))
 		elif th.type == DungeonMap.ITEM:
-			items.add_child(_item(c))
+			items.add_child(_item(c, th.item))
 		elif th.type == DungeonMap.SWITCH:
 			switches.add_child(_switch(c, _switch_on(map, th)))
+		elif th.type == DungeonMap.SAVE:
+			saves.add_child(_save_point(c))
+	# Zonas de extracción (y la entrada): un círculo cian en el suelo.
+	var exits := Node3D.new()
+	exits.name = "Extraccion"
+	root.add_child(exits)
+	for c: Vector2i in map.cells:
+		if map.is_extraction(c):
+			exits.add_child(_extraction(c))
 	return root
+
+
+static func _extraction(c: Vector2i) -> Node3D:
+	var node := Node3D.new()
+	node.name = "%d,%d" % [c.x, c.y]
+	node.position = cell_center(c)
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.72
+	torus.outer_radius = 0.8
+	torus.rings = 48
+	ring.mesh = torus
+	ring.material_override = _glow_material(UIStyle.CYAN, 1.2)
+	ring.scale = Vector3(1, 0.05, 1)
+	ring.position.y = 0.012
+	node.add_child(ring)
+	var pad := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 0.72
+	disc.bottom_radius = 0.72
+	disc.height = 0.01
+	pad.mesh = disc
+	var pm := _glow_material(Color(UIStyle.CYAN, 0.16), 0.4)
+	pm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pad.material_override = pm
+	pad.position.y = 0.008
+	node.add_child(pad)
+	var light := OmniLight3D.new()
+	light.light_color = UIStyle.CYAN
+	light.light_energy = 0.6
+	light.omni_range = 2.4
+	light.position.y = 0.4
+	node.add_child(light)
+	return node
 
 
 ## Una palanca está «activada» si la primera de sus puertas está abierta al empezar.
@@ -141,9 +192,10 @@ static func _glow_material(col: Color, energy: float = 0.8) -> StandardMaterial3
 	return m
 
 
-## Objeto: una caja pequeña con franja lima flotando sobre una losa que brilla
-## (a media altura, para que se vea desde la casilla de al lado).
-static func _item(c: Vector2i) -> Node3D:
+## Objeto sobre una losa que brilla, a media altura (para que se vea desde la
+## casilla de al lado), girando: su modelo 3D (ItemDB.model_path), si no su
+## imagen y, sin nada, una caja pequeña con franja lima.
+static func _item(c: Vector2i, item_id: String = "") -> Node3D:
 	var node := Node3D.new()
 	node.name = "%d,%d" % [c.x, c.y]
 	node.position = cell_center(c)
@@ -158,31 +210,103 @@ static func _item(c: Vector2i) -> Node3D:
 	glow.material_override = gm
 	glow.position.y = 0.01
 	node.add_child(glow)
-	var box := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(0.42, 0.32, 0.32)
-	box.mesh = bm
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color("2b2740")
-	mat.roughness = 0.5
-	box.material_override = mat
-	box.position.y = 0.8
-	box.rotation.y = 0.5
-	node.add_child(box)
-	var band := MeshInstance3D.new()
-	var bb := BoxMesh.new()
-	bb.size = Vector3(0.44, 0.06, 0.34)
-	band.mesh = bb
-	band.material_override = _glow_material(UIStyle.LIME)
-	band.position.y = 0.83
-	band.rotation.y = 0.5
 	var light := OmniLight3D.new()
 	light.light_color = UIStyle.LIME
 	light.light_energy = 0.6
 	light.omni_range = 1.6
 	light.position.y = 0.5
 	node.add_child(light)
-	node.add_child(band)
+	var spin := ItemSpin.new()
+	spin.name = "Objeto"
+	spin.position.y = 0.7
+	node.add_child(spin)
+	var model := ItemDB.model_path(item_id)
+	var image: String = ItemDB.get_item(item_id).get("image", "")
+	if model != "":
+		spin.add_child((load(model) as PackedScene).instantiate())
+	elif image != "" and ResourceLoader.exists(image):
+		# Imagen plana (la tarjeta): por las dos caras.
+		var tex: Texture2D = load(image)
+		var sprite := Sprite3D.new()
+		sprite.texture = tex
+		sprite.pixel_size = 0.55 / tex.get_width()
+		sprite.double_sided = true
+		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.position.y = 0.15
+		spin.add_child(sprite)
+	else:
+		var box := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.42, 0.32, 0.32)
+		box.mesh = bm
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color("2b2740")
+		mat.roughness = 0.5
+		box.material_override = mat
+		box.position.y = 0.1
+		spin.add_child(box)
+		var band := MeshInstance3D.new()
+		var bb := BoxMesh.new()
+		bb.size = Vector3(0.44, 0.06, 0.34)
+		band.mesh = bb
+		band.material_override = _glow_material(UIStyle.LIME)
+		band.position.y = 0.13
+		spin.add_child(band)
+	return node
+
+
+## Punto de guardado: terminal con pantalla cian sobre un pedestal, en el
+## centro de la casilla (se usa desde la de al lado, como una palanca).
+static func _save_point(c: Vector2i) -> Node3D:
+	var node := Node3D.new()
+	node.name = "%d,%d" % [c.x, c.y]
+	node.position = cell_center(c)
+	var base := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.32
+	cyl.bottom_radius = 0.42
+	cyl.height = 1.0
+	cyl.radial_segments = 6
+	base.mesh = cyl
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("24222e")
+	m.metallic = 0.6
+	m.roughness = 0.35
+	base.material_override = m
+	base.position.y = 0.5
+	node.add_child(base)
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.33
+	torus.outer_radius = 0.37
+	torus.rings = 32
+	ring.mesh = torus
+	ring.material_override = _glow_material(UIStyle.CYAN, 1.4)
+	ring.position.y = 0.72
+	node.add_child(ring)
+	# Cristal flotante que gira: lo que se ve desde lejos.
+	var gem := MeshInstance3D.new()
+	var diamond := SphereMesh.new()   # 4 lados y 2 anillos: un rombo
+	diamond.radius = 0.2
+	diamond.height = 0.62
+	diamond.radial_segments = 4
+	diamond.rings = 1
+	gem.mesh = diamond
+	var gmat := _glow_material(Color(UIStyle.CYAN, 0.8), 1.6)
+	gmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	gem.material_override = gmat
+	var spin := ItemSpin.new()
+	spin.name = "Cristal"
+	spin.position.y = 1.4
+	spin.add_child(gem)
+	node.add_child(spin)
+	var light := OmniLight3D.new()
+	light.light_color = UIStyle.CYAN
+	light.light_energy = 1.0
+	light.omni_range = 3.2
+	light.position.y = 1.4
+	node.add_child(light)
 	return node
 
 
@@ -281,20 +405,25 @@ static func _stairs(c: Vector2i, up: bool, d: int, tex: Texture2D) -> Node3D:
 	return node
 
 
-## Enemigo de pie en la casilla: su retrato mirando siempre a la cámara.
+## Enemigo de pie en la casilla, mirando siempre a la cámara: su modelo 3D si
+## existe (EnemyModel), si no su retrato plano y, sin retrato, una cápsula.
+## Las voladoras (CharacterDB.hover) flotan y dejan una sombra en el suelo.
 static func _enemy(c: Vector2i, enemy_id: String) -> Node3D:
 	var node := Node3D.new()
 	node.name = "%d,%d" % [c.x, c.y]
 	node.position = cell_center(c)
+	var model := EnemyModel.create(enemy_id)
 	var tex := CharacterDB.portrait(enemy_id)
-	if tex != null:
+	if model != null:
+		node.add_child(model)
+	elif tex != null:
 		var sprite := Sprite3D.new()
 		sprite.texture = tex
 		sprite.pixel_size = ENEMY_H / tex.get_height()
 		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		sprite.position.y = ENEMY_H * 0.5
+		sprite.position.y = ENEMY_H * 0.5 + CharacterDB.hover(enemy_id)
 		node.add_child(sprite)
 	else:
 		var body := MeshInstance3D.new()
@@ -305,32 +434,123 @@ static func _enemy(c: Vector2i, enemy_id: String) -> Node3D:
 		var m := StandardMaterial3D.new()
 		m.albedo_color = CharacterDB.color(enemy_id)
 		body.material_override = m
-		body.position.y = ENEMY_H * 0.5
+		body.position.y = ENEMY_H * 0.5 + CharacterDB.hover(enemy_id)
 		node.add_child(body)
+	if CharacterDB.hover(enemy_id) > 0.0:
+		node.add_child(_hover_shadow())
 	return node
+
+
+## Mancha oscura y difusa en el suelo bajo una criatura que vuela.
+static func _hover_shadow() -> MeshInstance3D:
+	var shadow := MeshInstance3D.new()
+	shadow.name = "Sombra"
+	var quad := PlaneMesh.new()
+	quad.size = Vector2(1.3, 1.3)
+	shadow.mesh = quad
+	var g := Gradient.new()
+	g.set_color(0, Color(0, 0, 0, 0.55))
+	g.set_color(1, Color(0, 0, 0, 0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	shadow.material_override = m
+	shadow.position.y = 0.02
+	return shadow
 
 
 ## Una cara de pared del borde `d` de la casilla `c`, mirando hacia dentro de `c`.
 ## Con puerta, deja el hueco (dos laterales y el dintel).
+## Cara del muro del borde `d` vista desde la casilla `c`: metida medio grosor en
+## la casilla y sin los extremos (los cubren los pilares de `_posts`). Con puerta,
+## deja el hueco y pone su mitad de jambas y dintel.
 static func _wall_face(st: SurfaceTool, c: Vector2i, d: int, with_door: bool) -> void:
 	var t := tile()
 	var h := wall_h()
+	var k := WALL_THICK * 0.5
 	var center := cell_center(c)
 	var out := Vector3(DungeonMap.DIRS[d].x, 0, DungeonMap.DIRS[d].y)   # hacia el borde
 	var n := -out                                                    # normal: hacia la casilla
 	var right := out.cross(Vector3.UP)                               # derecha vista de frente
-	var mid := center + out * t * 0.5
-	var spans := [[-t * 0.5, t * 0.5, 0.0, h]]
+	var line := center + out * t * 0.5                               # eje del muro
+	var mid := line - out * k                                        # su cara
+	var wall_uv := func(p: Vector3) -> Vector2: return Vector2(p.dot(right) / t, 1.0 - p.y / h)
+	var a0 := -t * 0.5 + k
+	var a1 := t * 0.5 - k
+	var spans := [[a0, a1, 0.0, h]]
 	if with_door:
 		var hw := DOOR_W * 0.5
-		spans = [[-t * 0.5, -hw, 0.0, h], [hw, t * 0.5, 0.0, h], [-hw, hw, DOOR_H, h]]
+		spans = [[a0, -hw, 0.0, h], [hw, a1, 0.0, h], [-hw, hw, DOOR_H, h]]
+		# Jambas y dintel: del eje del muro hasta la cara, por este lado.
+		var depth_uv := func(p: Vector3) -> Vector2: return Vector2(p.dot(out) / t, 1.0 - p.y / h)
+		for side: float in [-1.0, 1.0]:
+			var x := right * hw * side
+			_quad(st, [line + x, mid + x, mid + x + Vector3.UP * DOOR_H, line + x + Vector3.UP * DOOR_H],
+					right * -side, depth_uv)
+		var top := Vector3.UP * DOOR_H
+		_quad(st, [line - right * hw + top, line + right * hw + top, mid + right * hw + top, mid - right * hw + top],
+				Vector3.DOWN, func(p: Vector3) -> Vector2: return Vector2(p.dot(right) / t, p.dot(out) / t))
 	for s: Array in spans:
 		var a: Vector3 = mid + right * s[0] + Vector3.UP * s[2]
 		var b: Vector3 = mid + right * s[1] + Vector3.UP * s[2]
 		var cc: Vector3 = mid + right * s[1] + Vector3.UP * s[3]
 		var dd: Vector3 = mid + right * s[0] + Vector3.UP * s[3]
-		_quad(st, [a, b, cc, dd], n, func(p: Vector3) -> Vector2:
-			return Vector2(p.dot(right) / t, 1.0 - p.y / h))
+		_quad(st, [a, b, cc, dd], n, wall_uv)
+
+
+## Pilares de las esquinas: en cada vértice de la cuadrícula al que llega algún
+## muro o puerta, un prisma de WALL_THICK de lado. Solo se dibujan sus caras libres
+## (las que no tapan un muro) y que dan a alguna casilla: así se cierran los
+## extremos de los tabiques y las esquinas.
+static func _posts(map: DungeonMap, st: SurfaceTool) -> void:
+	var t := tile()
+	var h := wall_h()
+	var k := WALL_THICK * 0.5
+	var attached := {}   # vértice -> máscara de direcciones con muro
+	# Extremos de cada borde: [vértice, dirección del muro desde él] por lado de la casilla.
+	var ends := [
+		[[Vector2i(0, 0), DungeonMap.E], [Vector2i(1, 0), DungeonMap.W]],   # N
+		[[Vector2i(1, 0), DungeonMap.S], [Vector2i(1, 1), DungeonMap.N]],   # E
+		[[Vector2i(0, 1), DungeonMap.E], [Vector2i(1, 1), DungeonMap.W]],   # S
+		[[Vector2i(0, 0), DungeonMap.S], [Vector2i(0, 1), DungeonMap.N]],   # W
+	]
+	for c: Vector2i in map.cells:
+		for d in 4:
+			var type := map.edge_type(c, d)
+			if type == DungeonMap.OPEN or type == DungeonMap.NONE:
+				continue
+			# La pared falsa no cuenta: al hundirse, el pilar cierra la esquina.
+			if type == DungeonMap.DOOR and map.is_secret(DungeonMap.edge_key(c, d)):
+				continue
+			for e: Array in ends[d]:
+				var v: Vector2i = c + e[0]
+				attached[v] = attached.get(v, 0) | (1 << int(e[1]))
+	# Casillas a los dos lados del medio borde que sale de un vértice hacia cada dirección.
+	var sides := [
+		[Vector2i(0, -1), Vector2i(-1, -1)],   # N
+		[Vector2i(0, 0), Vector2i(0, -1)],     # E
+		[Vector2i(0, 0), Vector2i(-1, 0)],     # S
+		[Vector2i(-1, 0), Vector2i(-1, -1)],   # W
+	]
+	for v: Vector2i in attached:
+		var base := Vector3(v.x * t, 0.0, v.y * t)
+		for d in 4:
+			if attached[v] & (1 << d):
+				continue
+			if not (map.has_cell(v + sides[d][0]) or map.has_cell(v + sides[d][1])):
+				continue
+			var n := Vector3(DungeonMap.DIRS[d].x, 0, DungeonMap.DIRS[d].y)
+			var across := n.cross(Vector3.UP)
+			var mid := base + n * k
+			_quad(st, [mid - across * k, mid + across * k, mid + across * k + Vector3.UP * h, mid - across * k + Vector3.UP * h],
+					n, func(p: Vector3) -> Vector2: return Vector2(p.dot(across) / t, 1.0 - p.y / h))
 
 
 static func _flat_uv(p: Vector3) -> Vector2:

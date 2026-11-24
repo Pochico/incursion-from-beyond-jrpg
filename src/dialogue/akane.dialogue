@@ -261,7 +261,7 @@ Akane: Hoy no. No me hagas repetirlo.
 
 ~ akane_alarma
 # cuando: alarma
-Akane: ¡¿Qué ha sido eso?! Ha sonado igual que la máquina del fondo la otra noche. Pero mucho más fuerte.
+Akane: ¡¿Qué ha sido eso?! Ha sonado igual que la máquina del fondo la otra noche. Pero mucho más fuerte. [#cara=sorpresa]
 Ren: Algo viene.
 => END
 
@@ -275,7 +275,7 @@ $> Story.set_mood("akane", "irritado", 50)
 
 ~ akane_tras_incursion_pierde
 # cuando: tras_incursion, resultado = pierde
-Akane: ¡Eh! ¡Ren! Abre los ojos... Vale, vale, estás vivo. Esa cosa se ha largado sin más.
+Akane: ¡Eh! ¡Ren! Abre los ojos... Vale, vale, estás vivo. Esa cosa se ha largado sin más. [#cara=sorpresa]
 Ren: Va a volver.
 $> Story.set_mood("akane", "irritado", 50)
 => END
@@ -325,4 +325,255 @@ Akane: Vale.
 Ren: ¿Cómo estás?
 Akane: Cabreada. Si eso vuelve a aparecer, que me pille con algo más que las botas.
 Akane: ...Y tú cuídate. No hagas el idiota.
+=> END
+
+# =====================================================================================
+# DÍAS 2 Y 3, PLANES Y REUNIÓN DE LAS CLOACAS
+# (no dependen de lo que se hablara el primer día)
+# =====================================================================================
+
+~ akane_hablar_charla
+# cuando: hablar, fase = rutina
+%
+	Akane: Mi batería ha roto otro parche. Van tres este mes. Toca como si el tambor le debiera dinero.
+	- ¿Y tú cómo tocas? [#curioso]
+		Akane: Yo toco la guitarra como si me debiera dinero el mundo entero. Es distinto.
+	- Suena a que os va bien. [#cariñoso]
+		Akane: Nos va fatal. Pero suena bien. Que es lo que importa.
+%
+	Akane: Un crío de doce años me ha ganado hoy al de lucha. Doce. Le he dado una ficha gratis por humillarme con tanta elegancia.
+%
+	Akane: ¿Por qué me miras así? ¿Tengo algo en la cara?
+	- Tienes rotulador en la mejilla. [#franco]
+		Akane: ...Mierda. Llevo así todo el turno. Y nadie me ha dicho nada. Eres el único que se atreve.
+		$> Story.change("akane", "confianza", 1)
+	- No, nada. [#reservado]
+		Akane: Vale. Pues deja de mirar. Me pones nerviosa. Bueno, nerviosa no. Me pones... algo.
+=> END
+
+~ akane_hablar_martes
+# cuando: hablar, flag dia_2, no hoy >= 2, fase = rutina
+Akane: Anoche cerré a las dos. A las dos y cinco, la máquina de baile hizo un pitido. Solo uno. Como si me diera las buenas noches.
+- ¿Y te fuiste sin más? [#curioso]
+	Akane: Le di una patada. Suavecita. Y luego me fui. No soy de piedra.
+- Deberías dejar ese trabajo. [#protector]
+	Akane: ¿Y quién me paga el alquiler del local de ensayo? ¿Tú? Ya me imaginaba.
+Akane: Esta tarde igual me paso por Bowls. A patinar. No a veros a vosotros. A patinar.
+=> END
+
+~ akane_hablar_miercoles
+# cuando: hablar, flag dia_3, no hoy >= 2, fase = rutina
+Akane: ¿Te has fijado en que las palomas de Parquesur ya no entran al centro? Antes estaban por todas partes. Ahora se quedan fuera. Mirando.
+- Los animales notan cosas. [#idealista, #curioso]
+	Akane: Eso dice mi abuela. Y mi abuela no se equivoca nunca. Es lo peor que tiene.
+- Será por el frío. [#pragmático]
+	Akane: Ya. El frío. En el centro comercial con calefacción. Muy lógico todo.
+Akane: Esta tarde estoy en las recres. Pásate si quieres. O no. Me da igual. Pásate.
+=> END
+
+~ akane_hablar_plantada_recreativas
+# cuando: hablar, flag plan_invitado:recreativas, no flag plan_hecho:recreativas, no flag dia_2, no flag dia_3, una vez
+Akane: Te guardé la ficha. La de la primera partida gratis. Sigue en el mostrador. Cogiendo polvo.
+- Lo siento, me lié. [#conciliador]
+	Akane: Ya. Todos os liais. La ficha no caduca. Yo sí me canso.
+- Me la guardas otro día. [#desenfadado]
+	Akane: Ya veremos. Depende de lo que tardes.
+	$> Story.change("akane", "afecto", -1)
+- Me puse malo. Me quedé en casa todo el día. [#miente=dia_3, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿Malo? Pero si te vi por ahí ese día, Ren. Tan pancho.
+		% {{Story.lie_witness()}}: Uf. No me metáis en esto... Vale, sí: le vi en la calle. No estaba en casa.
+		% {{Story.lie_witness()}}: Perdona, Ren, pero no. Ese día estuviste conmigo. No voy a mentir por ti.
+		Akane: Ya. Malo. (Escupe el chicle.) No me tomes por tonta, Ren. Lo odio.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad, estaba fatal. Le vi yo. Daba pena.
+		% {{Story.lie_witness()}}: (Te mira un segundo de más.) Sí, sí. Hecho polvo estaba. Pobrecito.
+		% {{Story.lie_witness()}}: Doy fe. Parecía un zombi. Un zombi con fiebre.
+		Akane: Vale. Si lo dice {{Story.lie_witness()}}, me lo creo. A ti solo, no tanto.
+	else
+		Akane: Pues cuídate. Y la próxima avisa, que no soy adivina.
+=> END
+
+~ akane_hablar_tras_recreativas
+# cuando: hablar, flag plan_hecho:recreativas, una vez, no hoy >= 2
+if Story.flag("akane_tabla_vista")
+	Akane: La tabla de la máquina de baile ha cambiado otra vez. Ahora pone REN dos veces. Arriba y abajo.
+	Akane: He tapado la pantalla con una sábana. Como en las películas. No ha servido de nada, pero me siento mejor.
+else
+	Akane: El otro día en las recres no estuviste mal. Para ser tú.
+	Akane: Si vuelves, la segunda partida va por ti. Que no se diga que no soy justa.
+=> END
+
+~ akane_hablar_reunion
+# cuando: hablar, fase >= reunion, una vez
+Akane: Oye. Lo de las Cloacas. Que conste que fui porque Rika no paraba de mandar audios. No porque me importe.
+Akane: ...Vale, me importa. Pero no lo digas en el grupo.
+- No diré nada. [#cariñoso]
+	Akane: Bien. Ni a Kenji, que lo pone en una canción.
+	$> Story.change("akane", "confianza", 2)
+- Me alegro de que vinieras. [#franco]
+	Akane: Ya. Yo también. Un poco.
+	$> Story.change("akane", "afecto", 2)
+- Lo voy a poner en el grupo ahora mismo. [#bromista, #provocador]
+	Akane: Hazlo y te hago tragar el móvil. Con funda.
+Akane: Cuando entremos en La Torre, voy delante. No es negociable.
+=> END
+
+~ akane_hablar_tras_reunion
+# cuando: hablar, fase >= reunion, no hoy >= 2
+%
+	Akane: He ido a ver la puerta de servicio de La Torre. Entornada. Como siempre. Le he puesto un trozo de chicle en la bisagra. Por si alguien la mueve.
+%
+	Akane: He escrito una canción sobre las Cloacas. Se llama «Huele a hierro». Es la mejor que he hecho. Y la más corta.
+%
+	Akane: Si vas a entrar en La Torre, avísame. Regla uno. No me hagas repetirla.
+=> END
+
+~ akane_movil_reunion
+# cuando: movil, fase >= reunion, sabe incursion_1
+Ren: ¿Estás en el turno?
+Akane: Sí. Con el jefe. Y con la barra de hierro. Todo bajo control.
+Akane: No escribas tanto. ...Bueno, escribe.
+=> END
+
+# --- Citas y parejas (Romance) ----------------------------------------------------
+
+~ akane_cita_acepta
+# cuando: cita_pide, resultado = acepta
+if Story.partner("akane") == "ren"
+	Akane: ¿Otra? Vale. {{Story.date_place()}}. Y esta vez pierdes tú.
+else
+	Akane: ¿Una cita? (Se ríe por la nariz.) Vale. Me gusta la gente que pregunta sin rodeos.
+	Akane: {{Story.date_place()}}. Si te rajas, me entero.
+=> END
+
+~ akane_cita_animo
+# cuando: cita_pide, resultado = animo
+Akane: Hoy no. Hoy le pego a alguien y prefiero que no seas tú.
+=> END
+
+~ akane_cita_gustos
+# cuando: cita_pide, resultado = gustos
+Akane: ¿{{Story.date_place()}}? ¿Qué soy, tu tía? No.
+Akane: {{Story.favourite_place("akane")}}. Ahí sí me tendrías.
+=> END
+
+~ akane_cita_afecto
+# cuando: cita_pide, resultado = afecto
+Akane: No. Pero me ha gustado que tengas huevos de preguntar.
+=> END
+
+~ akane_cita
+# cuando: cita
+if Story.partner("akane") == "ren"
+	Akane te espera apoyada en la pared, con una bolsa de patatas abierta y tu nombre escrito en ella con rotulador.
+	Akane: Para que nadie me las quite. Son tuyas también, por cierto. Las de abajo.
+else
+	Akane llega con la chaqueta de cuero mojada y cara de haber venido corriendo.
+	Akane: No he corrido. Estaba entrenando. Es diferente.
+if Story.date_taste("akane") > 0
+	Akane: Buen sitio. Tú sabes lo que me gusta, ¿eh? Eso es peligroso.
+elif Story.date_taste("akane") < 0
+	Akane: El sitio es una mierda. Pero has venido. Eso cuenta.
+- Te reto. A lo que quieras. [#atrevido, #provocador]
+	Akane: (Le brillan los ojos.) Ahora sí estamos hablando.
+	Perdéis la noción del tiempo. Gana ella. Siempre gana ella.
+	$> Story.change("akane", "respeto", 3)
+- Me gusta cómo eres. Sin postureo. [#franco]
+	Akane: (Se encoge de hombros, pero se le escapa una sonrisa.) Ya. A mí también me gusta cómo eres tú.
+	$> Story.change("akane", "afecto", 3)
+- ¿Estás bien? Pareces cansada. [#protector]
+	Akane: No me trates como si fuera de cristal, Ren.
+	Akane: ...Pero sí. Estoy cansada. Gracias por notarlo.
+	$> Story.change("akane", "confianza", 2)
+if Story.partner("akane") != "ren" and Story.can_be_partner("akane")
+	Akane: Ren. Sin rodeos, que no me van. ¿Vamos en serio o no?
+	- Vamos en serio. [#franco, #decidido]
+		Akane: Bien. Pues ya está. Ahora eres mío. Que lo sepa todo el mundo.
+		$> Story.become_partner("akane")
+	- Déjame pensarlo. [#dubitativo]
+		Akane: Piensa rápido. No me gusta esperar.
+	- Prefiero que sigamos así. [#prudente]
+		Akane: Vale. Sin dramas.
+		$> Story.change("akane", "afecto", -2)
+Akane: La próxima me la pago yo. No discutas.
+=> END
+
+~ akane_deja_a_ren
+# cuando: deja_a_ren
+Akane te espera en la puerta del portal. Lleva ahí un rato, por cómo tiene las manos.
+if Story.dump_reason() == "infiel"
+	Akane: Ya lo sé. No me lo cuentes, que no soy idiota.
+	Akane: Odio a los chivatos, pero odio más a la gente que se esconde. Se acabó, Ren.
+elif Story.dump_reason() == "descuido"
+	Akane: Te he estado esperando. Días. Yo, esperando. ¿Sabes lo que me cuesta?
+	Akane: No soy un mueble. Lo dejamos.
+else
+	Akane: Esto no va. Lo sabes tú y lo sé yo. Prefiero decirlo antes de que se pudra.
+	Akane: Lo dejamos.
+Se da la vuelta y se va sin mirar atrás. Es muy buena en eso.
+=> END
+
+~ akane_hablar_pareja
+# cuando: hablar, flag pareja_akane, no hoy >= 2
+% Akane: Eh. Tú. Mi novio. (Lo dice como un reto.)
+% Akane: He sacado tu nombre en la máquina de baile. Esta vez lo he puesto yo.
+% Akane: Kenji me ha preguntado si vamos en serio. Le he dicho que sí y se ha asustado. Me ha encantado.
+- Me alegro de verte. [#cariñoso]
+	Akane: Ya. Y yo. No hace falta decirlo todo, ¿eh?
+	$> Story.change("akane", "afecto", 2)
+- Akane, creo que deberíamos dejarlo. [#franco]
+	Akane: (Aprieta la mandíbula.) Vale. Al menos me lo dices a la cara. Eso te lo respeto.
+	Akane: Ahora lárgate un rato.
+	$> Story.break_up_with("akane")
+- Luego te veo. [#evasivo]
+	Akane: Luego. Siempre luego.
+	$> Story.change("akane", "afecto", -1)
+=> END
+
+~ akane_hablar_ex
+# cuando: hablar, flag ex_akane, una vez
+Akane: Ni me mires así. Estoy bien. Siempre estoy bien.
+Akane: Si quieres echar una partida, echamos una partida. Lo otro, de momento, no.
+=> END
+
+
+# --- Mentiras y secretos (Lies) -----------------------------------------------------
+
+~ akane_hablar_sospecha
+# cuando: hablar, flag pareja_akane, flag sospecha_akane
+$> Story.set_flag("sospecha_akane", false)
+Akane: Ayer. ¿Dónde. Estabas.
+Akane: Sin rodeos, que no me van.
+- Quedé con alguien. Una cita. Lo siento. [#franco]
+	$> Story.confess("akane")
+	Akane: (Aprieta los puños. Luego los suelta.) Bien. Al menos tienes huevos de decírmelo.
+- En casa. Toda la tarde. Estaba reventado. [#miente=cita, #evasivo]
+	if Story.lie_result() == "delatado"
+		% {{Story.lie_witness()}}: ¿En casa? Ren... te vi quedar. Lo siento, pero no.
+		% {{Story.lie_witness()}}: No me miréis así. Yo le vi salir con alguien. No pienso callarme.
+		Akane: (Mira a {{Story.lie_witness()}}, que no te cubre.) ¿En casa? No me tomes por tonta, Ren.
+	elif Story.lie_result() == "cubierto"
+		% {{Story.lie_witness()}}: Es verdad. Le escribí y me dijo que estaba muerto en el sofá.
+		% {{Story.lie_witness()}}: Sí, sí, estaba en casa. Le vi el estado del móvil. «Desconectado».
+		Akane: Vale. Me fío. De quien te cubre, más que de ti, pero me fío.
+	else
+		Akane: Vale. Pero si me entero de otra cosa, me entero.
+- Por ahí. ¿Qué más da? [#evasivo, #reservado]
+	Akane: Ya. «Por ahí». Muy bonito.
+	$> Story.change("akane", "confianza", -2)
+=> END
+
+~ akane_hablar_pillado
+# cuando: hablar, flag pillado_akane
+$> Story.set_flag("pillado_akane", false)
+if Story.lied_to("akane")
+	Akane: {{Story.snitch("akane")}} me lo ha contado. Odio a los chivatos. Pero te odio más a ti ahora mismo.
+	Akane: Me mentiste. A mí. A la cara.
+else
+	Akane: Me lo ha contado {{Story.snitch("akane")}}. Podías habérmelo dicho tú. Eso es lo que me jode.
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	$> Story.change("akane", "resentimiento", -3)
+- ¿Y {{Story.snitch("akane")}} qué sabrá? [#provocador]
+	$> Story.change("akane", "confianza", -3)
 => END

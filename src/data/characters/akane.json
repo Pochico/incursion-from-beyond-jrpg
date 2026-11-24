@@ -104,8 +104,12 @@
 
 	"gear": {"arma": "Botas con puntera", "accesorio": "Muñequera de pinchos", "modulo": ""},
 	"combat": {
-		"level": 15, "pv": 250, "pm": 85, "attack": "Patada de pogo", "damage": 38,
+		"level": 1, "attack": "Patada de pogo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 26, "TEC": 16, "INT": 14, "VOL": 18, "RES": 22, "AGI": 24}
+		"stats": {"FUE": 13, "TEC": 8, "INT": 8, "VOL": 10, "RES": 11, "AGI": 12}
+	},
+
+	"citas": {
+		"lugares": {"galeria": 15, "cloacas": 10, "parque": 5, "campus": -10, "plaza": 0}
 	}
 }

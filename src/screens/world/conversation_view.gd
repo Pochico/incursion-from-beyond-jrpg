@@ -14,6 +14,14 @@ extends Control
 ## Si habla alguien que no está en el retrato de la derecha (escenas con varios
 ## personajes), su retrato pasa a ocupar ese lugar.
 ##
+## Gestos: el retrato de la derecha cambia de cara (CharacterDB `faces`) con un
+## fundido breve. Manda, por este orden:
+##   1. una etiqueta en la línea: `Rika: ¿Desde cuándo? [#cara=sorpresa]`
+##      (`[#cara=normal]` fuerza la cara normal), solo para esa línea;
+##   2. su reacción a la última opción de Ren (si le ha sentado mal, enfado; si
+##      le ha dado miedo, sorpresa), durante sus REACTION_LINES líneas siguientes;
+##   3. su ánimo, si es intenso (MOOD_FACES).
+##
 ## Para encadenar guiones sin cerrar la vista (p. ej. un evento que interrumpe
 ## la charla), usar `keep_open`; `stop_after` corta el guion de golpe.
 
@@ -32,6 +40,23 @@ const AUTO_DELAY := 1.4
 const SPEAKING_DIM := 0.0
 const LISTENING_DIM := 0.55
 
+## Gestos con retrato propio (ver CharacterDB `faces`). Vacío = cara normal.
+const FACES: Array[String] = ["enfado", "sorpresa", "incomodo"]
+const FACE_TAG := "cara"
+## Si el personaje no tiene ese gesto, prueba con este antes de la cara normal.
+const FACE_FALLBACK := {"sorpresa": "incomodo"}
+const FACE_MOTION := {
+	"enfado": CharacterSprite.Motion.SHAKE,
+	"sorpresa": CharacterSprite.Motion.HOP,
+}
+## Ánimo → gesto, a partir de MOOD_FACE_INTENSITY.
+const MOOD_FACES := {"irritado": "enfado", "ansioso": "incomodo", "triste": "incomodo"}
+const MOOD_FACE_INTENSITY := 45
+## Cuánto tiene que sentarle mal (o asustarle) una opción para que se le note
+## (ver Social.displeasure) y durante cuántas de sus líneas.
+const REACTION_MIN := 2.0
+const REACTION_LINES := 2
+
 @onready var _left: CharacterSprite = %LeftPortrait
 @onready var _right: CharacterSprite = %RightPortrait
 @onready var _box: DialogueBox = %Box
@@ -46,6 +71,9 @@ var _npc_id := ""
 var _right_id := ""
 var _has_protagonist := false
 var _pending_choices: Array = []
+var _right_face := ""
+## Reacciones en curso: id → {face, lines}.
+var _reactions := {}
 var _open := false
 
 
@@ -89,7 +117,8 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 	var shown := 0
 	while line != null:
 		var choices := _choices_from(line)
-		_show_line({"who": _speaker_id(line.character), "text": line.text.replace(PERSON_PLACEHOLDER, Story.persona_name()), "choices": choices})
+		_show_line({"who": _speaker_id(line.character), "text": line.text.replace(PERSON_PLACEHOLDER, Story.persona_name()),
+				"choices": choices, "face": line.get_tag_value(FACE_TAG)})
 		shown += 1
 		if stop_after > 0 and shown >= stop_after and choices.is_empty():
 			if _state == State.TYPING:
@@ -105,8 +134,12 @@ func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 			if choice.has("persona"):
 				Story.persona = choice.persona
 			# Las reacciones van por detrás: no se muestra nada.
-			if _npc_id != "":
-				Social.on_choice(_npc_id, choice)
+			# Sin interlocutor fijo (escenas de grupo), cuenta quien está en el retrato.
+			var target := _npc_id if _npc_id != "" else _right_id
+			if target != "":
+				_react(Social.on_choice(target, choice))
+				if choice.has("lie"):
+					Lies.tell(target, choice.lie)
 			next_id = choice.next_id
 		else:
 			await _line_done
@@ -136,11 +169,14 @@ func _choices_from(line: DialogueLine) -> Array:
 		var mentions: Array[String] = []
 		var per_person := Social.PERSON_TAG in r.tags
 		var filters: Array[String] = []
+		var lie := ""
 		for tag: String in r.tags:
 			if tag == Social.PERSON_TAG:
 				continue
 			if per_person and Social.is_person_filter(tag):
 				filters.append(tag)
+			elif tag.begins_with(Lies.TAG + "="):
+				lie = tag.get_slice("=", 1)
 			elif tag.begins_with(Social.MENTION_TAG + "="):
 				for who in tag.get_slice("=", 1).split("|", false):
 					if not who in mentions:
@@ -159,8 +195,11 @@ func _choices_from(line: DialogueLine) -> Array:
 				out.append({"text": r.text.replace(PERSON_PLACEHOLDER, CharacterDB.display_name(who)),
 					"next_id": r.next_id, "styles": styles, "stance": stance, "mentions": m, "persona": who})
 			continue
-		out.append({"text": r.text.replace(PERSON_PLACEHOLDER, Story.persona_name()), "next_id": r.next_id,
-			"styles": styles, "stance": stance, "mentions": mentions})
+		var choice := {"text": r.text.replace(PERSON_PLACEHOLDER, Story.persona_name()), "next_id": r.next_id,
+			"styles": styles, "stance": stance, "mentions": mentions}
+		if lie != "":
+			choice["lie"] = lie   # [#miente=tema]: ver Lies
+		out.append(choice)
 	return out
 
 
@@ -180,8 +219,53 @@ func _setup_portraits() -> void:
 	_left.texture = CharacterDB.portrait(CharacterDB.PROTAGONIST) if _has_protagonist else null
 	_left.visible = _has_protagonist
 	_right_id = _npc_id
-	_right.texture = CharacterDB.portrait(_npc_id) if _npc_id != "" else null
+	_right_face = _face_for(_npc_id)
+	CharacterDB.preload_faces(_npc_id)
+	_right.texture = CharacterDB.portrait(_npc_id, _right_face) if _npc_id != "" else null
 	_right.visible = _npc_id != ""
+
+
+## Gesto que toca para `who` ahora: el de la línea, su reacción o su ánimo.
+func _face_for(who: String, line_face: String = "") -> String:
+	if who == "" or line_face == "normal":
+		return ""
+	var face := line_face
+	if face == "" and _reactions.has(who):
+		face = _reactions[who].face
+	if face == "":
+		var m := Social.mood(who)
+		if m.intensity >= MOOD_FACE_INTENSITY:
+			face = MOOD_FACES.get(m.id, "")
+	if face != "" and not CharacterDB.has_face(who, face):
+		face = FACE_FALLBACK.get(face, "")
+		if not CharacterDB.has_face(who, face):
+			face = ""
+	return face
+
+
+## Pone al de la derecha la cara que le toca; si cambia, con transición.
+func _refresh_face(line_face: String = "") -> void:
+	if _right_id == "":
+		return
+	var face := _face_for(_right_id, line_face)
+	if face == _right_face:
+		return
+	_right_face = face
+	_right.change_texture(CharacterDB.portrait(_right_id, face), FACE_MOTION.get(face, CharacterSprite.Motion.NONE))
+
+
+## Tras una opción de Ren: a quien le ha sentado mal o le ha asustado se le nota.
+func _react(reactions: Dictionary) -> void:
+	for who: String in reactions:
+		var deltas: Dictionary = reactions[who]
+		var face := ""
+		if deltas.get("miedo", 0.0) >= REACTION_MIN:
+			face = "sorpresa"
+		elif Social.displeasure(deltas) >= REACTION_MIN:
+			face = "enfado"
+		if face != "":
+			_reactions[who] = {"face": face, "lines": REACTION_LINES}
+	_refresh_face()
 
 
 func _focus_speaker(who: String) -> void:
@@ -235,6 +319,7 @@ func _animate_out() -> void:
 	await t.finished
 	visible = false
 	_open = false
+	_reactions.clear()
 
 
 # --- Líneas ----------------------------------------------------------------------
@@ -250,8 +335,17 @@ func _show_line(line: Dictionary) -> void:
 			and CharacterDB.portrait(who) != null:
 		# Interviene otro personaje de la escena: ocupa el retrato de la derecha.
 		_right_id = who
-		_right.texture = CharacterDB.portrait(who)
+		# Entra con su cara de fondo; el gesto de la línea, con su transición.
+		_right_face = _face_for(who)
+		CharacterDB.preload_faces(who)
+		_right.texture = CharacterDB.portrait(who, _right_face)
 		_right.visible = true
+	# La etiqueta [#cara=…] es de quien habla; el que escucha sigue con la suya.
+	_refresh_face(line.get("face", "") if who == _right_id else "")
+	if _reactions.has(who):
+		_reactions[who].lines -= 1
+		if _reactions[who].lines <= 0:
+			_reactions.erase(who)
 	_focus_speaker(who)
 
 	var label := _box.get_text_label()

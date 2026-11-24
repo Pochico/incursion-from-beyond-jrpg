@@ -65,7 +65,7 @@ open_phone={
 
 [internationalization]
 
-locale/translations_pot_files=PackedStringArray("res://src/dialogue/rika.dialogue", "res://src/dialogue/akane.dialogue", "res://src/dialogue/shiori.dialogue", "res://src/dialogue/kenji.dialogue", "res://src/dialogue/general.dialogue", "res://src/dialogue/capitulo1.dialogue", "res://src/dialogue/yuna.dialogue", "res://src/dialogue/madre_ren.dialogue")
+locale/translations_pot_files=PackedStringArray("res://src/dialogue/rika.dialogue", "res://src/dialogue/akane.dialogue", "res://src/dialogue/shiori.dialogue", "res://src/dialogue/kenji.dialogue", "res://src/dialogue/general.dialogue", "res://src/dialogue/capitulo1.dialogue", "res://src/dialogue/yuna.dialogue", "res://src/dialogue/madre_ren.dialogue", "res://src/dialogue/mazmorra.dialogue")
 locale/fallback="es"
 
 [rendering]

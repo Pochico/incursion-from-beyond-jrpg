@@ -6,14 +6,22 @@ extends RefCounted
 ## en px (base 1080). La posición horizontal depende de cuántos personajes haya
 ## en la ubicación (ver LocationDB `cast`).
 ##
-## `combat` son valores PROVISIONALES para el prototipo de combate (no son
-## balance definitivo): nivel, PV/PM, nombre del ataque y daño que causa.
-## `items` = objetos que lleva el personaje en combate.
-## `stats` = atributos de docs/diseno/habilidades_1.md (FUE, TEC, INT, VOL, RES, AGI),
-## usados por las fórmulas de SkillDB. `skills` = IDs de SkillDB que puede usar.
+## `combat` (PROVISIONAL, pendiente de prueba de combate):
+##   level  : nivel (1..60). Todos empiezan en el 1.
+##   stats  : atributos FUE, TEC, INT, VOL, RES (y AGI, aún sin uso). Referencia
+##            de diseño: 10 + floor((nivel − 1) / 2).
+##   attack : nombre del ataque básico (0,75 × D con FUE contra RES).
+##   skills : IDs de SkillDB. items: objetos que lleva en combate.
+##   tags   : etiquetas de compatibilidad (SkillDB.NATURE_TAGS); si no hay, las
+##            de su naturaleza.
+##   pv_mult: solo enemigos; multiplica sus PV (luchan solos contra el grupo).
+## PV = 100 + 10·nivel + 5·RES y PM = 35 + 3·nivel + 2·max(INT, VOL) (SkillDB).
 ##
 ## Los enemigos (`enemy: true`) no aparecen en escenarios: surgen en eventos.
 ## `battle_rect` = rectángulo de su imagen dentro del visor de combate.
+##
+## `faces` = retratos alternativos por gesto (ver ConversationView.FACES): el
+## de `portrait` es el normal. Si falta un gesto, se usa el normal.
 ##
 ## Ficha de personalidad: `src/data/characters/<id>.json` (ver
 ## docs/diseno/personajes_y_relaciones.md). Si la ficha trae `combat`, sustituye
@@ -30,32 +38,35 @@ const ALL := {
 		"nature": "biological",
 		"gear": {"arma": "Cúter retráctil", "accesorio": "Auriculares rotos", "modulo": ""},
 		"bio": "Estudia en el instituto de Leganés, última fila junto a la ventana. Lleva semanas viviendo en piloto automático: clase, pantalla, cama. Kenji es el único que sigue insistiendo en sacarlo de casa.",
-		"combat": {"level": 14, "pv": 282, "pm": 112, "pm_now": 86,
-			"attack": "Corte rápido", "damage": 42, "variance": 6,
-			"stats": {"FUE": 24, "TEC": 14, "INT": 14, "VOL": 16, "RES": 20, "AGI": 22},
-			"skills": ["bio_impulso_organico", "bio_regeneracion_celular"]},
+		"combat": {"level": 1, "attack": "Corte rápido",
+			"stats": {"FUE": 12, "TEC": 9, "INT": 9, "VOL": 10, "RES": 11, "AGI": 12},
+			"skills": ["BIO-03", "bio_impulso_organico", "BIO-04", "BIO-05"]},
 	},
 	"kenji": {
 		"name": "Kenji", "color": Color("27d8ff"),
 		"portrait": "res://assets/characters/kenji.png",
+		"faces": {"enfado": "res://assets/characters/kenji_enfado.png", "sorpresa": "res://assets/characters/kenji_sorpresa.png"},
 		"scene": {"height": 740.0},
 		# Combate y personalidad: src/data/characters/kenji.json
 	},
 	"shiori": {
 		"name": "Shiori", "color": Color("b46bff"),
 		"portrait": "res://assets/characters/shiori.png",
+		"faces": {"enfado": "res://assets/characters/shiori_enfado.png", "sorpresa": "res://assets/characters/shiori_sorpresa.png"},
 		"scene": {"height": 660.0},
 		# Combate y personalidad: src/data/characters/shiori.json
 	},
 	"akane": {
 		"name": "Akane", "color": Color("ff3d5a"),
 		"portrait": "res://assets/characters/akane.png",
+		"faces": {"enfado": "res://assets/characters/akane_enfado.png", "sorpresa": "res://assets/characters/akane_sorpresa.png"},
 		"scene": {"height": 770.0},
 		# Combate y personalidad: src/data/characters/akane.json
 	},
 	"rika": {
 		"name": "Rika", "color": Color("ff7ad9"),
 		"portrait": "res://assets/characters/rika.png",
+		"faces": {"enfado": "res://assets/characters/rika_enfado.png", "sorpresa": "res://assets/characters/rika_sorpresa.png"},
 		"scene": {"height": 780.0},
 		# Combate y personalidad: src/data/characters/rika.json
 	},
@@ -63,6 +74,7 @@ const ALL := {
 	"yuna": {
 		"name": "Yuna", "color": Color("c58cf0"),
 		"portrait": "res://assets/characters/yuna.png",
+		"faces": {"enfado": "res://assets/characters/yuna_enfado.png", "incomodo": "res://assets/characters/yuna_incomodo.png"},
 		"face": Rect2(400, 140, 420, 420),
 		"scene": {"height": 780.0},
 	},
@@ -88,9 +100,9 @@ const ALL := {
 		"nature": "digital",
 		"portrait": "res://assets/enemies/tiranosaurio_mutante.png",
 		"battle_rect": Rect2(380, 190, 1020, 600),
-		"combat": {"level": 16, "pv": 400, "pm": 50, "attack": "Dentellada", "damage": 36, "variance": 6,
-			"stats": {"FUE": 30, "TEC": 20, "INT": 18, "VOL": 10, "RES": 28, "AGI": 14},
-			"skills": ["dig_corrupcion_datos", "dig_depuracion"]},
+		"combat": {"level": 1, "pv_mult": 1.6, "boss": true, "attack": "Dentellada",
+			"stats": {"FUE": 13, "TEC": 10, "INT": 11, "VOL": 8, "RES": 12, "AGI": 8}, "tags": ["datos", "electronica", "materia", "vision", "oido"],
+			"skills": ["dig_corrupcion_datos", "CYBER-03", "dig_depuracion"]},
 	},
 	"oni": {
 		"name": "Oni", "color": Color("ff5a36"), "enemy": true,
@@ -98,27 +110,28 @@ const ALL := {
 		"portrait": "res://assets/enemies/oni.png",
 		# Más alto que el visor: se le cortan los pies.
 		"battle_rect": Rect2(600, 150, 400, 740),
-		"combat": {"level": 15, "pv": 340, "pm": 70, "attack": "Zarpazo", "damage": 30, "variance": 5,
-			"stats": {"FUE": 18, "TEC": 10, "INT": 16, "VOL": 20, "RES": 22, "AGI": 20},
-			"skills": ["mis_manifestacion_arcana", "mis_marca_funesta"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Zarpazo",
+			"stats": {"FUE": 11, "TEC": 7, "INT": 9, "VOL": 12, "RES": 11, "AGI": 10}, "tags": ["tejido", "materia", "mente", "vision", "oido"],
+			"skills": ["mis_manifestacion_arcana", "ARQ-05", "ARQ-01"]},
 	},
 	"engendro": {
 		"name": "Engendro", "color": Color("ff4a1c"), "enemy": true,
-		"nature": "biological",
+		"nature": "psychic",
 		"portrait": "res://assets/enemies/engendro.png",
 		"battle_rect": Rect2(510, 150, 560, 740),
-		"combat": {"level": 15, "pv": 380, "pm": 60, "attack": "Zarpa larga", "damage": 34, "variance": 6,
-			"stats": {"FUE": 28, "TEC": 8, "INT": 8, "VOL": 12, "RES": 26, "AGI": 18},
-			"skills": ["bio_impulso_organico", "bio_secrecion_caustica"]},
+		# Psíquico: una manifestación de la rabia. Tiene cuerpo, pero no tejido vivo.
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Zarpa larga",
+			"stats": {"FUE": 11, "TEC": 6, "INT": 6, "VOL": 13, "RES": 11, "AGI": 9}, "tags": ["materia", "mente", "vision", "oido"],
+			"skills": ["psi_choque_mental", "psi_disonancia", "PSY-02"]},
 	},
 	"turbina": {
 		"name": "Turbina", "color": Color("4d8dff"), "enemy": true,
 		"nature": "mechanical",
 		"portrait": "res://assets/enemies/turbina.png",
 		"battle_rect": Rect2(420, 170, 760, 620),
-		"combat": {"level": 15, "pv": 360, "pm": 55, "attack": "Tijeretazo", "damage": 32, "variance": 5,
-			"stats": {"FUE": 24, "TEC": 26, "INT": 14, "VOL": 8, "RES": 30, "AGI": 26},
-			"skills": ["mec_impacto_cinetico", "mec_proyeccion_fragmentos"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Tijeretazo",
+			"stats": {"FUE": 11, "TEC": 12, "INT": 8, "VOL": 6, "RES": 13, "AGI": 12},
+			"skills": ["mec_impacto_cinetico", "MECH-04", "MECH-01"]},
 	},
 	# Mecánico: torreta cuadrúpeda.
 	"crawler": {
@@ -126,9 +139,9 @@ const ALL := {
 		"nature": "mechanical",
 		"portrait": "res://assets/enemies/crawler.png",
 		"battle_rect": Rect2(370, 130, 720, 650),
-		"combat": {"level": 15, "pv": 370, "pm": 55, "attack": "Cañonazo", "damage": 33, "variance": 6,
-			"stats": {"FUE": 22, "TEC": 28, "INT": 12, "VOL": 8, "RES": 30, "AGI": 14},
-			"skills": ["mec_impacto_cinetico", "mec_proyeccion_fragmentos"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Cañonazo",
+			"stats": {"FUE": 10, "TEC": 13, "INT": 8, "VOL": 6, "RES": 13, "AGI": 7},
+			"skills": ["mec_proyeccion_fragmentos", "CYBER-02", "MECH-05"]},
 	},
 	# ARQ: esqueleto rastrero con cola de demonio.
 	"imp": {
@@ -136,19 +149,20 @@ const ALL := {
 		"nature": "mystic",
 		"portrait": "res://assets/enemies/imp.png",
 		"battle_rect": Rect2(440, 80, 580, 720),
-		"combat": {"level": 15, "pv": 320, "pm": 70, "attack": "Garra hueca", "damage": 31, "variance": 5,
-			"stats": {"FUE": 20, "TEC": 10, "INT": 14, "VOL": 18, "RES": 18, "AGI": 26},
-			"skills": ["mis_manifestacion_arcana", "mis_marca_funesta"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Garra hueca",
+			"stats": {"FUE": 10, "TEC": 7, "INT": 9, "VOL": 11, "RES": 9, "AGI": 13}, "tags": ["materia", "mente", "vision"],
+			"skills": ["mis_marca_funesta", "ARQ-04", "ARQ-07"]},
 	},
 	# ARQ: querubín cabeza abajo con un ojo en el vientre. Flota.
 	"querubin": {
 		"name": "Querubín", "color": Color("f2d27a"), "enemy": true,
 		"nature": "mystic",
 		"portrait": "res://assets/enemies/querubin.png",
+		"hover": 0.7,   # vuela: metros sobre el suelo en la mazmorra
 		"battle_rect": Rect2(520, 40, 600, 660),
-		"combat": {"level": 15, "pv": 330, "pm": 80, "attack": "Flechazo", "damage": 30, "variance": 6,
-			"stats": {"FUE": 14, "TEC": 18, "INT": 20, "VOL": 24, "RES": 16, "AGI": 22},
-			"skills": ["mis_manifestacion_arcana", "mis_marca_funesta"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Flechazo",
+			"stats": {"FUE": 8, "TEC": 9, "INT": 11, "VOL": 13, "RES": 9, "AGI": 11}, "tags": ["tejido", "materia", "mente", "vision", "oido"],
+			"skills": ["mis_manifestacion_arcana", "ARQ-06", "ARQ-08"]},
 	},
 	# Digital: caballo de Troya hecho de cables y glitch.
 	"troyano": {
@@ -156,9 +170,9 @@ const ALL := {
 		"nature": "digital",
 		"portrait": "res://assets/enemies/troyano.png",
 		"battle_rect": Rect2(330, 100, 780, 700),
-		"combat": {"level": 15, "pv": 360, "pm": 65, "attack": "Coz corrupta", "damage": 34, "variance": 6,
-			"stats": {"FUE": 24, "TEC": 22, "INT": 20, "VOL": 10, "RES": 22, "AGI": 22},
-			"skills": ["dig_corrupcion_datos", "dig_depuracion"]},
+		"combat": {"level": 1, "pv_mult": 1.5, "attack": "Coz corrupta",
+			"stats": {"FUE": 11, "TEC": 12, "INT": 11, "VOL": 7, "RES": 11, "AGI": 11}, "tags": ["datos", "electronica", "materia", "vision"],
+			"skills": ["dig_corrupcion_datos", "CYBER-02", "CYBER-01"]},
 	},
 }
 
@@ -249,8 +263,19 @@ static func display_name(id: String) -> String:
 	return get_character(id).get("name", "")
 
 
+## Altura (m) a la que flota una criatura voladora en la mazmorra; 0 = de pie.
+static func hover(id: String) -> float:
+	return float(get_character(id).get("hover", 0.0))
+
+
 static func color(id: String) -> Color:
 	return get_character(id).get("color", UIStyle.WHITE)
+
+
+## Etiquetas de compatibilidad en combate (ver SkillDB.NATURE_TAGS).
+static func combat_tags(id: String) -> Array:
+	var data := get_character(id)
+	return SkillDB.tags_for(data.get("combat", {}), data.get("nature", ""))
 
 
 static func is_enemy(id: String) -> bool:
@@ -272,8 +297,30 @@ static func face_region(id: String) -> Rect2:
 static var _portraits := {}
 
 
-static func portrait(id: String) -> Texture2D:
-	if not _portraits.has(id):
-		var path: String = get_character(id).get("portrait", "")
-		_portraits[id] = load(path) if path != "" else null
-	return _portraits[id]
+## `face`: gesto ("enfado", "sorpresa", "incomodo"…); vacío o sin retrato
+## para ese gesto = el normal.
+static func portrait(id: String, face: String = "") -> Texture2D:
+	var path: String = get_character(id).get("faces", {}).get(face, "")
+	if path == "":
+		path = get_character(id).get("portrait", "")
+	if not _portraits.has(path):
+		if path == "":
+			_portraits[path] = null
+		elif ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_portraits[path] = ResourceLoader.load_threaded_get(path)   # ver preload_faces
+		else:
+			_portraits[path] = load(path)
+	return _portraits[path]
+
+
+## Empieza a cargar en segundo plano los gestos de `id`, para que el primer
+## cambio de cara no dé un tirón (sobre todo en el móvil).
+static func preload_faces(id: String) -> void:
+	for path: String in get_character(id).get("faces", {}).values():
+		if not _portraits.has(path) and not ResourceLoader.has_cached(path):
+			ResourceLoader.load_threaded_request(path)
+
+
+## ¿Tiene `id` retrato para el gesto `face`?
+static func has_face(id: String, face: String) -> bool:
+	return get_character(id).get("faces", {}).has(face)

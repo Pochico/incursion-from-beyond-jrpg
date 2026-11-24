@@ -42,11 +42,13 @@ var backdrop_override: Texture2D
 var _actor := Battle.PLAYER       # miembro del grupo al que le toca elegir
 var _state := State.IDLE
 var _enemy_id := ""
+var _pending_item := ""       ## objeto elegido mientras se escoge sobre quién usarlo
 var _current_command := 0
 var _info_text := ""
 var _log_text := ""             # última acción del combate (registro)
 var _result_text := ""
-var _result_sub := ""       ## Línea bajo VICTORIA (dinero ganado)
+var _result_sub := ""       ## Línea bajo VICTORIA (dinero y EXP ganados)
+var _result_levels := ""    ## Subidas de nivel, debajo
 var _result_color := UIStyle.LIME
 var _result_t := 0.0
 
@@ -172,15 +174,20 @@ const DEFAULT_ENEMY_SIZE := Vector2(560, 600)
 
 ## Prepara el combate contra `enemy_id` y lo hace visible (sin dar el control).
 ## Con `ally_id`, un compañero lucha junto al protagonista; `ally_skills`
-## sustituye sus habilidades.
-func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = []) -> void:
+## sustituye sus habilidades. `vitals` (Battle.party_vitals) = PV y PM con los
+## que empieza el grupo (vacío = al máximo); al acabar, `party_vitals()`.
+## `enemy_level` > 0 fija el nivel de la criatura (ver ProgressionDB).
+func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vitals: Dictionary = {},
+		enemy_level: int = 0) -> void:
 	_enemy_id = enemy_id
-	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id, ally_id, ally_skills)
+	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id, ally_id, ally_skills, enemy_level)
+	_battle.set_party_vitals(vitals, 1)
 	_actor = Battle.PLAYER
 	_state = State.IDLE
 	_tension_shown = 0.0
 	_result_text = ""
 	_result_sub = ""
+	_result_levels = ""
 	_result_t = 0.0
 	_slash_t = -1.0
 	_banner_text = ""
@@ -228,12 +235,18 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = []) -> v
 	_fx.queue_redraw()
 
 
+## PV y PM del grupo al terminar (ver `setup`).
+func party_vitals() -> Dictionary:
+	return _battle.party_vitals() if _battle else {}
+
+
 ## Da el control al jugador. El resultado llega por la señal `finished(player_won)`.
 func begin() -> void:
 	# Pequeño margen para que las pulsaciones de Enter con las que se avanzaba
 	# el diálogo previo no ejecuten una acción sin querer.
 	await get_tree().create_timer(0.3).timeout
-	_enter_command_state(0)
+	_current_command = 0
+	await _prompt()
 
 
 # --- Estados y entrada ---------------------------------------------------------------------
@@ -289,8 +302,10 @@ func _options_for(command_id: String) -> Array:
 	var p := _battle.fighter(_actor)
 	match command_id:
 		"attack":
-			return [{"label": p.attack, "icon": "slash", "action": "attack",
-				"desc": "Ataque básico que inflige daño físico al rival. Daño: %d ± %d." % [p.damage, p.variance]}]
+			var can := _battle.can_attack(_actor)
+			return [{"label": p.attack, "icon": "slash", "action": "attack", "disabled": not can,
+				"desc": ("Ataque básico: golpe físico (FUE contra RES). Daño estimado: ~%d." % _battle.attack_preview(_actor))
+					if can else "Ahora no puede dar golpes físicos."}]
 		"skill":
 			var opts := []
 			for id: String in p.skills:
@@ -300,9 +315,30 @@ func _options_for(command_id: String) -> Array:
 					"desc": "%s no tiene habilidades." % p.name})
 			return opts
 		"item":
-			var n := GameState.item_count("pochicola")
-			return [{"label": "Pochicola  ×%d" % n, "icon": "can", "action": "item:pochicola",
-				"disabled": n <= 0, "desc": ItemDB.description("pochicola") if n > 0 else "No te quedan Pochicolas."}]
+			var opts := []
+			var can_use := _battle.can_use_items(_actor)
+			for id: String in GameState.inventory:
+				var n := GameState.item_count(id)
+				if n <= 0 or not ItemDB.usable_in_combat(id):
+					continue
+				opts.append({"label": "%s  ×%d" % [ItemDB.display_name(id), n], "icon": ItemDB.get_item(id).get("icon", "can"),
+					"action": "item:%s" % id, "disabled": not can_use,
+					"desc": ItemDB.description(id) if can_use else "Fuera del cuerpo no puede coger nada."})
+			if opts.is_empty():
+				opts.append({"label": "Nada", "icon": "can", "disabled": true,
+					"desc": "No llevas nada que sirva en combate."})
+			return opts
+		"item_target":
+			# Tras elegir objeto: sobre quién del grupo (en pie) se usa.
+			var item_id := _pending_item
+			var opts := []
+			for who in _battle.alive_party():
+				var f := _battle.fighter(who)
+				var pm_item: bool = ItemDB.get_item(item_id).get("heal", 0) <= 0
+				opts.append({"label": f.name, "icon": ItemDB.get_item(item_id).get("icon", "can"), "action": "item:%s:%s" % [item_id, who],
+					"desc": "Usar %s con %s (%s)." % [ItemDB.display_name(item_id), f.name,
+						("%d/%d PM" % [f.pm, f.pm_max]) if pm_item else ("%d/%d PV" % [f.pv, f.pv_max])]})
+			return opts
 		"defend":
 			return [{"label": "Guardia", "icon": "shield", "action": "defend",
 				"desc": "Te cubres: el próximo golpe del rival te hará la mitad de daño."}]
@@ -318,22 +354,37 @@ func _options_for(command_id: String) -> Array:
 	return []
 
 
+## Cambia las opciones del comando Objeto por los miembros del grupo.
+func _show_item_targets() -> void:
+	for c in _options.get_children():
+		c.queue_free()
+	for opt in _options_for("item_target"):
+		var b := PillButton.new()
+		b.label = opt.label
+		b.icon_name = opt.icon
+		b.selectable = true
+		b.description = opt.desc
+		b.font_size = 24
+		b.custom_minimum_size = Vector2(250, 50)
+		b.focus_entered.connect(func() -> void: _set_info(b.description))
+		b.pressed.connect(_execute.bind(opt.action))
+		_options.add_child(b)
+	_log("¿A quién?")
+	_state = State.OPTION
+	(_options.get_child(_options.get_child_count() - 1) as Control).grab_focus.call_deferred()
+
+
 func _skill_option(id: String) -> Dictionary:
 	var skill := SkillDB.get_skill(id)
 	var cost := _battle.skill_cost(_actor, id)
-	var cd := _battle.skill_cooldown(_actor, id)
-	var preview := _battle.skill_preview(_actor, id)
-	var result := ("Restaura ~%d PV." if skill.target == "self" else "Daño estimado: ~%d.") % preview
-	var desc := "%s %s Coste: %d PM." % [skill.desc, result, cost]
+	var tier: String = (" Tier %d." % skill.tier) if skill.get("tier", 0) > 0 else ""
+	var desc := "%s Efecto: %s. Coste: %d PM.%s" % [skill.desc, _battle.skill_summary(_actor, id), cost, tier]
 	if skill.cd > 0:
 		desc += " Recarga: %d turnos." % skill.cd
-	var disabled := false
-	if cd > 0:
-		disabled = true
-		desc = "Recargando: disponible en %d turno%s. %s" % [cd, "" if cd == 1 else "s", desc]
-	elif _battle.fighter(_actor).pm < cost:
-		disabled = true
-		desc = "No tienes PM suficientes. %s" % desc
+	var problem := _battle.skill_problem(_actor, id)
+	var disabled := problem != ""
+	if disabled:
+		desc = "%s %s" % [problem, desc]
 	return {"label": "%s  %d PM" % [skill.name, cost], "icon": skill.get("icon", "sparkle"),
 		"action": "skill:" + id, "disabled": disabled, "desc": desc}
 
@@ -408,6 +459,38 @@ func _gui_input(event: InputEvent) -> void:
 func _execute(action: String) -> void:
 	if _state != State.COMMAND and _state != State.OPTION:
 		return
+	# Objeto con más de uno en el grupo: antes, elegir sobre quién.
+	var parts := action.split(":")
+	if parts[0] == "item" and parts.size() == 2 and _battle.alive_party().size() > 1 and not ItemDB.is_attack(parts[1]):
+		_pending_item = parts[1]
+		_show_item_targets()
+		return
+	await _run_action(action)
+	await _prompt()
+
+
+## Da el turno a `_actor`: si pierde el turno (aturdido, desactivado...) o tiene
+## que actuar al azar (Adivinación), lo resuelve solo y pasa al siguiente.
+func _prompt() -> void:
+	while not _battle.is_over():
+		var pre := _battle.start_turn(_actor)
+		await _play_events(pre.events)
+		if _battle.is_over():
+			break
+		if pre.skip:
+			await _advance()
+		elif pre.forced != "":
+			await _run_action(pre.forced)
+		else:
+			if _battle.party.size() > 1:
+				_log("Turno de %s." % _fighter_name(_actor))
+			_enter_command_state(_current_command)
+			return
+	await _show_result()
+
+
+## Ejecuta la acción de `_actor` y, si gasta el turno, pasa al siguiente.
+func _run_action(action: String) -> void:
 	_state = State.ANIMATING
 	get_viewport().gui_release_focus()
 	_set_commands_enabled(false)
@@ -426,29 +509,26 @@ func _execute(action: String) -> void:
 			events = _battle.surrender()
 		_:
 			if action.begins_with("item:"):
-				events = _battle.use_item(_actor, action.substr(5))
+				var parts := action.split(":")
+				events = _battle.use_item(_actor, parts[1], parts[2] if parts.size() > 2 else "")
 			elif action.begins_with("skill:"):
 				events = _battle.use_skill(_actor, action.substr(6))
 	await _play_events(events)
-
 	if not _battle.is_over() and uses_turn:
-		# Le toca al siguiente del grupo en pie; si no queda nadie, al rival.
-		var next := _next_actor(_actor)
-		if next != "":
-			_actor = next
-		else:
-			await get_tree().create_timer(0.35).timeout
-			await _play_events(_battle.enemy_turn())
-			var alive := _battle.alive_party()
-			if not alive.is_empty():
-				_actor = alive[0]
+		await _advance()
 
-	if _battle.is_over():
-		await _show_result()
-	else:
-		if _battle.party.size() > 1:
-			_log("Turno de %s." % _fighter_name(_actor))
-		_enter_command_state(_current_command)
+
+## Le toca al siguiente del grupo en pie; si no queda nadie, al rival.
+func _advance() -> void:
+	var next := _next_actor(_actor)
+	if next != "":
+		_actor = next
+		return
+	await get_tree().create_timer(0.35).timeout
+	await _play_events(_battle.enemy_turn())
+	var alive := _battle.alive_party()
+	if not alive.is_empty():
+		_actor = alive[0]
 
 
 ## Siguiente miembro del grupo en pie después de `who` en esta ronda ("" si no hay).
@@ -468,10 +548,50 @@ func _play_events(events: Array) -> void:
 	for ev: Dictionary in events:
 		match ev.type:
 			"damage":
-				if ev.target == Battle.ENEMY:
+				if ev.get("immune", false):
+					await _anim_immune(ev)
+				elif ev.get("shared", false):
+					await _anim_shared(ev)
+				elif ev.target == Battle.ENEMY:
 					await _anim_player_hits(ev)
 				else:
 					await _anim_enemy_hits(ev)
+			"miss":
+				_log("%s falla: %s no alcanza a %s." % [_fighter_name(ev.source), ev.move, _fighter_name(ev.target)])
+				_popup(ev.target, "FALLO", UIStyle.GRAY)
+				await get_tree().create_timer(0.7).timeout
+			"self_damage":
+				var why := SkillDB.display_name(ev.skill) if ev.skill != "" else "El calor de la sobrecarga"
+				_log("%s: %s pierde %d PV." % [why, _fighter_name(ev.target), ev.amount])
+				_refresh_pv(ev.target)
+				_popup(ev.target, str(ev.amount), Color("ff6b7d"))
+				await get_tree().create_timer(0.7).timeout
+			"pm_restore":
+				_log("%s: %s recupera %d PM." % [SkillDB.display_name(ev.skill), _fighter_name(ev.target), ev.amount])
+				if ev.target != Battle.ENEMY:
+					_card(ev.target).animate_pm(_battle.fighter(ev.target).pm)
+				_popup(ev.target, "+%d PM" % ev.amount, CombatantCard.PM_COLOR)
+				await get_tree().create_timer(0.7).timeout
+			"regen":
+				_log("%s: %s recupera %d PV." % [SkillDB.STATUS_NAMES.get(ev.status, ev.status), _fighter_name(ev.target), ev.amount])
+				_refresh_pv(ev.target)
+				_popup(ev.target, "+%d" % ev.amount, UIStyle.LIME)
+				await get_tree().create_timer(0.6).timeout
+			"cleanse":
+				var names: Array = ev.statuses.map(func(s: String) -> String: return SkillDB.STATUS_NAMES.get(s, s).to_lower())
+				_log("%s se libra de %s." % [_fighter_name(ev.target), ", ".join(names)] if not names.is_empty()
+						else "%s no tenía nada que quitarse." % _fighter_name(ev.target))
+				_update_status_tags()
+				await get_tree().create_timer(0.6).timeout
+			"skip":
+				_log("%s pierde el turno (%s)." % [_fighter_name(ev.target), SkillDB.STATUS_NAMES.get(ev.status, ev.status).to_lower()])
+				await get_tree().create_timer(0.8).timeout
+			"random":
+				_log("%s se deja llevar por la intuición..." % _fighter_name(ev.target))
+				await get_tree().create_timer(0.7).timeout
+			"wait":
+				_log("%s no puede hacer nada." % _fighter_name(ev.target))
+				await get_tree().create_timer(0.7).timeout
 			"heal":
 				await _anim_heal(ev)
 			"skill":
@@ -493,7 +613,7 @@ func _play_events(events: Array) -> void:
 			"analyze":
 				_plate.analyzed = true
 				var e := _battle.enemy()
-				var text := "Analizas a %s: %d / %d PV. Ataque: %s (%d de daño)." % [e.name, e.pv, e.pv_max, e.attack, e.damage]
+				var text := "Analizas a %s (nivel %d): %d / %d PV. Ataque: %s (~%d de daño)." % [e.name, e.level, e.pv, e.pv_max, e.attack, _battle.attack_preview(Battle.ENEMY)]
 				if e.nature != "":
 					text += " Naturaleza: %s." % SkillDB.NATURE_NAMES.get(e.nature, e.nature)
 				if not e.skills.is_empty():
@@ -550,11 +670,20 @@ func _anim_enemy_hits(ev: Dictionary) -> void:
 
 func _anim_heal(ev: Dictionary) -> void:
 	var item_name: String = ItemDB.get_item(ev.item).get("name", "objeto")
+	var pm: int = ev.get("pm", 0)
+	var gain := ("%d PM" % pm) if pm > 0 and ev.amount <= 0 else ("%d PV" % ev.amount)
 	if ev.target != Battle.ENEMY:
-		_log("%s bebe una %s. Recupera %d PV." % [_fighter_name(ev.target), item_name, ev.amount])
-		_card(ev.target).flash(UIStyle.LIME)
+		if ev.get("source", ev.target) != ev.target:
+			_log("%s le da un %s a %s. Recupera %s." % [_fighter_name(ev.source), item_name, _fighter_name(ev.target), gain]
+					if pm > 0 else "%s le da una %s a %s. Recupera %s." % [_fighter_name(ev.source), item_name, _fighter_name(ev.target), gain])
+		else:
+			_log("%s se toma %s. Recupera %s." % [_fighter_name(ev.target), item_name, gain])
+		var col := CombatantCard.PM_COLOR if pm > 0 else UIStyle.LIME
+		_card(ev.target).flash(col)
 		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
-		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
+		_card(ev.target).animate_pm(_battle.fighter(ev.target).pm)
+		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30),
+				("+%d PM" % pm) if pm > 0 and ev.amount <= 0 else "+%d" % ev.amount, col, false)
 	else:
 		var e := _battle.enemy()
 		_log("%s bebe una %s. Recupera %d PV." % [e.name, item_name, ev.amount])
@@ -598,19 +727,27 @@ func _anim_restore(ev: Dictionary) -> void:
 func _anim_status(ev: Dictionary) -> void:
 	var status_name: String = SkillDB.STATUS_NAMES.get(ev.status, ev.status)
 	var who := _fighter_name(ev.target)
-	if ev.applied:
-		_log("¡%s sufre %s durante %d turnos! (%d %%)" % [who, status_name.to_lower(), ev.turns, roundi(ev.chance)])
+	var debuff: bool = SkillDB.status(ev.status).get("debuff", false)
+	var turns := "%d turno%s" % [ev.turns, "" if ev.turns == 1 else "s"]
+	if ev.get("immune", false):
+		_log("A %s no le afecta: %s." % [who, status_name.to_lower()])
+	elif ev.applied and debuff:
+		_log("¡%s sufre %s durante %s! (%d %%)" % [who, status_name.to_lower(), turns, roundi(ev.chance)])
 		if ev.target != Battle.ENEMY:
 			_card(ev.target).flash(UIStyle.VIOLET)
+	elif ev.applied:
+		_log("%s: %s durante %s." % [who, status_name, turns])
+		if ev.target != Battle.ENEMY:
+			_card(ev.target).flash(UIStyle.LIME)
 	else:
-		_log("%s resiste la %s. (%d %%)" % [who, status_name.to_lower(), roundi(ev.chance)])
+		_log("%s resiste: %s. (%d %%)" % [who, status_name.to_lower(), roundi(ev.chance)])
 	_update_status_tags()
 	await get_tree().create_timer(0.8).timeout
 
 
 func _anim_tick(ev: Dictionary) -> void:
 	var status_name: String = SkillDB.STATUS_NAMES.get(ev.status, ev.status)
-	_log("La %s consume a %s: %d de daño." % [status_name.to_lower(), _fighter_name(ev.target), ev.amount])
+	_log("%s: %s pierde %d PV." % [status_name, _fighter_name(ev.target), ev.amount])
 	if ev.target != Battle.ENEMY:
 		_card(ev.target).flash(UIStyle.VIOLET)
 		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
@@ -620,6 +757,39 @@ func _anim_tick(ev: Dictionary) -> void:
 		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.VIOLET)
 	_update_status_tags()
 	await get_tree().create_timer(0.7).timeout
+
+
+## Golpe sin efecto: el objetivo está fuera de su cuerpo.
+func _anim_immune(ev: Dictionary) -> void:
+	_log("%s atraviesa a %s sin hacerle nada." % [ev.move, _fighter_name(ev.target)])
+	_popup(ev.target, "INMUNE", UIStyle.VIOLET)
+	await get_tree().create_timer(0.7).timeout
+
+
+## Parte del daño que llega por Empatía.
+func _anim_shared(ev: Dictionary) -> void:
+	_log("Empatía: %s comparte el golpe y recibe %d de daño." % [_fighter_name(ev.target), ev.amount])
+	if ev.target != Battle.ENEMY:
+		_card(ev.target).flash(UIStyle.RED)
+	_refresh_pv(ev.target)
+	_popup(ev.target, str(ev.amount), Color("ff6b7d"))
+	await get_tree().create_timer(0.6).timeout
+
+
+## Actualiza la barra de PV de `who` (ficha o placa del rival).
+func _refresh_pv(who: String) -> void:
+	if who == Battle.ENEMY:
+		_plate.animate_pv(_battle.enemy().pv)
+	else:
+		_card(who).animate_pv(_battle.fighter(who).pv)
+
+
+## Número flotante sobre `who`.
+func _popup(who: String, text: String, color: Color) -> void:
+	if who == Battle.ENEMY:
+		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), text, color)
+	else:
+		DamagePopup.spawn(self, _card(who).position + Vector2(_card(who).size.x * 0.55, 30), text, color, false)
 
 
 func _update_status_tags() -> void:
@@ -657,11 +827,23 @@ func _show_result() -> void:
 	_result_text = "VICTORIA" if won else "DERROTA"
 	_result_color = UIStyle.LIME if won else UIStyle.RED
 	_result_sub = ""
+	_result_levels = ""
+	var gains: Array[String] = []
 	var money := _battle.reward()
 	if money > 0:
 		GameState.add_money(money)
-		_result_sub = "+ ¥ %s" % UIStyle.format_money(money)
+		gains.append("+ ¥ %s" % UIStyle.format_money(money))
 		queue_redraw()   # La cabecera muestra el dinero.
+	var xp := _battle.xp_reward()
+	if xp > 0:
+		var results := GameState.grant_xp(_battle.party_ids(), xp)
+		gains.append("+ %d EXP" % xp)
+		_result_levels = GameState.level_up_text(results)
+		for i in _battle.party.size():
+			var f := _battle.fighter(_battle.party[i])
+			f.level = GameState.level_of(f.id)
+			_cards[i].setup(f.id, i + 1, f)
+	_result_sub = "   ·   ".join(gains)
 	if won:
 		var t := create_tween()
 		t.tween_property(_enemy, "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
@@ -824,3 +1006,8 @@ func _draw_fx() -> void:
 			var sw := sf.get_string_size(_result_sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 34).x
 			_fx.draw_string(sf, Vector2((vs.x - sw) * 0.5, y + band_h * 0.5 * p + 52), _result_sub,
 					HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(UIStyle.WHITE, p))
+		if _result_levels != "":
+			var lf := UIStyle.FONT_BOLD_ITALIC
+			var lw := lf.get_string_size(_result_levels, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+			_fx.draw_string(lf, Vector2((vs.x - lw) * 0.5, y + band_h * 0.5 * p + 98), _result_levels,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color(UIStyle.LIME, p))

@@ -24,6 +24,8 @@ extends RefCounted
 ##  - {type: "item", item: <id de ItemDB>, count}: en el suelo; se coge desde la casilla de al lado.
 ##  - {type: "switch", doors: [claves de borde]}: palanca; bloquea el paso y abre o
 ##    cierra las puertas vinculadas (de la misma planta).
+##  - {type: "extraction"}: zona de extracción segura: saliendo desde ella te
+##    llevas lo conseguido en la incursión (la casilla de inicio también lo es).
 ##  - {type: "stairs", up: bool, dir}: escalera. Se entra andando hacia `dir` y
 ##    se sale en la planta de arriba/abajo, en la casilla siguiente en esa
 ##    dirección. Va en pareja: la de la otra planta está en la misma casilla,
@@ -48,6 +50,9 @@ const ENEMY := "enemy"
 const STAIRS := "stairs"
 const ITEM := "item"
 const SWITCH := "switch"
+const EXTRACTION := "extraction"
+## Punto de guardado: terminal que guarda la partida y asegura lo conseguido.
+const SAVE := "save"
 
 var id := "mazmorra"
 var theme := "pruebas"
@@ -87,6 +92,11 @@ func set_level(i: int) -> void:
 
 
 ## Número visible de una planta (0 = la de `ground`).
+## Nivel de las criaturas de la planta `i` (ver ProgressionDB.floor_creature_level).
+func creature_level(i: int = level) -> int:
+	return ProgressionDB.floor_creature_level(i - ground)
+
+
 func level_name(i: int = level) -> String:
 	return "Planta %d" % (i - ground)
 
@@ -134,10 +144,13 @@ func thing(c: Vector2i) -> Dictionary:
 	return things.get(c, {})
 
 
-func set_enemy(c: Vector2i, enemy_id: String) -> bool:
-	if not has_cell(c) or thing(c).get("type", "") == STAIRS or thing(c).get("enemy", "") == enemy_id:
+func set_enemy(c: Vector2i, enemy_id: String, drop: String = "") -> bool:
+	if not has_cell(c) or thing(c).get("type", "") == STAIRS \
+			or (thing(c).get("enemy", "") == enemy_id and thing(c).get("drop", "") == drop):
 		return false
 	things[c] = {"type": ENEMY, "enemy": enemy_id}
+	if drop != "":
+		things[c]["drop"] = drop
 	return true
 
 
@@ -163,6 +176,26 @@ func set_item(c: Vector2i, item_id: String, count: int = 1) -> bool:
 	if t.get("item", "") == item_id and int(t.get("count", 1)) == count:
 		return false
 	things[c] = {"type": ITEM, "item": item_id, "count": count}
+	return true
+
+
+func set_extraction(c: Vector2i) -> bool:
+	if not has_cell(c) or thing(c).get("type", "") != "":
+		return false
+	things[c] = {"type": EXTRACTION}
+	return true
+
+
+## ¿Se puede salir sin perder nada desde `c` (planta activa)? Zonas de
+## extracción y la casilla de inicio.
+func is_extraction(c: Vector2i) -> bool:
+	return thing(c).get("type", "") == EXTRACTION or (level == start_level and c == start)
+
+
+func set_save_point(c: Vector2i) -> bool:
+	if not has_cell(c) or thing(c).get("type", "") != "":
+		return false
+	things[c] = {"type": SAVE}
 	return true
 
 
@@ -389,6 +422,12 @@ func door(c: Vector2i, dir: int) -> Dictionary:
 func is_secret(key: String) -> bool:
 	var e: Dictionary = edges.get(key, {})
 	return e.get("type", "") == DOOR and e.get("door", {}).get("secret", false)
+
+
+## ¿Es una pared secreta oculta (`hidden`)? Solo se puede inspeccionar después
+## de detectarla con el pulso del resonador.
+func is_hidden(key: String) -> bool:
+	return is_secret(key) and edges[key].door.get("hidden", false)
 
 
 func set_door(c: Vector2i, dir: int, field: String, value: Variant) -> void:

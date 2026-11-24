@@ -26,6 +26,12 @@
 		general: "general",
 		protagonist: "ren",
 		characters: [],
+		// Gestos de los retratos (ConversationView.FACES) y su etiqueta de línea: [#cara=enfado].
+		faces: ["enfado", "sorpresa", "incomodo"],
+		faceTag: "cara",
+		// Lo que los diálogos pueden usar de Story (funciones y variables públicas de story.gd).
+		storyApi: ["tier", "mood", "knows", "tell", "phase", "flag", "set_flag", "present", "today", "value",
+			"change", "set_mood", "text", "persona_name", "enemy_name", "seen", "speaker", "persona"],
 	};
 
 	/** Lee constantes del código fuente del juego (texto de los .gd). */
@@ -63,6 +69,10 @@
 			for (const m of am.matchAll(/"([a-z_]+)"\s*:\s*"([a-z_]+)"/g)) o[m[1]] = m[2];
 			if (Object.keys(o).length) cfg.actionMoments = o;
 		}
+		if (src.story) {
+			const api = [...src.story.matchAll(/^(?:func|var)\s+([a-z][a-z0-9_]*)/gm)].map((m) => m[1]);
+			if (api.length) cfg.storyApi = api;
+		}
 		const general = block(src.story, /const GENERAL\s*:?=\s*"([^"]+)"/);
 		if (general) cfg.general = general;
 		if (src.characterDb) {
@@ -71,9 +81,24 @@
 			const chars = [];
 			const re = /\n\t"([a-z0-9_]+)"\s*:\s*\{\s*\n?\s*"name"\s*:\s*"([^"]+)"\s*,\s*"color"\s*:\s*Color\("([0-9a-fA-F]+)"\)([^\n]*)/g;
 			for (const m of src.characterDb.matchAll(re)) {
-				chars.push({ id: m[1], name: m[2], color: "#" + m[3], enemy: /"enemy"\s*:\s*true/.test(m[4]) });
+				// Bloque del personaje: hasta la siguiente entrada «\t"id": {».
+				const rest = src.characterDb.slice(m.index + m[0].length);
+				const end = rest.search(/\n\t(?:"[a-z0-9_]+"\s*:\s*\{|\})/);
+				const body = m[4] + (end >= 0 ? rest.slice(0, end) : rest);
+				const portrait = block(body, /"portrait"\s*:\s*"res:\/\/([^"]+)"/);
+				const faces = {};
+				const fb = block(body, /"faces"\s*:\s*\{([^}]*)\}/);
+				if (fb) for (const f of fb.matchAll(/"([a-z_]+)"\s*:\s*"res:\/\/([^"]+)"/g)) faces[f[1]] = f[2];
+				chars.push({ id: m[1], name: m[2], color: "#" + m[3], enemy: /"enemy"\s*:\s*true/.test(body),
+					portrait: portrait || "", faces });
 			}
 			if (chars.length) cfg.characters = chars;
+		}
+		if (src.conversation) {
+			const faces = block(src.conversation, /const FACES[^=]*=\s*\[([^\]]*)\]/);
+			if (faces) cfg.faces = strList(faces);
+			const tag = block(src.conversation, /const FACE_TAG\s*:?=\s*"([^"]+)"/);
+			if (tag) cfg.faceTag = tag;
 		}
 		return cfg;
 	}

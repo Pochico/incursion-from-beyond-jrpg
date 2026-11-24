@@ -100,25 +100,32 @@
 			-1286.4,
 			435.3
 		],
-		"punto_1": [
-			-151.1,
-			815.7
+		"punto_2": [
+			-518.7,
+			-234.4
+		],
+		"cloacas": [
+			381.8,
+			668.3
 		]
 	},
 	"names": {
 		"parque": "Bowls",
 		"plaza": "Colinas",
 		"campus": "Egaleo",
-		"punto_1": "tu awela"
+		"punto_2": "Túnel tren",
+		"cloacas": "Cloacas"
 	},
 	"descs": {
 		"parque": "Rampas de skate, zona de ocio tranqui",
 		"plaza": "Parque, zona verde, tranquila, con árboles, donde la gente hace deportes como el voley, saca a los perros, etc",
 		"campus": "Teatro, cine, eventos culturales.",
-		"punto_1": ""
+		"punto_2": "Un túnel oscuro y lleno de pintadas y meaos que conecta norte con sur.",
+		"cloacas": "Lugar medio apestosito, pero seguro y acogedor si no eres escrupuloso"
 	},
+	"capacity": {},
 	"custom": [
-		"punto_1"
+		"punto_2"
 	],
 	"hidden": []
 }

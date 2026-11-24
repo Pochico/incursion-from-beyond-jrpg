@@ -105,8 +105,12 @@
 
 	"gear": {"arma": "Bajo eléctrico", "accesorio": "Cascos de estudio", "modulo": ""},
 	"combat": {
-		"level": 15, "pv": 230, "pm": 90, "attack": "Golpe de bajo", "damage": 34,
+		"level": 1, "attack": "Golpe de bajo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 22, "TEC": 20, "INT": 16, "VOL": 18, "RES": 20, "AGI": 18}
+		"stats": {"FUE": 10, "TEC": 12, "INT": 9, "VOL": 10, "RES": 11, "AGI": 10}
+	},
+
+	"citas": {
+		"lugares": {"parque": 10, "galeria": 5, "plaza": 5, "campus": -5, "cloacas": 0}
 	}
 }

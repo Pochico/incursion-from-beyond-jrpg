@@ -10,12 +10,19 @@ extends Control
 ##  - Columna derecha: automapa (en el hueco del minimapa) y fichas del grupo:
 ##    Ren y un compañero al azar (de CharacterDB.COMPANIONS) que entra con él y
 ##    lucha a su lado. Clic en una ficha (o Tab) abre su pantalla de estado.
-##  - Fila de comandos: Usar, Objetos, Mapa, Salir.
+##  - Fila de comandos: Usar, Habilidades, Objetos, Mapa, Salir.
 ##  - Fila de opciones + descripción / registro.
 ##
 ## El mapa es `dungeon_map` de la ubicación actual (LocationDB). El progreso
 ## (puertas, enemigos vencidos, objetos cogidos, automapa) se guarda en
 ## GameState.dungeons; al volver se empieza otra vez en la entrada.
+##
+## Incursión: los PV y PM del grupo pasan de un combate a otro (se curan con
+## objetos y habilidades, también explorando) y se recuperan al salir. Lo
+## conseguido (objetos y dinero) solo se conserva saliendo desde una zona de
+## extracción (o la entrada, ver DungeonMap.is_extraction); saliendo desde otro
+## sitio se pierde y los objetos vuelven a su sitio. Por eso no se guarda la
+## partida hasta salir.
 ##
 ## El compañero comenta de vez en cuando en el registro del visor (DungeonBanter):
 ## al andar, ante una criatura, junto a una pared falsa, al coger algo…
@@ -26,13 +33,16 @@ const COMMAND_Y := 898.0
 const OPTION_ROW := Rect2(30, 990, 1864, 70)
 const RIGHT_X := 1440.0
 const ACCENT := UIStyle.MAGENTA
+const PULSE_PINK := Color("f0a8ff")   ## brillo del resonador (ver pulse.gdshader)
 
 const COMMANDS := [
 	{"id": "use", "label": "Usar", "icon": "sparkle", "desc": "Usar lo que hay justo delante: abrir, coger, accionar o luchar."},
-	{"id": "items", "label": "Objetos", "icon": "flask", "desc": "Lo que llevas encima."},
+	{"id": "skills", "label": "Habilidades", "icon": "heart", "desc": "Habilidades que sirven fuera del combate: curar o recuperar PM."},
+	{"id": "items", "label": "Objetos", "icon": "flask", "desc": "Lo que llevas encima. Los que curan se usan sobre quien elijas; el resonador lanza un pulso que delata paredes secretas.  [F]"},
 	{"id": "map", "label": "Mapa", "icon": "antenna", "desc": "Automapa de la planta: lo que ya has recorrido.  [M]"},
-	{"id": "exit", "label": "Salir", "icon": "run", "desc": "Volver a la calle. Lo que hayas abierto o vencido seguirá así."},
+	{"id": "exit", "label": "Salir", "icon": "run", "desc": "Volver a la calle. Desde una zona de extracción (círculo cian) te llevas lo conseguido."},
 ]
+const EXIT_WARNING := "Si sales ahora perderás todo lo que hayas conseguido. Hay zonas de extracción segura. ¿Quieres salir?"
 
 var _map: DungeonMap
 var _map_id := ""
@@ -57,7 +67,10 @@ var _status: StatusPanel
 # Grupo: Ren y el compañero de esta visita.
 var _companion := ""
 var _companion_skills: Array = []
-var _party_battle: Battle    ## solo para las fichas y la pantalla de estado
+var _party_battle: Battle    ## PV/PM del grupo fuera del combate, fichas y pantalla de estado
+var _vitals: Dictionary = {}  ## PV y PM del grupo en esta incursión (Battle.party_vitals)
+var _run_start: Dictionary = {}  ## inventario, dinero y objetos cogidos al entrar
+var _was_extraction := false
 
 # Comentarios del compañero.
 const IDLE_STEPS := Vector2i(9, 17)    ## pasos entre comentarios sueltos
@@ -80,9 +93,11 @@ func _ready() -> void:
 		_log("No se encuentra el mapa «%s» (src/data/mazmorras/)." % _map_id)
 		return
 	_companion = CharacterDB.COMPANIONS.pick_random()
-	_companion_skills = SkillDB.random_skills(2)
+	_companion_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(_companion), CharacterDB.get_character(_companion).get("nature", ""))
 	_next_idle = randi_range(IDLE_STEPS.x, IDLE_STEPS.y)
 	_explorer.setup(_map, GameState.dungeon_state(_map_id))
+	_mark_run_start()
+	_was_extraction = _explorer.at_extraction()
 	_refresh_party()
 	_set_info(COMMANDS[0].desc)
 	_log("Entras en %s con %s." % [LocationDB.display_name(GameState.location_id), CharacterDB.display_name(_companion)])
@@ -107,12 +122,17 @@ func _build() -> void:
 	_explorer.moved.connect(func(_c: Vector2i, _d: int) -> void: _on_moved())
 	_explorer.level_changed.connect(func(_l: int) -> void:
 		queue_redraw()
-		_on_moved())
+		_on_moved()
+		_first_visit_xp())
 	_explorer.message.connect(_log)
+	_explorer.pulse_finished.connect(_on_pulse_finished)
+	_explorer.save_point_used.connect(func(_c: Vector2i) -> void: _use_save_point())
 	_explorer.encounter.connect(_on_encounter)
 	_explorer.item_taken.connect(func(_id: String, _n: int) -> void: _comment("item", 1.3))
 	_explorer.noticed.connect(func(kind: String) -> void:
-		_comment(kind, 1.6 if kind == "secret_found" else 1.3, kind == "secret_found"))
+		_comment(kind, 1.6 if kind == "secret_found" else 1.3, kind == "secret_found")
+		if kind == "secret_found":
+			_explore_xp(ProgressionDB.secret_xp(_map.creature_level()), "Pasadizo descubierto"))
 
 	# Capa sobre el visor: recuadro de lo de delante, registro y clics.
 	_fx = Control.new()
@@ -148,7 +168,7 @@ func _build() -> void:
 
 	# Comandos
 	var x := 74.0
-	var w := 296.0
+	var w := 262.0
 	for i in COMMANDS.size():
 		var b := SlantButton.new()
 		b.label = COMMANDS[i].label
@@ -156,7 +176,7 @@ func _build() -> void:
 		b.description = COMMANDS[i].desc
 		b.hover_focus = false
 		b.focus_mode = Control.FOCUS_NONE   # las flechas son para andar
-		b.font_size = 30
+		b.font_size = 27
 		b.slant = 26
 		b.position = Vector2(x + i * (w + 8), COMMAND_Y)
 		b.size = Vector2(w, 72)
@@ -176,6 +196,7 @@ func _build() -> void:
 	_options = HBoxContainer.new()
 	_options.position = OPTION_ROW.position + Vector2(18, 10)
 	_options.size = Vector2(900, 50)
+	_options.clip_contents = true
 	_options.add_theme_constant_override("separation", 18)
 	add_child(_options)
 
@@ -195,7 +216,24 @@ func _build() -> void:
 ## Fichas de Ren y del compañero con sus datos de combate (los PV se recuperan
 ## al salir de cada combate). El combate «de mentira» sirve a la pantalla de estado.
 func _refresh_party() -> void:
+	var old_max := {}
+	if _party_battle:
+		for who in _party_battle.party:
+			var f := _party_battle.fighter(who)
+			old_max[f.id] = [f.pv_max, f.pm_max]
 	_party_battle = Battle.new(CharacterDB.PROTAGONIST, "imp", _companion, _companion_skills)
+	# Al subir de nivel, lo que crecen PV y PM máximos se suma a los actuales.
+	for who in _party_battle.party:
+		var f := _party_battle.fighter(who)
+		if old_max.has(f.id) and _vitals.has(f.id):
+			_vitals[f.id].pv += maxi(f.pv_max - old_max[f.id][0], 0)
+			_vitals[f.id].pm += maxi(f.pm_max - old_max[f.id][1], 0)
+	_party_battle.set_party_vitals(_vitals, 1)
+	_vitals = _party_battle.party_vitals()
+	_update_cards()
+
+
+func _update_cards() -> void:
 	for i in _cards.size():
 		if i < _party_battle.party.size():
 			var f := _party_battle.fighter(_party_battle.party[i])
@@ -217,6 +255,10 @@ func _open_status(slot: int) -> void:
 
 func _on_moved() -> void:
 	_target = _explorer.front()
+	var safe := _explorer.at_extraction()
+	if safe and not _was_extraction:
+		_log("Zona de extracción segura: desde aquí puedes salir sin perder nada.")
+	_was_extraction = safe
 	_banter_on_move()
 	_automap.queue_redraw()
 	_big_map.queue_redraw()
@@ -262,6 +304,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_M:
 			if not key.echo:
 				_toggle_map()
+		KEY_F:
+			if not key.echo:
+				_use_resonator()
 		KEY_ESCAPE:
 			if _big_map.visible:
 				_toggle_map()
@@ -314,15 +359,20 @@ func _on_command(id: String) -> void:
 				_log("No hay nada delante que usar.")
 			else:
 				_use()
+		"skills":
+			_show_skills()
 		"items":
 			_show_items()
 		"map":
 			_toggle_map()
 		"exit":
 			_clear_options()
-			_add_option("Salir de %s" % LocationDB.display_name(GameState.location_id), _exit)
-			_add_option("Seguir explorando", _clear_options)
-			_log("¿Salir? Lo que hayas abierto o vencido seguirá así.")
+			if _explorer.at_extraction():
+				_add_option("Salir con lo conseguido", _exit.bind(true))
+				_add_option("Seguir explorando", _clear_options)
+				_log("Zona de extracción segura: te llevas todo lo que has conseguido.")
+			else:
+				_ask_exit()
 
 
 func _toggle_map() -> void:
@@ -338,13 +388,100 @@ func _show_items() -> void:
 		if n <= 0:
 			continue
 		any = true
-		var name_text: String = ItemDB.get_item(id).get("name", id)
-		var heals: bool = ItemDB.get_item(id).get("heal", 0) > 0
+		var name_text := ItemDB.display_name(id)
 		_add_option("%s  ×%d" % [name_text, n], func() -> void:
 			_set_info(ItemDB.description(id))
-			_log("%s: %s" % [name_text, "mejor guardarlo para un combate." if heals else "lo llevas encima; abrirá alguna puerta."]))
+			if ItemDB.get_item(id).get("tool", false):
+				_use_resonator()
+			elif ItemDB.restores(id):
+				_choose_item_target(id)
+			elif ItemDB.is_attack(id):
+				_log("%s: solo sirve en combate." % name_text)
+			else:
+				_log("%s: lo llevas encima; abrirá alguna puerta." % name_text))
 	if not any:
 		_log("No llevas nada.")
+
+
+## Resonador: pulso que hace brillar las paredes secretas a 5 casillas o menos.
+func _use_resonator() -> void:
+	if GameState.item_count("resonador") <= 0:
+		return
+	_clear_options()
+	if _explorer.is_pulsing():
+		return
+	_log("Activas el resonador. Un pulso rosado recorre los pasillos…")
+	_explorer.pulse()
+
+
+func _on_pulse_finished(found: int) -> void:
+	_on_moved()
+	if found == 0:
+		_log("El pulso se apaga. Nada ha respondido.")
+	elif found == 1:
+		_log("Algo ha respondido al pulso: una pared brilla. Cuanto más intenso el brillo, más cerca estaba.")
+	else:
+		_log("%d paredes han respondido al pulso. Cuanto más intenso el brillo, más cerca estaban." % found)
+
+
+## Objeto que cura: a quién del grupo se le da.
+func _choose_item_target(item_id: String) -> void:
+	_clear_options()
+	var name_text := ItemDB.display_name(item_id)
+	var pm_item: bool = ItemDB.get_item(item_id).get("heal", 0) <= 0
+	for who in _party_battle.party:
+		var f := _party_battle.fighter(who)
+		_add_option(("%s  %d/%d PM" % [f.name, f.pm, f.pm_max]) if pm_item else ("%s  %d/%d PV" % [f.name, f.pv, f.pv_max]), func() -> void:
+			if (f.pm >= f.pm_max) if pm_item else (f.pv >= f.pv_max):
+				_log("%s ya está al máximo." % f.name)
+				return
+			var events := _party_battle.field_use_item(who, item_id)
+			_after_field_action(events, "%s se toma: %s." % [f.name, name_text]))
+	_add_option("Volver", _show_items)
+	_log("¿A quién se lo das? (%s)" % name_text)
+
+
+## Habilidades de cada miembro que sirven fuera del combate (Battle.is_field_skill).
+func _show_skills() -> void:
+	_clear_options()
+	var any := false
+	for who in _party_battle.party:
+		var f := _party_battle.fighter(who)
+		for id: String in f.skills:
+			if not Battle.is_field_skill(id):
+				continue
+			any = true
+			var skill := SkillDB.get_skill(id)
+			var cost := _party_battle.skill_cost(who, id)
+			_add_option("%s · %s  %d PM" % [f.name, skill.name, cost], func() -> void:
+				_set_info("%s %s. Coste: %d PM." % [skill.desc, _party_battle.skill_summary(who, id), cost])
+				var problem := _party_battle.skill_problem(who, id)
+				if problem != "":
+					_log(problem)
+					return
+				var events := _party_battle.field_use_skill(who, id)
+				_after_field_action(events, "%s usa %s." % [f.name, skill.name]))
+	if not any:
+		_log("Nadie del grupo tiene habilidades que sirvan fuera del combate (curar o recuperar PM).")
+
+
+## Tras usar algo explorando: guarda los PV/PM, actualiza fichas y cuenta lo que ha pasado.
+func _after_field_action(events: Array, intro: String) -> void:
+	if events.is_empty():
+		_log("No ha servido de nada.")
+		return
+	var parts: Array[String] = []
+	for ev: Dictionary in events:
+		var who_name: String = _party_battle.fighter(ev.target).name if ev.has("target") else ""
+		match ev.type:
+			"heal", "restore":
+				parts.append("%s +%d PV" % [who_name, ev.amount])
+			"pm_restore":
+				parts.append("%s +%d PM" % [who_name, ev.amount])
+	_vitals = _party_battle.party_vitals()
+	_update_cards()
+	_clear_options()
+	_log("%s %s." % [intro, ", ".join(parts)] if not parts.is_empty() else intro)
 
 
 func _add_option(text: String, action: Callable) -> void:
@@ -355,7 +492,8 @@ func _add_option(text: String, action: Callable) -> void:
 	b.focus_mode = Control.FOCUS_NONE
 	b.font_size = 24
 	b.slant = 16
-	b.custom_minimum_size = Vector2(0, 50)
+	# El contenedor no usa el ancho que calcula SlantButton: se le da a mano.
+	b.custom_minimum_size = Vector2(b._get_minimum_size().x, 50)
 	b.pressed.connect(action)
 	_options.add_child(b)
 	_info.queue_redraw()
@@ -380,10 +518,13 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
 	await SceneRouter.fade_out(0.25)
-	_combat.setup(enemy_id, ally, ally_skills)
+	_combat.setup(enemy_id, ally, ally_skills, _vitals, _map.creature_level())
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
+	# Los PV y PM siguen así en la incursión (quien cayó, con 1 PV).
+	_vitals = _combat.party_vitals()
+	_refresh_party()
 	GameState.record("combat", CharacterDB.PROTAGONIST, enemy_id, {"won": won, "ally": ally, "dungeon": _map_id},
 			[ally] if ally != "" else [])
 	await SceneRouter.fade_out(0.25)
@@ -391,27 +532,98 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	await SceneRouter.fade_in(0.25)
 	if won:
 		_explorer.defeat(cell)
-		_log("¡%s derrotado!" % CharacterDB.display_name(enemy_id))
-		GameState.save_game()
+		var drop := _explorer.drop_at(cell)
+		if drop != "":
+			GameState.add_item(drop)
+			_log("¡%s derrotado! Al caer suelta algo: %s. Lo guardas." % [CharacterDB.display_name(enemy_id), ItemDB.display_name(drop)])
+		else:
+			_log("¡%s derrotado!" % CharacterDB.display_name(enemy_id))
 	else:
 		_log("Retrocedes. %s sigue ahí." % CharacterDB.display_name(enemy_id))
 		await _explorer.act("back")
 	queue_redraw()
 	_busy = false
 	_on_moved()
-	_comment("victory" if won else "defeat", 1.4, true)
+	if not (won and _explorer.drop_at(cell) != ""):   # que se lea lo que ha soltado
+		_comment("victory" if won else "defeat", 1.4, true)
+
+
+## EXP por explorar para el grupo (y la parte del resto de compañeros).
+func _explore_xp(amount: int, what: String) -> void:
+	var results := GameState.grant_xp([CharacterDB.PROTAGONIST, _companion], amount)
+	var ups := GameState.level_up_text(results)
+	_refresh_party()
+	await get_tree().create_timer(2.6).timeout
+	if not is_inside_tree():
+		return
+	_log("%s: + %d EXP.%s" % [what, amount, ("  " + ups) if ups != "" else ""])
+
+
+## Primera vez en una planta (en esta partida): EXP por explorar.
+func _first_visit_xp() -> void:
+	var seen: Dictionary = _explorer.state.get_or_add("xp_floors", {})
+	var k := str(_map.level)
+	if seen.has(k) or _map.level == _map.start_level:
+		return
+	seen[k] = true
+	_explore_xp(ProgressionDB.new_floor_xp(_map.creature_level()), "Planta nueva")
+
+
+## Fuera de una zona de extracción: aviso antes de salir.
+func _ask_exit() -> void:
+	_busy = true
+	var ok := await ConfirmPopup.ask(self, "¿Salir de %s?" % LocationDB.display_name(GameState.location_id),
+			EXIT_WARNING, "Salir", "Continuar explorando")
+	_busy = false
+	if ok:
+		_exit(false)
+	else:
+		_log("Sigues explorando. Busca una zona de extracción (círculo cian) o vuelve a la entrada.")
 
 
 ## Vuelta a la calle: salir de la mazmorra cuenta como una actividad (pasa la franja).
-func _exit() -> void:
+## Sin `extracted`, se pierde lo conseguido en la incursión.
+func _exit(extracted: bool) -> void:
 	if _busy:
 		return
 	_busy = true
 	_clear_options()
+	if not extracted:
+		_lose_run()
 	if GameState.slot_id() != "noche":
 		GameState.advance_slot()
 	GameState.save_game()
 	SceneRouter.go_to(WORLD_SCREEN)
+
+
+## Lo conseguido hasta ahora queda a salvo: al entrar y en cada punto de guardado.
+func _mark_run_start() -> void:
+	_run_start = {"inventory": GameState.inventory.duplicate(), "money": GameState.money,
+		"taken": _explorer.state.taken.duplicate(), "defeated": _explorer.state.defeated.duplicate()}
+
+
+## Punto de guardado: asegura lo conseguido (ya no se pierde al salir sin
+## extraer) y guarda la partida.
+func _use_save_point() -> void:
+	if _busy:
+		return
+	_mark_run_start()
+	GameState.save_game()
+	_log("Conectas el móvil a la terminal. Partida guardada: lo que llevas ya está a salvo.")
+
+
+## Deshace lo ganado desde que se entró (o desde el último punto de guardado): lo
+## que haya de más en el inventario y el dinero vuelve a lo que había (lo gastado
+## no se recupera) y los objetos cogidos vuelven a la mazmorra. Puertas, palancas,
+## criaturas vencidas y mapa siguen igual, salvo las criaturas que soltaron algo:
+## vuelven, para poder ganarlo otra vez.
+func _lose_run() -> void:
+	var before: Dictionary = _run_start.inventory
+	for id: String in GameState.inventory.keys():
+		GameState.inventory[id] = mini(GameState.inventory[id], before.get(id, 0))
+	GameState.money = mini(GameState.money, _run_start.money)
+	_explorer.restore_items(_run_start.taken)
+	_explorer.restore_drops(_run_start.defeated)
 
 
 # --- Registro -------------------------------------------------------------------------------
@@ -527,7 +739,7 @@ func _draw_info() -> void:
 	var div_x := 960.0
 	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
 	if _options.get_child_count() == 0:
-		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[W A S D] Moverte   [Q E] De lado   [Espacio] Usar   [M] Mapa   [Tab] Equipo",
+		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[W A S D] Moverte   [Q E] De lado   [Espacio] Usar   [F] Resonador   [M] Mapa   [Tab] Equipo",
 				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 21, Color(UIStyle.WHITE, 0.6))
 	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
 	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,
@@ -554,7 +766,7 @@ func _draw_fx() -> void:
 		var tag := UIStyle.slanted_rect(Rect2(tag_pos, Vector2(tw + 48, 44)), 12)
 		_fx.draw_colored_polygon(tag, Color(UIStyle.INK, 0.85))
 		UIStyle.draw_outline(_fx, tag, col, 1.5)
-		var accent := UIStyle.RED if _target.kind == "enemy" else UIStyle.LIME
+		var accent := UIStyle.RED if _target.kind == "enemy" else (DungeonScreen.PULSE_PINK if _target.kind == "secret" else UIStyle.LIME)
 		_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(tag_pos + Vector2(14, 10), Vector2(7, 24)), 5), accent)
 		_fx.draw_string(font, tag_pos + Vector2(30, 32), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIStyle.WHITE)
 

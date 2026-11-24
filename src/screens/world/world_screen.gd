@@ -9,6 +9,13 @@ extends Control
 ##  - El móvil («Terminal», tecla T). Solo fuera de combate.
 ##
 ## Flujo: introducción en negro → libre (casa) → mapa → ubicación → personajes.
+##
+## Capas del escenario: `Backdrop` (la ubicación) contiene `Props` (objetos
+## examinables, parte de la habitación) y `Scenario` (personajes). Así, al
+## fundir a negro la ubicación desaparece todo junto, y al conversar solo se
+## ocultan los personajes (salen en grande en la conversación): los objetos
+## nunca quedan sobre negro ni la habitación se queda sin ellos. Los fundidos
+## pasan siempre por `_fade_room` y `_fade_cast`, que cancelan el anterior.
 ## Mientras hay un paso de guion activo (capítulo 1, ver ChapterDB) se avisa del
 ## objetivo, solo se puede ir a su destino y al llegar se reproducen sus escenas.
 
@@ -18,6 +25,8 @@ const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
 const DUNGEON_SCREEN := "res://src/screens/dungeon/dungeon_screen.tscn"
 ## Color del contorno de los objetos examinables.
 const PROP_COLOR := UIStyle.LIME
+## Intensidad del contorno de los objetos en reposo (en exploración).
+const PROP_GLOW := 0.45
 ## Líneas de la conversación que se llegan a ver antes de que la incursión la corte.
 const INCURSION_CUT_AFTER := 2
 ## Opciones extra de la cama (además de Examinar).
@@ -27,6 +36,7 @@ const BED_ACTIONS := [
 ]
 
 @onready var _backdrop: LocationBackdrop = %Backdrop
+@onready var _props_layer: Control = %Props
 @onready var _scenario: Control = %Scenario
 @onready var _hud: Control = %Hud
 @onready var _region_header: RegionHeader = %RegionHeader
@@ -44,9 +54,12 @@ var _sprites: Dictionary = {}     # id -> CharacterSprite
 var _tags: Dictionary = {}        # id -> NameTag
 var _bubbles: Dictionary = {}     # id -> TalkIndicator (solo personajes)
 var _props: Dictionary = {}       # id -> datos del objeto examinable (LocationDB.props)
+var _poses: Dictionary = {}       # id -> rect (px del fondo) de los personajes con pose (LocationDB.pose)
 var _last_character := ""
 var _hint_toast: Toast
 var _phone: PhoneOverlay
+var _room_tween: Tween
+var _cast_tween: Tween
 
 
 func _ready() -> void:
@@ -80,14 +93,14 @@ func _ready() -> void:
 	_empty_hint.visible = false
 	_empty_hint.label_settings.font = UIStyle.FONT_LIGHT_ITALIC
 	# La introducción es en negro: la habitación aparece al terminar.
-	_backdrop.modulate.a = 0.0
+	_fade_room(false)
 	_spawn_cast()
-	_scenario.modulate.a = 0.0
 	if GameState.intro_done:
 		# Partida cargada: directamente a la ubicación guardada.
 		_enter_explore()
 		_banner.play(LocationDB.display_name(GameState.location_id), "Región · %s" % GameState.region_name)
 		_show_objective(false)
+		_announce_plans()
 	else:
 		_play_intro()
 
@@ -123,9 +136,8 @@ func _cast(location_id: String) -> Array:
 
 func _enter_explore() -> void:
 	mode = Mode.EXPLORE
-	var t := create_tween().set_parallel(true)
-	t.tween_property(_backdrop, "modulate:a", 1.0, 0.8)
-	t.tween_property(_scenario, "modulate:a", 1.0, 0.8)
+	_fade_room(true, 0.8)
+	_fade_cast(true)
 	_show_hud(true)
 	_update_empty_hint()
 
@@ -240,6 +252,10 @@ func _travel(location_id: String) -> void:
 	if not step.is_empty():
 		await _play_story_step()
 		return
+	var plan_id := ChapterDB.plan_at(location_id)
+	if plan_id != "":
+		await _play_plan(plan_id)
+		return
 	if LocationDB.is_dungeon(location_id):
 		GameState.save_game()
 		await _dungeon_entrance(1.4)
@@ -303,17 +319,87 @@ func _play_story_step() -> void:
 		_show_objective(false)
 
 
+## Plan propuesto (ChapterDB.PLANS): sus escenas, como un paso del guion, y
+## después juego libre en el mismo sitio.
+func _play_plan(plan_id: String) -> void:
+	var plan := ChapterDB.plan(plan_id)
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_empty_hint.visible = false
+	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
+	_show_hud(false)
+	GameState.scene_cast = plan.get("cast", [])
+	for scene: Dictionary in plan.scenes:
+		if scene.get("black", false):
+			await _black_scene(Story.cue(scene.cue))
+		else:
+			await _conversation.play(Story.cue(scene.cue), scene.get("npc", ""))
+	GameState.scene_cast = []
+	GameState.set_flag(ChapterDB.PLAN_DONE + plan_id)
+	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, plan.get("cast", []))
+	if plan.has("sets_phase"):
+		GameState.set_phase(plan.sets_phase)
+	if plan.get("advance_time", false) and GameState.slot_id() != "noche":
+		_pass_time()
+	_spawn_cast()
+	GameState.save_game()
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	_update_empty_hint()
+	_announce_plans()
+
+
+## Planes que alguien propone para hoy: el mensaje al móvil (una vez por plan) y
+## un aviso con los que quedan.
+func _announce_plans() -> void:
+	var ids := ChapterDB.plans_today()
+	if ids.is_empty():
+		return
+	for id in ids:
+		var invite: Dictionary = ChapterDB.plan(id).get("invite", {})
+		if not invite.is_empty() and not GameState.get_flag(ChapterDB.PLAN_INVITED + id):
+			GameState.set_flag(ChapterDB.PLAN_INVITED + id)
+			GameState.add_message(invite.from, invite.from, invite.text)
+	var y := 250.0
+	Toast.show_in(self, "Planes de hoy (opcionales; mira el móvil)", UIStyle.VIOLET, 7.0, y)
+	for id in ids.slice(0, 4):
+		y += 62.0
+		Toast.show_in(self, ChapterDB.plan_label(id), UIStyle.VIOLET, 7.0, y)
+
+
 ## Fundido a negro, narración sobre negro y vuelta a la escena.
 func _black_scene(entry: Dictionary) -> void:
 	await SceneRouter.fade_out(0.5)
-	_backdrop.modulate.a = 0.0
-	_scenario.modulate.a = 0.0
+	_fade_room(false)
 	await SceneRouter.fade_in(0.2)
 	await _conversation.play(entry, "", false)
 	await SceneRouter.fade_out(0.4)
-	_backdrop.modulate.a = 1.0
-	_scenario.modulate.a = 1.0
+	_fade_room(true)
 	await SceneRouter.fade_in(0.5)
+
+
+## Muestra u oculta la ubicación entera (fondo, objetos y personajes).
+## Sin `duration`, de golpe. Cancela cualquier fundido anterior de la ubicación.
+func _fade_room(on: bool, duration: float = 0.0) -> void:
+	_room_tween = _fade(_backdrop, _room_tween, on, duration)
+
+
+## Muestra u oculta solo a los personajes del escenario (los objetos se quedan).
+func _fade_cast(on: bool, duration: float = 0.0) -> void:
+	_cast_tween = _fade(_scenario, _cast_tween, on, duration)
+
+
+func _fade(node: CanvasItem, previous: Tween, on: bool, duration: float) -> Tween:
+	if previous and previous.is_valid():
+		previous.kill()
+	var alpha := 1.0 if on else 0.0
+	if duration <= 0.0:
+		node.modulate.a = alpha
+		return null
+	var t := create_tween()
+	t.tween_property(node, "modulate:a", alpha, duration)
+	return t
 
 
 # --- Paso del tiempo ------------------------------------------------------------------
@@ -323,6 +409,7 @@ func _black_scene(entry: Dictionary) -> void:
 func _pass_time() -> void:
 	if GameState.advance_slot():
 		return
+	_backdrop.set_location(GameState.location_id)   # fondo de la nueva franja, si lo hay
 	Toast.show_in(self, "Ahora: %s" % GameState.slot_name(), UIStyle.VIOLET, 3.0, 250.0)
 
 
@@ -332,14 +419,14 @@ func _go_to_next_morning(narration: String = "") -> void:
 	var before := _date_info()
 	var from_hour := GameState.slot_hour()
 	await SceneRouter.fade_out(0.8)
-	_backdrop.modulate.a = 0.0
-	_scenario.modulate.a = 0.0
+	_fade_room(false)
 	_hud.modulate.a = 0.0
 	if narration != "":
 		await SceneRouter.fade_in(0.2)
 		await _conversation.play(Story.cue(narration), "", false)
 		await SceneRouter.fade_out(0.5)
 	GameState.wake_up_next_day()
+	_backdrop.set_location(GameState.location_id)
 	_spawn_cast()
 	var transition := DayTransition.new()
 	add_child(transition)
@@ -352,7 +439,9 @@ func _go_to_next_morning(narration: String = "") -> void:
 	await _conversation.play(Story.cue("intro"), "", false)
 	GameState.save_game()
 	_enter_explore()
+	await _check_partner()
 	_show_objective(true)
+	_announce_plans()
 
 
 ## Siesta: pasa una franja. De noche equivale a dormir hasta la mañana.
@@ -384,13 +473,16 @@ func _update_empty_hint() -> void:
 
 # --- Escenario: personajes -------------------------------------------------------------
 
+## Crea objetos y personajes de la ubicación actual. No cambia su visibilidad:
+## eso lo deciden `_fade_room` / `_fade_cast`.
 func _spawn_cast() -> void:
-	for child in _scenario.get_children():
+	for child in _props_layer.get_children() + _scenario.get_children():
 		child.queue_free()
 	_sprites.clear()
 	_tags.clear()
 	_bubbles.clear()
 	_props.clear()
+	_poses.clear()
 
 	for prop: Dictionary in LocationDB.props(GameState.location_id):
 		_spawn_prop(prop)
@@ -399,11 +491,22 @@ func _spawn_cast() -> void:
 		var data := CharacterDB.get_character(id)
 		var sprite := CharacterSprite.new()
 		sprite.name = id.capitalize()
-		sprite.texture = CharacterDB.portrait(id)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		sprite.glow_color = data.color
-		sprite.glow_idle = 0.85
 		sprite.glow_active = 1.0
+		var pose := LocationDB.pose(GameState.location_id, id)
+		if pose.is_empty():
+			# Sin pose para este lugar: su retrato de pie, con el brillo siempre visible.
+			sprite.texture = CharacterDB.portrait(id)
+			sprite.glow_idle = 0.85
+		else:
+			# Integrado en el fondo, en su sitio: solo resalta al pasar por encima.
+			sprite.texture = pose.texture
+			sprite.stretch = true
+			sprite.glow_idle = 0.0
+			sprite.outline_screen_px = 2.0
+			sprite.glow_screen_px = 8.0
+			_poses[id] = pose.rect
 		sprite.interactive = true
 		sprite.activated.connect(_on_character_activated.bind(id))
 		sprite.focus_entered.connect(_set_tag_visible.bind(id, true))
@@ -424,7 +527,6 @@ func _spawn_cast() -> void:
 		_tags[id] = tag
 
 	_layout_cast()
-	_scenario.modulate.a = 1.0
 
 
 ## Objeto examinable encajado sobre el fondo, con contorno y menú al seleccionarlo.
@@ -438,13 +540,13 @@ func _spawn_prop(prop: Dictionary) -> void:
 	sprite.glow_color = PROP_COLOR
 	sprite.outline_screen_px = 2.0
 	sprite.glow_screen_px = 8.0
-	sprite.glow_idle = 0.45
+	sprite.glow_idle = PROP_GLOW
 	sprite.glow_active = 1.0
 	sprite.interactive = true
 	sprite.activated.connect(_on_prop_activated.bind(id))
 	sprite.focus_entered.connect(_set_tag_visible.bind(id, true))
 	sprite.focus_exited.connect(_set_tag_visible.bind(id, false))
-	_scenario.add_child(sprite)
+	_props_layer.add_child(sprite)
 	_sprites[id] = sprite
 	_props[id] = prop
 
@@ -452,7 +554,7 @@ func _spawn_prop(prop: Dictionary) -> void:
 	tag.text = prop.name
 	tag.color = PROP_COLOR
 	tag.visible = false
-	_scenario.add_child(tag)
+	_props_layer.add_child(tag)
 	_tags[id] = tag
 
 
@@ -468,29 +570,44 @@ func _layout_cast() -> void:
 		var top := sprite.position + sprite.head_point()
 		tag.position = Vector2(clampf(top.x - tag.size.x * 0.5, 20, area.x - tag.size.x - 20),
 				clampf(top.y - tag.size.y - 10, 130, area.y - tag.size.y - 20))
-	var ids := _sprites.keys().filter(func(k: String) -> bool: return not _props.has(k))
+	# Personajes con pose: en su sitio del fondo, como los objetos.
+	for id: String in _poses:
+		var r: Rect2 = _poses[id]
+		var sprite: CharacterSprite = _sprites[id]
+		sprite.position = _backdrop.image_to_local(r.position)
+		sprite.size = r.size * _backdrop.cover_scale()
+		_place_marks(id, sprite.position + sprite.head_point())
+	# El resto, repartidos a lo ancho: uno en el centro, dos a tercios, tres a cuartos...
+	var ids := _sprites.keys().filter(func(k: String) -> bool: return not _props.has(k) and not _poses.has(k))
 	for i in ids.size():
 		var id: String = ids[i]
 		var scene_data: Dictionary = CharacterDB.get_character(id).scene
-		# Repartidos a lo ancho: uno en el centro, dos a tercios, tres a cuartos...
 		var x := (i + 1.0) / (ids.size() + 1.0)
 		var sprite: CharacterSprite = _sprites[id]
 		var h: float = scene_data.height * area.y / 1080.0
 		var w := h * 0.75
 		sprite.size = Vector2(w, h)
 		sprite.position = Vector2(area.x * x - w * 0.5, area.y - h)
-		var head := sprite.position + sprite.head_point()
-		var bubble: TalkIndicator = _bubbles[id]
-		bubble.position = head + Vector2(-bubble.size.x * 0.5 + 8, -bubble.size.y + 4)
-		var tag: NameTag = _tags[id]
-		tag.position = head + Vector2(-bubble.size.x * 0.5 - tag.size.x - 4, -tag.size.y - 6)
+		_place_marks(id, sprite.position + sprite.head_point())
+
+
+## Burbuja de «hablar» y nombre de un personaje sobre su cabeza.
+func _place_marks(id: String, head: Vector2) -> void:
+	var bubble: TalkIndicator = _bubbles[id]
+	bubble.position = head + Vector2(-bubble.size.x * 0.5 + 8, -bubble.size.y + 4)
+	var tag: NameTag = _tags[id]
+	tag.position = head + Vector2(-bubble.size.x * 0.5 - tag.size.x - 4, -tag.size.y - 6)
 
 
 ## Los personajes solo responden en modo exploración (evita que roben el foco
-## al menú, al mapa o a la conversación).
+## al menú, al mapa o a la conversación). Los objetos siguen a la vista, pero
+## sin su contorno mientras no se pueden examinar.
 func _set_cast_interactive(on: bool) -> void:
-	for sprite: CharacterSprite in _sprites.values():
+	for id: String in _sprites:
+		var sprite: CharacterSprite = _sprites[id]
 		sprite.interactive = on
+		if _props.has(id):
+			sprite.glow_idle = PROP_GLOW if on else 0.0
 
 
 func _first_character() -> String:
@@ -545,10 +662,15 @@ func _on_action_chosen(id: String, action: String) -> void:
 	if action in ["nap", "sleep"]:
 		await _use_bed(id, action)
 		return
+	if action == "date":
+		_open_date_places(id)
+		return
+	if action.begins_with(InteractionMenu.DATE_PREFIX):
+		await _run_date(id, action.trim_prefix(InteractionMenu.DATE_PREFIX))
+		return
 	mode = Mode.TALK
 	get_viewport().gui_release_focus()
-	var t := create_tween()
-	t.tween_property(_scenario, "modulate:a", 0.0, 0.25)
+	_fade_cast(false, 0.25)
 	_show_hud(false)
 	if action == "examine":
 		GameState.record("examine", CharacterDB.PROTAGONIST, id)
@@ -563,16 +685,99 @@ func _on_action_chosen(id: String, action: String) -> void:
 			await _conversation.play(Story.pick(id, Story.moment_for(action, result)), id)
 		else:
 			await _conversation.play(Story.pick(id, Story.moment_for(action)), id)
+			if action == "flirt":
+				Romance.on_flirt(id)
 		if action == "fight" and result == Social.OK:
 			var won := await _run_combat(id)
 			await _conversation.play(Story.pick(id, "luchar_fin", {"resultado": "gana" if won else "pierde"}), id)
 	GameState.save_game()
-	t = create_tween()
-	t.tween_property(_scenario, "modulate:a", 1.0, 0.3)
+	_fade_cast(true, 0.3)
 	_show_hud(true)
 	mode = Mode.EXPLORE
 	_set_cast_interactive(true)
 	_focus_character(id)
+
+
+# --- Citas (Romance) -------------------------------------------------------------------
+
+## «Cita»: el menú pasa a los sitios donde se le puede invitar.
+func _open_date_places(id: String) -> void:
+	var why := ""
+	if GameState.story_step != "":
+		why = "Ahora no. Objetivo: %s" % ChapterDB.step(GameState.story_step).get("objective", "")
+	elif GameState.slot_id() == "noche":
+		why = "Es muy tarde para una cita."
+	elif Romance.dated_today():
+		why = "Hoy ya has tenido una cita."
+	if why != "":
+		Toast.show_in(self, why, UIStyle.LIME, 3.0, 170.0)
+		mode = Mode.EXPLORE
+		_set_cast_interactive(true)
+		_focus_character(id)
+		return
+	var actions: Array = []
+	for place in Romance.DATE_PLACES:
+		actions.append({"id": InteractionMenu.DATE_PREFIX + place, "label": LocationDB.display_name(place),
+				"icon": "heart", "desc": "Invitarle a %s." % LocationDB.display_name(place)})
+	var sprite: CharacterSprite = _sprites[id]
+	var img := sprite.image_rect()
+	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "¿Adónde?", CharacterDB.color(id), actions)
+
+
+## Pide la cita: responde según Romance.answer; si acepta, fundido al sitio, la
+## escena de la cita (momento «cita») y pasa la franja.
+func _run_date(id: String, place: String) -> void:
+	mode = Mode.TALK
+	get_viewport().gui_release_focus()
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	var answer := Romance.answer(id, place)
+	var accepted := answer in ["acepta", "rompe"]
+	if accepted:
+		Romance.start_date(id, place, answer)
+	else:
+		Romance.refused(id, place, answer)
+	await _conversation.play(Story.pick(id, "cita_pide", {"resultado": answer}), id)
+	if accepted:
+		await SceneRouter.fade_out(0.5)
+		GameState.set_location(place)
+		_backdrop.set_location(place)
+		_refresh_hints()
+		_spawn_cast()
+		GameState.scene_cast = [id]
+		await SceneRouter.fade_in(0.5)
+		_banner.play(LocationDB.display_name(place), "Cita con %s" % CharacterDB.display_name(id))
+		await _conversation.play(Story.pick(id, "cita"), id)
+		GameState.scene_cast = []
+		Romance.finish_date(id)
+		_pass_time()
+		_spawn_cast()
+	GameState.save_game()
+	_fade_cast(true, 0.3)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	if _sprites.has(id):
+		_focus_character(id)
+	_update_empty_hint()
+
+
+## Cada mañana: se descubren secretos (Lies) y la pareja de Ren repasa el día
+## anterior. Si le deja, se lo dice.
+func _check_partner() -> void:
+	Lies.morning()
+	var partner := Romance.ren_partner()
+	var why := Romance.morning()
+	if why == "":
+		return
+	mode = Mode.TALK
+	_show_hud(false)
+	_fade_cast(false)
+	await _conversation.play(Story.pick(partner, "deja_a_ren", {"resultado": why}), partner)
+	_fade_cast(true, 0.3)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	GameState.save_game()
 
 
 ## Siesta o dormir. Durante el guion no se puede (hay un objetivo pendiente).
@@ -608,9 +813,12 @@ func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
 		ally = ally_hint if ally_hint in CharacterDB.COMPANIONS else CharacterDB.COMPANIONS.pick_random()
-		ally_skills = SkillDB.random_skills(2)
+		ally_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(ally), CharacterDB.get_character(ally).get("nature", ""))
 	await SceneRouter.fade_out(0.25)
-	_combat.setup(enemy_id, ally, ally_skills)
+	# Criaturas en la calle: al nivel de Ren (ver ProgressionDB). Las personas, al suyo.
+	var level := ProgressionDB.street_creature_level(GameState.level_of(CharacterDB.PROTAGONIST)) \
+			if CharacterDB.is_enemy(enemy_id) else 0
+	_combat.setup(enemy_id, ally, ally_skills, {}, level)
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -639,10 +847,12 @@ func _run_incursion(npc_id: String, action: String) -> void:
 	# Todos los presentes lo han visto: a partir de aquí saben que existen las criaturas.
 	GameState.record("incursion", enemy_id, npc_id, {"won": won}, Social.present(), "incursion_1")
 	GameState.set_flag("conoce_criaturas")
+	GameState.set_flag("lugar_incursion", LocationDB.display_name(GameState.location_id))
 	GameState.set_phase("incursion_1")
 	var result := {"resultado": "gana" if won else "pierde"}
 	await _conversation.play(Story.cue("derrota_%s_%s" % [enemy_id, result.resultado]), npc_id, true, true)
 	await _conversation.play(Story.pick(npc_id, "tras_incursion", result), npc_id)
+	_announce_plans()   # el grupo convoca la reunión en las Cloacas
 
 
 ## Temblor de cámara: sacudida fuerte con destello, réplica y una más pequeña.

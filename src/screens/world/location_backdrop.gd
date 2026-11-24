@@ -2,7 +2,9 @@ class_name LocationBackdrop
 extends Control
 ## Fondo de la ubicación actual. Lo comparten el escenario y la conversación.
 ##
-## Si existe `res://assets/backgrounds/<id>.(png|jpg|webp)`, se usa esa imagen.
+## Si existe `res://assets/backgrounds/<id>_<franja>.(png|jpg|webp)` (franja de
+## GameState.TIME_SLOTS: manana, dia, tarde, noche), se usa esa imagen; si no,
+## `<id>.(png|jpg|webp)`, la de cualquier momento.
 ## Si no, se genera un fondo PROVISIONAL por código: ciudad nocturna con la
 ## paleta de la ubicación (ver LocationDB). Sin imagen, la ubicación vacía o
 ## «casa» es negro.
@@ -22,11 +24,15 @@ func set_location(id: String) -> void:
 	location_id = id
 	_loc = LocationDB.get_location(id)
 	_texture = null
-	for ext in ["png", "jpg", "webp"]:
-		var path := "%s%s.%s" % [BACKGROUND_DIR, id, ext]
-		if id != "" and ResourceLoader.exists(path):
-			_texture = load(path)
-			break
+	if id != "":
+		for name in [id + "_" + GameState.slot_id(), id]:
+			for ext in ["png", "jpg", "webp"]:
+				var path := "%s%s.%s" % [BACKGROUND_DIR, name, ext]
+				if _texture == null and ResourceLoader.exists(path):
+					_texture = load(path)
+				elif _texture == null and OS.has_feature("editor") and FileAccess.file_exists(path):
+					# Recién puesto desde el editor del mapa y aún sin importar.
+					_texture = ImageTexture.create_from_image(Image.load_from_file(ProjectSettings.globalize_path(path)))
 	queue_redraw()
 
 

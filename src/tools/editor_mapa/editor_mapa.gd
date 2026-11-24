@@ -1,6 +1,8 @@
 extends Control
 ## Editor del mapa 3D: vista, iluminación por horas, colores, capa gris y
-## ubicaciones (posición, nombre, descripción y puntos nuevos). Guarda en MapConfig.PATH.
+## ubicaciones (posición, nombre, descripción, personajes a la vez, fondo y
+## puntos nuevos). Guarda en MapConfig.PATH; los fondos se copian al momento a
+## assets/backgrounds/ (ver LocationBackdrop).
 ##
 ## Abrir la escena editor_mapa.tscn y pulsar F6 (o «Ejecutar escena actual»).
 ## La vista tiene la misma proporción que el mapa del juego. En el juego el mapa
@@ -16,6 +18,10 @@ extends Control
 const PANEL_W := 500.0
 const ORBIT_SPEED := 0.25        ## grados por píxel
 const PAN_KEYS_SPEED := 0.6      ## fracción de la distancia por segundo
+const BG_DIR := "res://assets/backgrounds/"
+const BG_EXTS := ["png", "jpg", "webp"]
+## Donde empieza a buscar el selector de fondos (copia organizada, ver tools/assets/).
+const ASSET_LIBRARY := "Documents/assets-game/Ubicaciones"
 
 var _cfg: Dictionary
 var _map: CityMap
@@ -39,7 +45,13 @@ var _hidden_box: VBoxContainer
 var _rows := {}                  ## id de ubicación -> {button, state, remove}
 var _name_edit: LineEdit
 var _desc_edit: LineEdit
+var _capacity_spin: SpinBox
+var _cast_label: Label
 var _loc_editor: Control
+var _bg_rows := {}               ## "" (cualquier momento) o id de franja -> {thumb, file, remove}
+var _bg_dialog: FileDialog
+var _bg_confirm: ConfirmationDialog
+var _bg_target := ""             ## franja cuyo fondo se está eligiendo o quitando
 
 
 func _ready() -> void:
@@ -173,6 +185,172 @@ func _build_locations(box: VBoxContainer) -> void:
 	box.add_child(ed)
 	_name_edit = _line(ed, "Nombre", func(t: String) -> void: _set_text("names", t))
 	_desc_edit = _line(ed, "Descripción", func(t: String) -> void: _set_text("descs", t))
+	_capacity_spin = _spin(ed, "Personajes a la vez", 0, LocationDB.MAX_CAPACITY, _set_capacity)
+	_cast_label = _small("")
+	ed.add_child(_cast_label)
+	_build_backgrounds(ed)
+
+
+# --- Fondos de la ubicación ---------------------------------------------------------------
+
+func _build_backgrounds(box: VBoxContainer) -> void:
+	var title := Label.new()
+	title.text = "Fondo"
+	title.add_theme_font_override("font", UIStyle.FONT_SEMIBOLD)
+	box.add_child(title)
+	box.add_child(_small("Se copia al proyecto al elegirlo (no hace falta Guardar). El de una franja tiene prioridad sobre «Cualquier momento»; sin ninguno, sale el fondo provisional."))
+	var moments := [["", "Cualquier momento"]]
+	for slot: Dictionary in GameState.TIME_SLOTS:
+		moments.append([slot.id, slot.name])
+	for m: Array in moments:
+		var suffix: String = m[0]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var l := Label.new()
+		l.text = m[1]
+		l.custom_minimum_size.x = 120
+		l.add_theme_font_size_override("font_size", 16)
+		row.add_child(l)
+		var thumb := TextureRect.new()
+		thumb.custom_minimum_size = Vector2(80, 45)
+		thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		thumb.clip_contents = true
+		row.add_child(thumb)
+		var file := _small("")
+		file.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		file.autowrap_mode = TextServer.AUTOWRAP_OFF
+		file.clip_text = true
+		row.add_child(file)
+		var choose := Button.new()
+		choose.text = "Elegir…"
+		choose.pressed.connect(_choose_background.bind(suffix))
+		row.add_child(choose)
+		var remove := Button.new()
+		remove.text = "Quitar"
+		remove.pressed.connect(_ask_remove_background.bind(suffix))
+		row.add_child(remove)
+		box.add_child(row)
+		_bg_rows[suffix] = {"thumb": thumb, "file": file, "remove": remove}
+
+	_bg_dialog = FileDialog.new()
+	_bg_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_bg_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_bg_dialog.filters = PackedStringArray(["*.png, *.jpg, *.jpeg, *.webp ; Imágenes"])
+	_bg_dialog.use_native_dialog = true
+	_bg_dialog.title = "Elegir fondo"
+	_bg_dialog.size = Vector2i(1000, 650)
+	_bg_dialog.file_selected.connect(_on_background_chosen)
+	add_child(_bg_dialog)
+	_bg_confirm = ConfirmationDialog.new()
+	_bg_confirm.ok_button_text = "Quitar"
+	_bg_confirm.cancel_button_text = "Cancelar"
+	_bg_confirm.confirmed.connect(_remove_background)
+	add_child(_bg_confirm)
+
+
+## Nombre del fondo en assets/backgrounds/ (sin extensión): <id> o <id>_<franja>.
+func _bg_name(suffix: String) -> String:
+	return _selected if suffix == "" else "%s_%s" % [_selected, suffix]
+
+
+## Ruta del fondo que hay ahora ("" si no hay).
+func _bg_file(suffix: String) -> String:
+	for ext: String in BG_EXTS:
+		var path := "%s%s.%s" % [BG_DIR, _bg_name(suffix), ext]
+		if FileAccess.file_exists(path):
+			return path
+	return ""
+
+
+func _moment_name(suffix: String) -> String:
+	for slot: Dictionary in GameState.TIME_SLOTS:
+		if slot.id == suffix:
+			return slot.name
+	return "Cualquier momento"
+
+
+func _refresh_backgrounds() -> void:
+	if _selected == "":
+		return
+	for suffix: String in _bg_rows:
+		var row: Dictionary = _bg_rows[suffix]
+		var path := _bg_file(suffix)
+		var thumb: TextureRect = row.thumb
+		thumb.texture = null
+		if path != "":
+			# Desde el archivo: puede que Godot aún no lo haya importado.
+			var img := Image.load_from_file(ProjectSettings.globalize_path(path))
+			if img:
+				img.resize(160, int(160.0 * img.get_height() / img.get_width()), Image.INTERPOLATE_BILINEAR)
+				thumb.texture = ImageTexture.create_from_image(img)
+		(row.file as Label).text = path.get_file() if path != "" else ("—" if suffix == "" else "usa el de cualquier momento")
+		(row.remove as Button).disabled = path == ""
+
+
+func _choose_background(suffix: String) -> void:
+	if _selected == "":
+		return
+	_bg_target = suffix
+	_bg_dialog.title = "Fondo de %s · %s" % [LocationDB.display_name(_selected), _moment_name(suffix)]
+	# Empieza en la carpeta de esa ubicación y momento de la copia organizada, si existe.
+	var lib := OS.get_environment("HOME").path_join(ASSET_LIBRARY)
+	var dir := lib.path_join(LocationDB.display_name(_selected)).path_join(_moment_name(suffix))
+	for candidate in [dir, dir.get_base_dir(), lib, OS.get_environment("HOME")]:
+		if DirAccess.dir_exists_absolute(candidate):
+			_bg_dialog.current_dir = candidate
+			break
+	_bg_dialog.popup_centered()
+
+
+## Copia la imagen elegida como assets/backgrounds/<id>[_<franja>].<ext>,
+## sustituyendo la que hubiera (con cualquier extensión).
+func _on_background_chosen(source: String) -> void:
+	var ext := source.get_extension().to_lower()
+	if ext == "jpeg":
+		ext = "jpg"
+	if not ext in BG_EXTS:
+		_set_status("Formato no válido: usa PNG, JPG o WebP.", UIStyle.RED)
+		return
+	_delete_background_files(_bg_target)
+	var dest := ProjectSettings.globalize_path("%s%s.%s" % [BG_DIR, _bg_name(_bg_target), ext])
+	var err := DirAccess.copy_absolute(source, dest)
+	if err != OK:
+		_set_status("No se pudo copiar el fondo: %s" % error_string(err), UIStyle.RED)
+		return
+	_refresh_backgrounds()
+	_set_status("Fondo de %s (%s): %s. Godot lo importa al volver al editor." % [
+			LocationDB.display_name(_selected), _moment_name(_bg_target).to_lower(), dest.get_file()], UIStyle.LIME)
+
+
+func _ask_remove_background(suffix: String) -> void:
+	var path := _bg_file(suffix)
+	if path == "":
+		return
+	_bg_target = suffix
+	_bg_confirm.dialog_text = "¿Quitar el fondo de %s (%s)?\nSe borra %s del proyecto (en git sigue la versión anterior)." % [
+			LocationDB.display_name(_selected), _moment_name(suffix).to_lower(), path.trim_prefix("res://")]
+	_bg_confirm.popup_centered()
+
+
+func _remove_background() -> void:
+	_delete_background_files(_bg_target)
+	_refresh_backgrounds()
+	_set_status("Fondo quitado.", UIStyle.LIME)
+
+
+## Borra el fondo de esa franja con cualquier extensión (y su .import).
+func _delete_background_files(suffix: String) -> void:
+	for ext: String in BG_EXTS:
+		var path := ProjectSettings.globalize_path("%s%s.%s" % [BG_DIR, _bg_name(suffix), ext])
+		for p in [path, path + ".import"]:
+			if FileAccess.file_exists(p):
+				DirAccess.remove_absolute(p)
+
+
+func _set_status(text: String, color: Color) -> void:
+	_status.text = text
+	_status.modulate = color
 
 
 func _build_view(box: VBoxContainer) -> void:
@@ -391,6 +569,25 @@ func _line(box: VBoxContainer, text: String, on_change: Callable) -> LineEdit:
 	return e
 
 
+func _spin(box: VBoxContainer, text: String, lo: int, hi: int, on_change: Callable) -> SpinBox:
+	var row := HBoxContainer.new()
+	var l := Label.new()
+	l.text = text
+	l.custom_minimum_size.x = 190
+	row.add_child(l)
+	var sb := SpinBox.new()
+	sb.min_value = lo
+	sb.max_value = hi
+	sb.step = 1
+	sb.rounded = true
+	sb.value_changed.connect(func(x: float) -> void:
+		if not _syncing:
+			on_change.call(int(x)))
+	row.add_child(sb)
+	box.add_child(row)
+	return sb
+
+
 static func _fmt(v: float, step: float) -> String:
 	if step == 0.25:
 		return "%02d:%02d" % [int(v), int(fmod(v, 1.0) * 60.0)]
@@ -468,6 +665,37 @@ func _set_text(field: String, text: String) -> void:
 	_set_dirty(true)
 
 
+## Máximo de personajes a la vez en la ubicación seleccionada. Si coincide con
+## el de LocationDB, no hace falta guardarlo.
+func _set_capacity(n: int) -> void:
+	if _selected == "":
+		return
+	var original := int(LocationDB.ALL.get(_selected, {}).get("capacity", LocationDB.DEFAULT_CAPACITY))
+	if n == original:
+		_cfg.capacity.erase(_selected)
+	else:
+		_cfg.capacity[_selected] = n
+	MapConfig.set_current(_cfg)
+	_refresh_cast_label()
+	_set_dirty(true)
+
+
+## Quién puede estar en la ubicación y cuántos a la vez.
+func _refresh_cast_label() -> void:
+	if _selected == "":
+		return
+	var all: Array = LocationDB.get_location(_selected).get("cast", [])
+	var n := LocationDB.capacity(_selected)
+	if all.is_empty():
+		_cast_label.text = "Aquí no hay nadie asignado (LocationDB `cast`)."
+	else:
+		var names := ", ".join(all.map(CharacterDB.display_name))
+		var rule := "Caben todos."
+		if all.size() > n:
+			rule = "Cada franja del día se elige 1." if n == 1 else "Cada franja del día se eligen %d." % n
+		_cast_label.text = "Pueden estar: %s. %s" % [names, rule]
+
+
 func _points_changed() -> void:
 	_map.apply(_cfg)
 	_refresh_rows()
@@ -524,7 +752,10 @@ func _select(id: String) -> void:
 		_syncing = true
 		_name_edit.text = loc.get("name", "")
 		_desc_edit.text = loc.get("desc", "")
+		_capacity_spin.value = LocationDB.capacity(id)
 		_syncing = false
+		_refresh_cast_label()
+		_refresh_backgrounds()
 	_refresh_rows()
 
 

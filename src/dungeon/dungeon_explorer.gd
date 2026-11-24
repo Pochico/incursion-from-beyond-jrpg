@@ -19,6 +19,14 @@ extends Node3D
 ##   defeated  "planta|x,y" -> true
 ##   taken     "planta|x,y" -> true
 ##   visited   planta -> {"x,y": true}   (para el automapa)
+##   detected  "planta|clave de borde" -> 1..5: paredes secretas que ha hecho
+##             brillar el pulso del resonador (5 = detectada desde muy cerca)
+##
+## Resonador (`pulse()`): un anillo rosado sale de la cámara y recorre
+## PULSE_RANGE casillas (efecto en pulse.gdshader, sobre toda la geometría de
+## la planta). Las paredes secretas sin abrir a su alcance brillan más cuanto
+## más cerca estaba el grupo y desde entonces se pueden inspeccionar. Las
+## ocultas (`hidden`) solo así; las demás también al empujarlas a ciegas.
 ## (las plantas van como texto, para que sobrevivan al JSON).
 
 signal message(text: String)
@@ -28,11 +36,19 @@ signal level_changed(level: int)
 signal item_taken(item_id: String, count: int)
 ## Algo que el grupo puede comentar: "secret_found", "locked", "switch", "bump".
 signal noticed(kind: String)
+## Fin del pulso del resonador: cuántas paredes ha hecho brillar.
+signal pulse_finished(found: int)
+## El grupo usa un punto de guardado (lo resuelve quien usa el explorador).
+signal save_point_used(cell: Vector2i)
 
 const EYE_H := 1.55
 const STEP_TIME := 0.2
 const TURN_TIME := 0.16
 const BUMP := 0.18
+const PULSE_RANGE := 5            ## casillas
+const PULSE_TIME := 1.8           ## s que tarda el frente en llegar al final
+const PULSE_SHADER := preload("res://src/dungeon/pulse.gdshader")
+const SECRET_GLOW := 0.5          ## brillo del borde de una pared detectada desde 1 casilla
 
 var map: DungeonMap
 var cell := Vector2i.ZERO
@@ -46,6 +62,11 @@ var _model: Node3D
 var _yaw := 0.0
 var _busy := false
 var _queued := ""
+var _pulse_mat: ShaderMaterial      ## capa del pulso sobre la planta
+var _secret_mats := {}              ## clave de pared secreta -> su capa (pulso + brillo)
+var _pulse_t := -1.0                ## s desde que empezó el pulso (-1 = ninguno)
+var _pulse_pending := {}            ## clave -> {dist (m), level} aún no alcanzadas
+var _pulse_found := 0
 
 
 ## `state` vacío = partida nueva en este mapa. `at` = {level, cell, dir} para
@@ -53,7 +74,7 @@ var _queued := ""
 func setup(dungeon: DungeonMap, game_state: Dictionary = {}, at: Dictionary = {}) -> void:
 	map = dungeon
 	state = game_state
-	for k in ["doors", "defeated", "taken", "visited"]:
+	for k in ["doors", "defeated", "taken", "visited", "detected"]:
 		if not state.has(k):
 			state[k] = {}
 	for ch in get_children():
@@ -120,6 +141,124 @@ func _build_level() -> void:
 		var doors: Array = map.thing(_cell_of(sw.name)).get("doors", [])
 		if not doors.is_empty():
 			DungeonBuilder.set_switch_on(sw, door_open(doors[0]), false)
+	_setup_pulse_layer()
+
+
+# --- Resonador -------------------------------------------------------------------------------
+
+## Pone la capa del pulso a la geometría de la planta (no a criaturas ni objetos).
+## Las paredes secretas llevan su propia copia, para poder brillar solas.
+func _setup_pulse_layer() -> void:
+	_pulse_mat = ShaderMaterial.new()
+	_pulse_mat.shader = PULSE_SHADER
+	_pulse_mat.set_shader_parameter("max_radius", PULSE_RANGE * DungeonBuilder.tile())
+	_secret_mats.clear()
+	_pulse_t = -1.0
+	for child in _model.get_children():
+		if child.name in ["Enemigos", "Objetos", "Extraccion", "Puertas"]:
+			continue
+		for mi: MeshInstance3D in child.find_children("*", "MeshInstance3D", true, false) + ([child] if child is MeshInstance3D else []):
+			mi.material_overlay = _pulse_mat
+	for door: Node3D in _model.get_node("Puertas").get_children():
+		var k: String = door.get_meta("key")
+		var mat := _pulse_mat
+		if door.has_meta("secret"):
+			mat = _pulse_mat.duplicate()
+			_secret_mats[k] = mat
+			mat.set_shader_parameter("glow", _glow_for(detection(k)) if not door_open(k) else 0.0)
+			# Caja de la pared cerrada, para que brille por los bordes.
+			var box := _local_aabb(door.get_node("Hoja"))
+			box.position.y = 0.0
+			box.position += door.position
+			mat.set_shader_parameter("box_center", box.get_center())
+			mat.set_shader_parameter("box_half", box.size * 0.5)
+			mat.set_shader_parameter("box_axes", Vector3(0, 1, 1) if k.ends_with("W") else Vector3(1, 1, 0))
+		for mi: MeshInstance3D in door.find_children("*", "MeshInstance3D", true, false):
+			mi.material_overlay = mat
+
+
+## Caja de las mallas de `node` en el espacio de su padre (sin animación de apertura).
+static func _local_aabb(node: Node3D) -> AABB:
+	var out := AABB()
+	var first := true
+	for mi: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = mi.transform * mi.get_aabb()
+		out = b if first else out.merge(b)
+		first = false
+	return out
+
+
+## Más brillo cuanto más cerca (nivel 5); el nivel 1 sigue viéndose.
+static func _glow_for(level: int) -> float:
+	if level <= 0:
+		return 0.0
+	return SECRET_GLOW * (0.3 + 0.7 * level / float(PULSE_RANGE))
+
+
+## 1..5 si el pulso ha hecho brillar la pared secreta `key` de esta planta (0 = no).
+func detection(key: String) -> int:
+	return int(state.detected.get("%s|%s" % [_lk(), key], 0))
+
+
+func is_pulsing() -> bool:
+	return _pulse_t >= 0.0
+
+
+## Lanza el pulso desde la posición del grupo. Al acabar emite `pulse_finished`.
+func pulse() -> void:
+	if is_pulsing() or _pulse_mat == null:
+		return
+	var origin := _camera.global_position
+	_pulse_t = 0.0
+	_pulse_found = 0
+	_pulse_pending.clear()
+	# Distancia (en casillas) del centro de la casilla al centro de cada pared secreta.
+	for k: String in _secret_mats:
+		if door_open(k):
+			continue
+		var cs := DungeonMap.key_cells(k)
+		var mid := (DungeonBuilder.cell_center(cs[0]) + DungeonBuilder.cell_center(cs[1])) * 0.5
+		var dist := Vector2(mid.x - origin.x, mid.z - origin.z).length()
+		var cells := dist / DungeonBuilder.tile()
+		var level := PULSE_RANGE + 1 - ceili(cells - 0.001)
+		if level >= 1:
+			_pulse_pending[k] = {"dist": dist, "level": mini(level, PULSE_RANGE)}
+	for m: ShaderMaterial in [_pulse_mat] + _secret_mats.values():
+		m.set_shader_parameter("origin", origin)
+
+
+func _process(delta: float) -> void:
+	if _pulse_t < 0.0:
+		return
+	_pulse_t += delta
+	var k_t := clampf(_pulse_t / PULSE_TIME, 0.0, 1.0)
+	var radius := ease(k_t, 0.6) * PULSE_RANGE * DungeonBuilder.tile()
+	var strength := 1.0 - k_t * k_t
+	for m: ShaderMaterial in [_pulse_mat] + _secret_mats.values():
+		m.set_shader_parameter("radius", radius)
+		m.set_shader_parameter("strength", strength)
+	# Al llegar el frente a una pared secreta: destello y se queda brillando.
+	for k: String in _pulse_pending.keys():
+		var p: Dictionary = _pulse_pending[k]
+		if radius >= p.dist:
+			_pulse_pending.erase(k)
+			_reveal(k, p.level)
+	if k_t >= 1.0:
+		_pulse_t = -1.0
+		for m: ShaderMaterial in [_pulse_mat] + _secret_mats.values():
+			m.set_shader_parameter("strength", 0.0)
+		pulse_finished.emit(_pulse_found)
+
+
+func _reveal(k: String, level: int) -> void:
+	_pulse_found += 1
+	var key := "%s|%s" % [_lk(), k]
+	state.detected[key] = maxi(detection(k), level)
+	var mat: ShaderMaterial = _secret_mats[k]
+	var final := _glow_for(detection(k))
+	# Destello al llegar el pulso, que se queda en su brillo según la distancia.
+	mat.set_shader_parameter("glow", final + 0.6)
+	create_tween().tween_method(func(v: float) -> void: mat.set_shader_parameter("glow", v), final + 0.6, final, 1.2)
 
 
 static func _cell_of(n: String) -> Vector2i:
@@ -128,11 +267,12 @@ static func _cell_of(n: String) -> Vector2i:
 
 
 ## Paredes falsas sin descubrir alrededor de la casilla actual (claves de borde).
+## Las ocultas no cuentan: esas solo las delata el resonador.
 func secrets_near() -> Array[String]:
 	var out: Array[String] = []
 	for d in 4:
 		var k := DungeonMap.edge_key(cell, d)
-		if map.is_secret(k) and not door_open(k) and map.edge_type(cell, d) == DungeonMap.DOOR:
+		if map.is_secret(k) and not map.is_hidden(k) and not door_open(k) and map.edge_type(cell, d) == DungeonMap.DOOR:
 			out.append(k)
 	return out
 
@@ -156,9 +296,43 @@ func _item_at(c: Vector2i) -> Dictionary:
 	return th
 
 
-## ¿Algo en `c` impide entrar? (enemigo vivo o interruptor)
+## ¿Está el grupo en una zona de extracción segura (o en la entrada)?
+func at_extraction() -> bool:
+	return map != null and map.is_extraction(cell)
+
+
+## Devuelve a su sitio los objetos cogidos (claves de `state.taken`) que no estén
+## en `keep`: al salir sin extraer, lo conseguido se pierde y vuelve a la mazmorra.
+func restore_items(keep: Dictionary) -> void:
+	for k in state.taken.keys():
+		if not keep.has(k):
+			state.taken.erase(k)
+
+
+## Devuelve a la vida las criaturas vencidas (fuera de `keep`) que soltaban algo:
+## si lo soltado se pierde al salir sin extraer, hay que poder volver a ganarlo.
+func restore_drops(keep: Dictionary) -> void:
+	for k: String in state.defeated.keys():
+		if keep.has(k):
+			continue
+		var parts := k.split("|")
+		var lvl := int(parts[0])
+		if lvl < 0 or lvl >= map.floors.size():
+			continue
+		var xy := parts[1].split(",")
+		var th: Dictionary = map.floors[lvl].things.get(Vector2i(int(xy[0]), int(xy[1])), {})
+		if th.get("drop", "") != "":
+			state.defeated.erase(k)
+
+
+## Lo que suelta la criatura de `c` al caer ("" = nada).
+func drop_at(c: Vector2i) -> String:
+	return map.thing(c).get("drop", "")
+
+
+## ¿Algo en `c` impide entrar? (enemigo vivo, interruptor o punto de guardado)
 func _blocked(c: Vector2i) -> bool:
-	return enemy_at(c) != "" or map.thing(c).get("type", "") == DungeonMap.SWITCH
+	return enemy_at(c) != "" or map.thing(c).get("type", "") in [DungeonMap.SWITCH, DungeonMap.SAVE]
 
 
 ## Lo que hay justo delante y se puede usar: {kind (door, enemy, item, switch),
@@ -167,7 +341,13 @@ func front() -> Dictionary:
 	if map == null:
 		return {}
 	var ahead := cell + DungeonMap.DIRS[dir]
-	# Una pared falsa no se distingue de las demás (ni cerrada ni ya abierta).
+	# Una pared falsa no se distingue de las demás (ni cerrada ni ya abierta),
+	# salvo que el resonador la haya hecho brillar.
+	var front_key := DungeonMap.edge_key(cell, dir)
+	if map.edge_type(cell, dir) == DungeonMap.DOOR and map.is_secret(front_key) \
+			and not door_open(front_key) and detection(front_key) > 0:
+		return {"kind": "secret", "cell": ahead, "key": front_key, "name": "Pared que resuena", "verb": "Inspeccionar",
+				"node": _model.get_node("Puertas").get_node_or_null(front_key)}
 	if map.edge_type(cell, dir) == DungeonMap.DOOR and not map.is_secret(DungeonMap.edge_key(cell, dir)):
 		var k := DungeonMap.edge_key(cell, dir)
 		var open := door_open(k)
@@ -189,6 +369,9 @@ func front() -> Dictionary:
 	if map.thing(ahead).get("type", "") == DungeonMap.SWITCH:
 		return {"kind": "switch", "cell": ahead, "name": "Palanca", "verb": "Accionar",
 				"node": _model.get_node("Interruptores").get_node_or_null(nk)}
+	if map.thing(ahead).get("type", "") == DungeonMap.SAVE:
+		return {"kind": "save", "cell": ahead, "name": "Punto de guardado", "verb": "Guardar",
+				"node": _model.get_node("Guardado").get_node_or_null(nk)}
 	return {}
 
 
@@ -337,9 +520,25 @@ func _interact() -> void:
 			var th := map.thing(t.cell)
 			var n: int = th.get("count", 1)
 			state.taken[_ck(t.cell)] = true
-			GameState.add_item(th.item, n)
-			item_taken.emit(th.item, n)
-			message.emit("Coges: %s" % t.name)
+			if ItemDB.get_item(th.item).has("loot"):
+				# Caja: se abre y da una cosa al azar por cada una.
+				var got: Array[String] = []
+				for i in n:
+					var loot := ItemDB.roll_loot(th.item)
+					if loot.is_empty():
+						continue
+					if loot.item == "money":
+						GameState.add_money(loot.count)
+						got.append("¥ %d" % loot.count)
+					else:
+						GameState.add_item(loot.item, loot.count)
+						item_taken.emit(loot.item, loot.count)
+						got.append(ItemDB.display_name(loot.item) + (" ×%d" % loot.count if loot.count > 1 else ""))
+				message.emit("Abres: %s. Dentro hay: %s." % [t.name, ", ".join(got) if not got.is_empty() else "nada"])
+			else:
+				GameState.add_item(th.item, n)
+				item_taken.emit(th.item, n)
+				message.emit("Coges: %s" % t.name)
 			var node: Node3D = t.node
 			if node:
 				var tw := create_tween().set_parallel(true)
@@ -349,14 +548,28 @@ func _interact() -> void:
 				node.hide()
 		"switch":
 			await _use_switch(t.cell, t.node)
+		"save":
+			save_point_used.emit(t.cell)
+		"secret":
+			message.emit("Inspeccionas la pared: suena hueca. La empujas… y cede. ¡Un pasadizo oculto!")
+			noticed.emit("secret_found")
+			await _open_secret(t.key)
 		_:
 			var k := DungeonMap.edge_key(cell, dir)
-			if map.is_secret(k) and not door_open(k):
+			if map.is_secret(k) and not map.is_hidden(k) and not door_open(k):
 				message.emit("Empujas la pared… y cede. ¡Un pasadizo oculto!")
 				noticed.emit("secret_found")
-				await _set_door(k, true)
+				await _open_secret(k)
 			else:
 				message.emit("No hay nada delante.")
+
+
+func _open_secret(k: String) -> void:
+	if _secret_mats.has(k):
+		var mat: ShaderMaterial = _secret_mats[k]
+		create_tween().tween_method(func(v: float) -> void: mat.set_shader_parameter("glow", v),
+				float(mat.get_shader_parameter("glow")), 0.0, 0.5)
+	await _set_door(k, true)
 
 
 func _use_door(k: String) -> void:

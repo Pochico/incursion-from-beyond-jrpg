@@ -51,40 +51,53 @@ El ratón también funciona: pasar por encima selecciona y el clic confirma (tam
    - *Objetivo: ve a Westfield Parquesur con el grupo*. Camas elásticas, fundido y despedida.
    - *Objetivo: vuelve a casa*. «Buah... Estoy hecho polvo.» Ren se duerme.
    - Las escenas están en `src/dialogue/capitulo1.dialogue` y los pasos en `src/data/chapter_db.gd`.
-3. **Día 2 (martes)**: introducción en negro, «Despiertas un día más...», y a partir de aquí el juego libre de siempre.
+3. **Días 2 y 3 (martes y miércoles)**: juego libre con **planes que alguien propone** y que no son obligatorios. Cada mañana tiene su propio despertar en negro (la nota de Mamá en la nevera el martes, la lluvia y el sueño de la pantalla el miércoles; después de la incursión, el móvil lleno de mensajes; después de la reunión, el grupo renombrado «Cloacas FC»). Después llegan al móvil los mensajes de quien propone cada plan y unos avisos violetas con los **planes de hoy**. Si vas al sitio en esa franja, se juega la escena (y pasa la franja); si no, no pasa nada, salvo que al día siguiente te lo echan en cara.
+   - **Martes**: *Matemáticas II* (Instituto, mañana; Rika te pide los ejercicios, la profesora te saca a la pizarra), *Charla de leyendas urbanas* con Shiori (Egaleo, día; la leyenda de la Torre que crece de noche) y *Patinar en Bowls* con Kenji, Yuna y Akane (Bowls, tarde; Yuna te cuenta cuánto se preocupa Kenji por ti).
+   - **Miércoles**: *examen sorpresa* (Instituto, mañana), *Vóley en Colinas* con Rika, Yuna y Kenji (día; Rika te pregunta por qué estuviste tanto tiempo sin salir) y *Recreativas con Akane* (Westfield Parquesur, tarde; la máquina de baile con tu nombre a las 3:33).
+   - **La primera incursión** sigue llegando al hablar con el segundo personaje distinto. Después, Kenji convoca una **reunión en las Cloacas** (aviso «Reunión en las Cloacas»; cualquier día, menos de noche). Allí están los cinco en sus poses: Ren cuenta lo que pasó, Shiori une las pistas (la voz de las 3:33 de Kenji, el nombre de Ren en la máquina de Akane, el piso catorce de La Torre), votan si volver a la vida normal y ponen las reglas del grupo («nadie entra solo en La Torre»). La historia pasa a la fase `reunion`.
+   - **Conversaciones**: todos tienen charlas generales que no dependen del primer día, una propia del martes y otra del miércoles, una reacción si los dejas plantados o si fuiste a su plan, y conversaciones nuevas tras la reunión (también por el móvil). Yuna ya tiene conversación completa (antes solo móvil) y está en Colinas con Kenji y Rika.
+   - Planes en `ChapterDB.PLANS` (`src/data/chapter_db.gd`); escenas en `capitulo1.dialogue`; despertares en el cue `intro` de `general.dialogue`.
 4. **Casa** (la habitación de Ren). La pantalla, la estantería y la cama tienen contorno: al pasar el ratón se resaltan y abren un menú con *Examinar*, que muestra lo que piensa Ren de cada cosa. Abajo a la derecha, el botón **(M) Mapa**. En el mapa aparece como *Casa*, y allí no hay nadie.
 5. **Mapa**: elige cualquier ubicación (con clic en el rombo o en su nombre) y viajas a ella. Cada una tiene su propio fondo.
 6. **Escenario**: cada ubicación tiene su gente, con una silueta brillante de su color. Al pasar el ratón o seleccionarlos con flechas se resaltan y muestran su nombre.
-   - *Plaza Mayor*: Kenji y Rika. *Campus*: Shiori. *Westfield Parquesur*: Akane.
+   - *Plaza Mayor* (en el mapa, «Colinas»): Kenji, Rika y Yuna. *Campus* («Egaleo»): Shiori. *Westfield Parquesur*: Akane.
    - *Estación de Zarzaquemada*, *Parque de la Ribera* y *La Torre* están vacías: al llegar, temblor y combate contra un enemigo al azar.
+   - *Cloacas*: un canal subterráneo con una cascada en escalones. Es un lugar seguro (sin combate). Desde la primera incursión es donde se junta el grupo: Kenji, Shiori, Rika, Akane y Yuna (hasta 5 a la vez), cada uno **integrado en el fondo** con su pose y en su sitio (`cast_phase` en `LocationDB`). Resaltan solo al pasar el ratón; con clic se abre el menú (Hablar, Luchar, Ligar) y la conversación empieza solo al elegir.
    - *Instituto*: el aula de Ren, Rika y Shiori. Fuera de horario está vacía, pero es un lugar seguro (no hay combate).
-7. **Menú de interacción**: *Hablar*, *Luchar* o *Ligar*.
+7. **Menú de interacción**: *Hablar*, *Luchar*, *Ligar* o *Cita*.
    - *Hablar*: conversación larga con opciones de diálogo. Cada opción tiene un estilo (franco, bromista, reservado...) y los presentes reaccionan por detrás según su personalidad.
+   - **Gestos**: el retrato del interlocutor cambia de cara (enfado, sorpresa, incomodidad) con un fundido breve, un saltito si se sorprende y una sacudida si se enfada. Manda, por orden: una etiqueta en la línea del diálogo (`Rika: ¿Desde cuándo? [#cara=sorpresa]`; `[#cara=normal]` la quita); su reacción a la última opción de Ren (si le sienta mal o le asusta, se le nota durante sus dos líneas siguientes); y su ánimo, si es intenso (irritado → enfado; ansioso o triste → incomodidad). Si un personaje no tiene ese gesto, sale con la cara normal.
    - *Luchar*: el personaje acepta el reto → fundido → **combate** → comentario de la pelea (distinto si ganas o pierdes).
    - *Ligar*: respuestas cortas y distintas para cada personaje.
+   - *Cita*: eliges sitio (Westfield Parquesur, Bowls, Colinas, Egaleo o Cloacas). Acepta o no según lo que siente por Ren, su ánimo y lo que le gusta el sitio. Si dice que no, dice por qué: no le apetece hoy, mejor otro sitio, tiene pareja o no siente lo mismo. Si acepta, fundido al sitio, cita con opciones y pasa la franja. Al final de una cita que va bien te pregunta «¿qué somos?» y podéis empezar a salir.
+   - **Mentiras**: algunas respuestas de Ren son mentiras («me puse malo», «estuve en casa»). Quien está delante y sabe la verdad te cubre si te aprecia más a ti que a quien engañas, o te delata si no. Lo que cuela queda como secreto: por la mañana, quien lo sabe y prefiere al engañado se lo cuenta, y luego te lo echa en cara. Si quedas con alguien a espaldas de tu pareja, te pregunta dónde estuviste (confiesas, mientes o te escabulles). Lógica en `src/systems/lies.gd`.
+   - **Parejas**: Kenji y Yuna empiezan juntos. Si Yuna (o Kenji) siente bastante por Ren, acepta la cita y deja a su pareja, con consecuencias para el grupo. Con pareja, cada mañana te escribe; si pasas días sin verla, no vas a sus planes o quedas con otra persona, te puede dejar (te lo dice al despertar). También puedes cortar tú desde la conversación. Lógica en `src/systems/romance.gd`; diseño en `personajes_y_relaciones.md` («Citas y parejas»).
 8. **Conversación**: el protagonista (Ren) siempre a la izquierda, el interlocutor a la derecha, sobre el mismo fondo de la ubicación. Botones *Saltar* y *Auto*.
-9. **Combate** (1 contra 1, prototipo):
-   - **Atacar** → *Corte rápido* (daño ~42).
-   - **Habilidad** → *Impulso orgánico* (ataque) y *Regeneración celular* (curación), de la naturaleza Biológica. Gastan PM; la curación tiene 2 turnos de recarga. Fórmulas en `SkillDB` (ver `docs/diseno/habilidades_1.md`).
-   - **Objeto** → *Pochicola* (empiezas con 3): restaura 80 PV a quien la bebe. El rival lleva una y la usa cuando va bajo de vida.
-   - **Defender** → el próximo golpe hace la mitad de daño.
-   - **Analizar** → revela PV y ataque del rival; no gasta el turno.
+9. **Combate** (por turnos, prototipo; valores pendientes de prueba de combate):
+   - **Nivel 1 para todos**: Ren, compañeros y criaturas empiezan en el nivel 1, con atributos de referencia (~10). PV = 100 + 10·nivel + 5·RES (Ren y compañeros: 165) y PM = 35 + 3·nivel + 2·máx(INT, VOL) (58). Las criaturas multiplican sus PV (×1,5; el Tiranosaurio ×1,6) porque luchan solas contra el grupo.
+   - **Atacar** → ataque básico gratis: 0,75 × daño base con FUE contra RES (~31–35 a nivel 1).
+   - **Habilidad** → las del personaje, con su coste en PM y su recarga, que crecen con el nivel según fórmula (sin tablas ni interpolación). Ren: *Puñete*, *Impulso orgánico*, *Regeneración celular* y *Resiliencia*. Catálogo de 42: las 32 por tipo (PSY, ARQ, BIO, CYBER, MECH, con tier 1–5) de `docs/diseno/habilidades_tiers.md` y las 10 intrínsecas de `habilidades_1.md`.
+   - **Efectos**: daño en área, daño y curación por turnos, potenciadores y penalizaciones de daño (máximo ×2,5 combinado), reducciones (máximo 70 %, la guardia incluida), precisión y esquiva (máximo 85 %), perder el turno (aturdido, interrumpido, desactivado, excorporado), inmunidad (Proyección astral, Excorporar), Empatía (reparte el daño a medias), Dominio por bando, acción al azar (Adivinación), limpiar estados, recuperar PM y costes en PV (nunca matan: dejan 1 PV).
+   - **Compatibilidad**: cada personaje tiene etiquetas (tejido, materia, metal, electrónica, datos, mente, vista, oído; por defecto, las de su naturaleza). El veneno no afecta a máquinas, *Inutilizar dispositivo* solo a electrónica, *Deslumbrar* necesita vista... Si no se puede usar, la opción sale apagada con el motivo.
+   - **Objeto** → lo que llevas que sirve en combate: *Pochicola* (empiezas con 3; restaura 80 PV), *Batido Chocopolved* (30 PM) y *Granada táctica* (120 de daño al rival, sin elegir a quién; la guardia del rival la reduce). Los que curan preguntan a quién del grupo se le dan. El rival lleva una Pochicola y la usa cuando va bajo de vida.
+   - **Defender** → reduce a la mitad el daño hasta tu siguiente turno.
+   - **Analizar** → revela nivel, PV, ataque y técnicas del rival; no gasta el turno.
    - **Huir** → te rindes (cuenta como derrota).
-   - El rival tiene un ataque propio con daño fijo (Kenji 34, Shiori 30, Akane 38).
-   - La *Tensión* es solo visual por ahora. Valores provisionales en `CharacterDB.combat`.
-   - **Ficha de estado**: en «Estado» solo salen los estados alterados que tienes (o «Normal» si no tienes ninguno). Al pasar el ratón por uno aparece un tooltip con qué hace, los PV que quita por turno y los turnos que le quedan. Los textos están en `SkillDB.STATUS_DESC`.
+   - La *Tensión* es solo visual por ahora. Datos en `CharacterDB.combat`, fórmulas y catálogo en `SkillDB`, lógica en `Battle`.
+   - **Ficha de estado**: en «Estado» solo salen los estados que tienes (violeta, negativos; lima, positivos) o «Normal». Al pasar el ratón por uno aparece un tooltip con qué hace, los PV que quita o da por turno y los turnos que le quedan. Los textos están en `SkillDB.STATUSES`.
    - **Recompensa**: al ganar, recibes ¥ = nivel de la criatura × 120, con un +15 % por cada nivel que la criatura te saque y un −15 % por cada nivel que tú le saques (mínimo, el 10 %). Ejemplos: misma altura, nivel 15: ¥ 1.800; criatura 10 niveles por encima: ¥ 4.500; 10 niveles por debajo: ¥ 180. Se ve bajo «VICTORIA» y se suma a la cabecera. Constantes en `Battle.REWARD_*`.
 10. **Primera incursión**: al hablar con el **segundo personaje distinto**, la conversación se corta con un temblor y aparece una criatura, elegida al azar en cada partida:
-   - **Tiranosaurio mutante** (Digital): *Corrupción de datos* y *Depuración*.
-   - **Oni** (ARQ): *Manifestación arcana* y *Marca funesta* (maldición que hace daño durante 3 turnos).
+   - **Tiranosaurio mutante** (Digital): *Corrupción de datos*, *Ultrasónico* y *Depuración*.
+   - **Oni** (ARQ): *Manifestación arcana*, *Maldecir* y *Pacto*.
 11. **Enemigos aleatorios** (ubicaciones vacías): los dos anteriores y además
-   - **Engendro** (Biológico): *Impulso orgánico* y *Secreción cáustica* (corrosión: RES −8 % durante 2 turnos).
-   - **Turbina** (Mecánico): *Impacto cinético* y *Proyección de fragmentos*.
-   - **Crawler** (Mecánico): torreta cuadrúpeda. Mismas técnicas que la Turbina.
-   - **Imp** y **Querubín** (ARQ): *Manifestación arcana* y *Marca funesta*.
-   - **Troyano** (Digital): *Corrupción de datos* y *Depuración*.
+   - **Engendro** (Psíquico, una manifestación de la rabia): *Choque mental*, *Disonancia* y *Manifestar*. Tiene cuerpo pero no tejido vivo: no se envenena ni sangra.
+   - **Turbina** (Mecánico): *Impacto cinético*, *Chispazo* y *Sobrecarga*.
+   - **Crawler** (Mecánico): torreta cuadrúpeda. *Proyección de fragmentos*, *Deslumbrar* y *Reset*.
+   - **Imp** (ARQ): *Marca funesta*, *Sacrificio* y *Lluvia de sangre*.
+   - **Querubín** (ARQ): *Manifestación arcana*, *Bendecir* y *Voz celestial*.
+   - **Troyano** (Digital): *Corrupción de datos*, *Deslumbrar* y *Explosión de bolsillo*.
    - La naturaleza que antes se llamaba «Místico» se muestra ahora como **ARQ** (arquetípica: mitos, símbolos y leyendas encarnados). En el código sigue siendo `mystic`.
-12. **Primer combate contra una criatura**: luchas con un compañero (el personaje con el que hablabas en la incursión, o uno al azar) que lleva 2 habilidades al azar de todo el catálogo, sin importar su naturaleza. Cada miembro del grupo elige su acción en su turno (la ficha activa se resalta) y después actúa el rival.
+12. **Primer combate contra una criatura**: luchas con un compañero (el personaje con el que hablabas en la incursión, o uno al azar) que lleva 2 habilidades al azar de todo el catálogo, sin importar su naturaleza (solo las que puede usar: un humano no lleva *Depuración*). Cada miembro del grupo elige su acción en su turno (la ficha activa se resalta) y después actúa el rival.
 
 En combate, los comandos (*Atacar*, *Habilidad*, *Objeto*...) se eligen con clic o con el teclado; pasar el ratón por encima solo cambia la opción resaltada del submenú.
 
@@ -119,7 +132,8 @@ Durante un objetivo del guion la cama responde «Ahora no». Al pasar al día si
 ### Pendiente
 
 - ✅ Interfaz de combate (prototipo 1 contra 1).
-- ⬜ Habilidades, grupo de varios personajes y combate por naturalezas.
+- ✅ Habilidades (42, con tiers y escalado por nivel) y grupo de dos.
+- ⬜ Combate por naturalezas y asimilación. De la experiencia, lo marcado [PENDIENTE] en `docs/diseno/experiencia_y_niveles.md` (habilidades por nivel, crecimiento propio de cada personaje, nivel por planta en el editor).
 - ⬜ Interfaz de estado de personaje.
 - ⬜ Mapa y fondos definitivos (los actuales son provisionales, generados por código).
 - ✅ Guardado automático y «Continuar» (al llegar a una ubicación y tras cada interacción).
@@ -150,6 +164,8 @@ El mapa del juego (tecla **M**) es un modelo 3D de Leganés generado por código
     - elige una en la lista y haz clic en el mapa para colocarla; los marcadores también se pueden arrastrar;
     - **Nombre** y **Descripción** cambian lo que se ve en el juego;
     - **+ Nuevo punto** crea una ubicación nueva. Al ir allí se ve el fondo genérico y, como no hay nadie, salta un combate;
+    - **Personajes a la vez**: cuántos personajes puede haber como mucho en la ubicación seleccionada (0–6; por defecto 3). Debajo dice quién puede estar. Si pueden estar más de los que caben, cada franja del día se eligen al azar los que caben (siempre los mismos durante esa franja). Se guarda en `capacity` de `mapa3d.json`; lo aplica `LocationDB.cast`, que usan el escenario y quién está presente en las conversaciones.
+    - **Fondo**: una fila por momento (Cualquier momento, Mañana, Día, Tarde, Noche) con miniatura, «Elegir…» (selector de archivos del sistema, que empieza en `~/Documents/assets-game/Ubicaciones/<lugar>/<momento>` si existe) y «Quitar». La imagen se copia al momento como `assets/backgrounds/<id>.png` o `<id>_<franja>.png` (PNG, JPG o WebP), sustituyendo la anterior; no hace falta Guardar. El de una franja tiene prioridad; sin ninguno sale el fondo provisional. Vale también para los puntos nuevos (`punto_N`).
     - **Quitar** borra solo la posición;
     - **Borrar** la quita del mapa: un punto nuevo se elimina del todo, y una ubicación del juego pasa a «Borradas del mapa», desde donde se puede **Recuperar**;
     - la casa y los destinos de la historia (instituto y Westfield Parquesur) no se pueden borrar;
@@ -209,7 +225,8 @@ Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en 
 | **Inicio [5]** | Casilla de salida (en la planta que estás editando); clic otra vez para girar la orientación. |
 | **Enemigos [6]** | Pone el enemigo elegido (los de `CharacterDB` con `enemy`) en una casilla; clic derecho lo quita. En el plano sale su cara; en 3D, su retrato de pie. |
 | **Objetos [8]** | Deja en el suelo el objeto elegido (de `ItemDB`) con su cantidad. En el juego se coge desde la casilla de al lado. Clic derecho lo quita. |
-| **Interruptores [9]** | Pone una palanca (bloquea el paso) o la selecciona. Con una seleccionada, clic en una puerta para vincularla o desvincularla: al accionarla, abre o cierra todas sus puertas. Clic derecho la quita. Una puerta puede marcarse como «Solo se abre con una palanca» o como **«Secreta»**: parece una pared más (en el plano, muro con trazos violeta) hasta que el jugador la examina con Usar; entonces se hunde y deja el paso abierto. |
+| **Interruptores [9]** | Pone una palanca (bloquea el paso) o la selecciona. Con una seleccionada, clic en una puerta para vincularla o desvincularla: al accionarla, abre o cierra todas sus puertas. Clic derecho la quita. Una puerta puede marcarse como «Solo se abre con una palanca» o como **«Secreta»**: parece una pared más (en el plano, muro con trazos violeta) hasta que el jugador la examina con Usar; entonces se hunde y deja el paso abierto. **«Oculta»** (además de secreta): solo se encuentra con el pulso del resonador. |
+| **Extracción [0]** | Clic en una casilla: zona de extracción segura (círculo cian en el juego y en el automapa). Saliendo desde ella el jugador se lleva lo conseguido en la incursión; la casilla de inicio ya lo es siempre. Clic derecho la quita. |
 | **Escaleras [7]** | Escalera que sube o baja hacia donde apunta la flecha (se entra andando en esa dirección). Crea la planta de arriba o de abajo si no existe, y la escalera de vuelta en la misma casilla. Clic otra vez para girarla, clic derecho la quita (con su pareja). |
 
 - **Plantas**: «Planta» en el panel (▼ ▲, «+ Encima», «+ Debajo», «Borrar planta») o **Re Pág / Av Pág**. La planta de debajo se ve en gris para alinear. Solo se puede borrar la de arriba o la de abajo del todo.
@@ -221,13 +238,21 @@ Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en 
 ### Modo mazmorra en el juego (`src/screens/dungeon/`)
 
 - Al viajar a **La Torre** sale una escena con dos opciones: **«Entrar en la torre»** o **«Pensarlo mejor»** (cue `torre_llegada` en `general.dialogue`). Si te lo piensas, sigues en la Torre y puedes volver a intentarlo con **«Entrar» [E]** en la barra de abajo.
-- Al entrar empieza el **modo mazmorra** (`DungeonScreen`) con la interfaz del combate: cabecera, visor grande con la vista 3D, automapa en el hueco del minimapa, fichas del grupo, comandos (**Usar, Objetos, Mapa, Salir**) y barra de descripción y registro.
+- Al entrar empieza el **modo mazmorra** (`DungeonScreen`) con la interfaz del combate: cabecera, visor grande con la vista 3D, automapa en el hueco del minimapa, fichas del grupo, comandos (**Usar, Habilidades, Objetos, Mapa, Salir**) y barra de descripción y registro.
+- **Experiencia y niveles** ([diseño](docs/diseno/experiencia_y_niveles.md)): ganar un combate da EXP a quienes luchan (y la mitad a los compañeros que no están); también descubrir un pasadizo y llegar por primera vez a una planta. Las criaturas de la mazmorra tienen el nivel de su planta (La Torre: 1, 3, 5, 7, 9); en la calle, el de Ren. Al subir de nivel crecen PV, PM, atributos (+1 cada 2 niveles) y todo lo que calculan las habilidades. La victoria muestra «+ N EXP» y las subidas; la pantalla de estado, la EXP para el siguiente nivel.
+- **Objetos de la mazmorra**: se ven en 3D, girando sobre una losa lima (modelos en `assets/modelos/objetos/<id>.glb`, reducidos con `tools/modelos/reducir_glb.py --max 512 --altura <m>`; sin modelo, la imagen `image` de `item_db.gd`, como la tarjeta, o una caja). Hay Pochicolas, Batidos Chocopolved, Granadas tácticas, tarjetas y **Cajas misteriosas**, que se abren al cogerlas y dan una cosa al azar por cada una (Pochicolas, un batido, una granada o ¥ 500; tabla `loot` de `item_db.gd`).
+- **Criaturas que sueltan algo**: en el editor, «Suelta al morir» (`drop` en el mapa). Al vencerla, el objeto va directo al inventario. Si luego sales sin extraer y lo pierdes, la criatura vuelve para poder ganarlo otra vez.
+- **Punto de guardado** (terminal con un rombo cian; herramienta «Guardado» del editor): se usa desde la casilla de al lado, guarda la partida y deja a salvo todo lo conseguido hasta ese momento (salir después sin extraer solo pierde lo de después). Al cargar, apareces en la calle, en La Torre.
+- **Incursión**: los PV y PM del grupo no se recuperan entre combates (quien cae se queda con 1 PV); se recuperan al salir. Explorando se puede curar: **Objetos** (los que curan preguntan a quién del grupo se le dan; en combate, igual) y **Habilidades** (las que curan o recuperan PM, como Meditación o Voz celestial; gastan PM pero no turno ni recarga).
+- **Extracción**: lo conseguido en la incursión (objetos cogidos y dinero de los combates) solo se conserva saliendo desde una **zona de extracción segura** (círculo cian; la entrada siempre lo es). Si pulsas **Salir** en otro sitio, una ventana avisa: «Si sales ahora perderás todo lo que hayas conseguido…» con **Salir** / **Continuar explorando**. Saliendo así, el inventario y el dinero vuelven a lo que había al entrar (lo gastado no se recupera) y los objetos vuelven a su sitio; puertas, palancas, criaturas vencidas y automapa se quedan como estaban. La partida no se guarda hasta salir.
 - **Interactuar**: lo que hay justo delante (la puerta de ese borde, o la criatura, objeto o palanca de la casilla de delante) se recuadra en lima con una etiqueta («Abrir · Puerta cerrada», «Luchar · Imp», «Coger · Pochicola», «Accionar · Palanca»). Se usa con **clic encima**, **Espacio** o el comando **Usar**. Las criaturas también saltan al chocar con ellas; el combate es el de siempre y, si pierdes, retrocedes una casilla.
 - **Grupo**: entras con un **compañero al azar** (Kenji, Shiori, Akane o Rika) que aparece en las fichas de la derecha y lucha a tu lado en cada combate. **Clic en una ficha** (o **Tab**) abre su pantalla de estado, la misma del combate.
-- **Comentarios**: el compañero habla de vez en cuando en el registro del visor, con su nombre y su voz: al entrar, al andar, ante una criatura, al coger algo, al cambiar de planta, ante una puerta cerrada, al accionar una palanca y, sobre todo, junto a una pared falsa (es la pista). Las frases están en `src/data/dungeon_banter.gd`.
+- **Comentarios**: el compañero habla de vez en cuando en el registro del visor, con su nombre y su voz: al entrar, al andar, ante una criatura, al coger algo, al cambiar de planta, ante una puerta cerrada, al accionar una palanca y, sobre todo, junto a una pared falsa (es la pista). Las frases están en `src/dialogue/mazmorra.dialogue` (un cue `mazmorra_<id>_<momento>` con una variante `%` por frase), así que se editan como cualquier diálogo, también desde el editor web; las lee `DungeonBanter`.
 - **Paredes falsas**: delante de una, **Usar** la empuja y se abre un pasadizo.
+- **Resonador** (herramienta de Ren; está en Objetos y en la tecla **F**; no se gasta): lanza un pulso rosado que sale del grupo y recorre 5 casillas a la redonda (en un pasillo se ve como un marco que se aleja por suelo, paredes y techo). Las paredes secretas sin abrir a su alcance brillan en rosa por los bordes (un marco suave; el centro, apenas teñido): más cuanto más cerca estabas (nivel 5 a una casilla, 1 a cinco; más lejos, nada). Una pared que brilla se recuadra como **«Inspeccionar · Pared que resuena»** y se abre al inspeccionarla. Las paredes **ocultas** solo se encuentran así: ni se pueden empujar a ciegas ni las comenta el compañero. En La Torre hay una junto a la entrada (planta 0, al oeste de la casilla de la izquierda del inicio) con un hueco y tres Pochicolas. Efecto en `src/dungeon/pulse.gdshader`; lo detectado se guarda en `detected` del estado de la mazmorra.
+- **Criaturas en 3D**: si existe `assets/modelos/<id del enemigo>.glb`, la criatura sale con ese modelo (a su tamaño, girándose para mirarte); si no, con su retrato plano. Tienen modelo el Oni, el Engendro, la Turbina, el Tiranosaurio y el Querubín; faltan el Imp, el Crawler y el Troyano.
 - **Controles**: W/S avanzar y retroceder, A/D girar, Q/E de lado, M automapa, Tab equipo, Esc salir.
-- **La Torre**: planta 0 con vestíbulo, pasillo con puerta de palanca, sala de la palanca (con un pasadizo secreto en la pared oeste que guarda la **Tarjeta de acceso**), ala este con un almacén y una cámara cerrada con tarjeta, y la sala de la escalera; planta 1 con el pasillo del cartel, la sala del Oni, el laboratorio (cerrado con tarjeta) y un pasillo al este con otro hueco secreto al fondo.
+- **La Torre**: planta 0 con vestíbulo, pasillo con puerta de palanca, sala de la palanca (con un pasadizo secreto en la pared oeste que guarda la **Tarjeta de acceso**), ala este con un almacén y una cámara cerrada con tarjeta, y la sala de la escalera; planta 1 con el pasillo del cartel, la sala del Oni, el laboratorio (cerrado con tarjeta), un pasillo al este con otro hueco secreto al fondo y la escalera a la planta 2; planta 2, oficinas con cubículos y tabiques sueltos y una puerta de palanca ante la escalera; planta 3, un anillo alrededor de una cámara central a la que solo se entra por una pared falsa (con el Tiranosaurio mutante) y, al oeste, una sala cerrada con la **Tarjeta de acceso roja** con un **punto de guardado** y una zona de extracción; planta 4, la cima, con un Oni que suelta la Tarjeta de acceso roja al caer, y botín.
 - El mapa de cada mazmorra es `dungeon_map` en `LocationDB` (La Torre usa `src/data/mazmorras/torre.json`, editable con el editor) y `battle_background` el fondo de sus combates (La Torre: `assets/backgrounds/torre_mazmorra.png`).
 - Texturas de La Torre (tema `torre`): ocho paneles de pared (`panel_1`…`panel_8`; el predeterminado es `panel_1` y el resto se reparte por las caras) y el suelo `salida`, solo en la casilla de delante de cada escalera con la flecha hacia ella. En `tema.json`, `"suelo": ""` indica que el suelo normal no usa ninguna de las del tema (sale el provisional). El progreso (puertas, criaturas vencidas, objetos cogidos y casillas vistas del automapa) se guarda en la partida (`GameState.dungeons`); al volver se empieza en la entrada. Salir pasa a la franja siguiente del día (salvo de noche).
 
@@ -250,7 +275,7 @@ Da un poco de volumen a una textura, como en los juegos antiguos: marcas qué zo
 
 **Código** (`src/dungeon/`), pensado para usarlo también en el juego:
 - `DungeonMap`: datos y reglas de paso, por plantas. Cada casilla es dueña de sus bordes norte y oeste, así que una puerta es la misma vista desde los dos lados. Enemigos y escaleras son «cosas» de una casilla.
-- `DungeonBuilder`: genera la geometría, con una malla por textura y las UV según la posición en el mundo.
+- `DungeonBuilder`: genera la geometría, con una malla por textura y las UV según la posición en el mundo. Los muros tienen grosor (`WALL_THICK`, 0,3 m): cada cara se mete medio grosor en su casilla, las puertas llevan jambas y dintel, y en cada vértice con muros hay un pilar que cierra esquinas y extremos (un tabique suelto en mitad de una sala se ve como un bloque).
 - `DungeonExplorer`: movimiento por casillas con cola de una acción, choque con los muros, escaleras entre plantas, lo que hay delante (`front()`) y su uso (puertas, palancas, objetos, encuentros con la señal `encounter`), estado guardable y luz del grupo.
 - `DungeonTextures`: temas, paleta, texturas predeterminadas y relieve (`relief_for`). En el juego carga las texturas importadas; el editor activa `live_files` para leer los PNG recién exportados.
 
@@ -264,6 +289,7 @@ App web en `docs/editor-dialogos/`. Lee los diálogos del repositorio en GitHub,
 - **Conversación (diagrama)**: en *Editar* (pestaña «Conversación») y en *Simular* (la del diálogo que sale), cada «siguiente» del juego es una burbuja: personajes a la izquierda con su color, Ren a la derecha, narración en el centro, numeradas por pasos. Las respuestas de Ren salen como pestañas («Ren responde · elige una opción»): al elegir una se ve su rama. También se muestran las variantes al azar (`%`), las condiciones (`if`), los efectos (afecto +2, ánimo, indicadores…) y el final o el salto a otro diálogo. Toca cualquier burbuja para editarla: quién habla, el texto, el estilo y la postura de las respuestas de Ren (con los estilos que ya usan los diálogos), a qué diálogo salta; y subir, bajar, borrar, añadir línea debajo, añadir respuestas de Ren, otra opción o una línea dentro de la rama. La pestaña «Texto» sigue dando el texto completo.
 - **Menciones**: en una respuesta de Ren, «Menciona a…» marca a quién se refiere (`#alude=rika`); en el juego, si está presente, se da por aludido y reacciona del todo, como el interlocutor. «Si está presente, contesta…» añade, tras una línea o dentro de la rama de una respuesta, la réplica de ese personaje solo para cuando esté (`if Story.present("rika")`). Los nombres que aparecen en el texto salen marcados con «•». En el simulador, esas ramas se abren o no según los presentes que marques.
 - **Opciones por persona**: en una respuesta de Ren, «Una opción por cada persona» la repite para cada personaje que cumpla unos filtros (afecto u otra dimensión, relación, género, edad, presente, solo entre…), con `{persona}` donde va el nombre. Nunca sale quien pregunta ni el interlocutor. En el diagrama sale una pestaña 👤 por persona; las líneas siguientes usan `{persona}` y `if Story.persona == "rika"` para ramas propias. Ejemplo en el capítulo 1: «Tuve una cita con {persona}» (afecto ≥ 15).
+- **Gestos (cara del retrato)**: al editar una línea de cualquier personaje salvo Ren, «Cara en esta línea» muestra sus gestos con miniatura (Normal, enfado, sorpresa…) o «Según su ánimo» (sin etiqueta: decide el juego). Se guarda como `[#cara=enfado]`. Las burbujas del diagrama llevan la carita del gesto, y los avisos marcan un gesto que ese personaje no tiene. Los gestos y retratos se leen de `character_db.gd`; las miniaturas (`docs/editor-dialogos/caras/`) se regeneran con `tools/editor_dialogos/miniaturas.sh` al añadir retratos.
 - **Simular**: eliges personaje, momento y situación (fase, ánimo, relación, interacciones, resultado, presentes, lo que sabe, indicadores, lo ya visto) y dice qué diálogo sale, con qué puntuación y por qué falla cada uno de los demás. Usa el mismo selector que el juego (comprobado con `tools/editor_dialogos/paridad.sh`). «Inicio de partida» parte de las fichas; «Cargar partida…» lee un `partida.json`.
 - **Guardar**: muestra las diferencias y sube un solo commit a `main` (solo los cues tocados cambian en el archivo). Si alguien ha cambiado ese archivo en GitHub mientras tanto, no sube nada y avisa. Sin conexión: abre `.dialogue` locales y descárgalos.
 - **Token**: para guardar hace falta un *fine-grained token* de GitHub (github.com → Settings → Developer settings → Fine-grained tokens → Generate new token):
@@ -271,13 +297,35 @@ App web en `docs/editor-dialogos/`. Lee los diálogos del repositorio en GitHub,
   - *Permissions* → botón **+** → marca **Contents** → cambia su acceso de *Read-only* a **Read and write**. *Metadata* (solo lectura) se añade sola; no hace falta nada más.
   - Pégalo en la app en ⋯ → Ajustes. Se guarda solo en ese navegador.
 
+### Copia organizada de las imágenes (`tools/assets/`)
+
+`tools/assets/organizar.sh` copia todas las imágenes del juego a `~/Documents/assets-game`, ordenadas:
+
+```
+assets-game/
+  Personajes/<Nombre>/              ren.png, kenji_enfado.png...
+  Enemigos/<Tipo>/                  oni.png... (Biológico, Mecánico, Digital, Psíquico, ARQ)
+  Ubicaciones/<Nombre>/<Momento>/   Cualquier momento, Mañana, Día, Tarde, Noche
+  Ubicaciones/<Nombre>/Objetos/     objetos examinables (cama, estantería...)
+  Ubicaciones/<Nombre>/Personajes/  poses de los personajes en ese lugar
+  Ubicaciones/<Nombre>/Combate/     fondo de combate de una mazmorra
+  Sin clasificar/                   lo que no reconoce
+  Versiones anteriores/             lo sustituido (nunca borra nada)
+```
+
+- Cada vez que se ejecuta, copia lo nuevo o cambiado del proyecto y **ordena la carpeta**: una imagen soltada en la raíz va a su sitio según su nombre (`kenji_triste.png` → Personajes/Kenji, `plaza_tarde.png` → Ubicaciones/Plaza Mayor/Tarde); si no la reconoce, a «Sin clasificar». Un fondo con nombre libre dentro de una carpeta de momento (p. ej. `Ubicaciones/Instituto/Noche/aula.png`) se entiende como `instituto_noche.png`.
+- Avisa de lo que hay en la carpeta y no en el proyecto (o es más nuevo). `--importar` lo copia al proyecto con el nombre que espera el juego; `--prueba` solo dice lo que haría; `--destino` cambia la carpeta.
+- Personajes, enemigos (y su naturaleza), ubicaciones y franjas se leen del código: lo que se añada al juego se clasifica solo.
+
 ## Cómo añadir contenido
 
 - **Diálogos**: `src/dialogue/*.dialogue` (plugin [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager), en `addons/`). Uno por personaje más `general.dialogue`. Cada conversación lleva una regla `# cuando:` que decide cuándo sale; ver [el documento de diseño](docs/diseno/personajes_y_relaciones.md).
-- **Personajes**: `src/data/character_db.gd` (nombre, color del brillo, retrato y posición en el escenario). La personalidad, las reacciones y las relaciones iniciales van en una ficha `src/data/characters/<id>.json` (Rika, Kenji, Shiori, Akane, Yuna, Mamá y la madre de Kenji). Yuna es la novia de Kenji y está en su clase. Mamá (`madre_ren`) y la madre de Kenji (`madre_kenji`) son amigas. Durante el guion del capítulo 1, los que reaccionan a las opciones de Ren son los del `cast` de cada paso (`chapter_db.gd`). Los retratos están en `assets/characters/` (PNG con transparencia).
-- **Combate**: estadísticas provisionales en `combat` de cada personaje (`character_db.gd`), objetos en `src/data/item_db.gd`, lógica en `src/systems/battle.gd` (sin interfaz: devuelve eventos que la vista anima).
+- **Personajes**: `src/data/character_db.gd` (nombre, color del brillo, retrato y posición en el escenario). La personalidad, las reacciones y las relaciones iniciales van en una ficha `src/data/characters/<id>.json` (Rika, Kenji, Shiori, Akane, Yuna, Mamá y la madre de Kenji). Yuna es la novia de Kenji y está en su clase. Mamá (`madre_ren`) y la madre de Kenji (`madre_kenji`) son amigas. Durante el guion del capítulo 1, los que reaccionan a las opciones de Ren son los del `cast` de cada paso (`chapter_db.gd`). Los retratos están en `assets/characters/` (PNG con transparencia); los gestos son `<id>_<gesto>.png` y se declaran en `faces` del personaje (`enfado`, `sorpresa`, `incomodo`).
+- **Combate**: nivel, atributos, habilidades y etiquetas en `combat` de cada personaje (`character_db.gd` o su ficha JSON); catálogo, estados y fórmulas en `src/data/skill_db.gd`, objetos en `src/data/item_db.gd`, lógica en `src/systems/battle.gd` (sin interfaz: devuelve eventos que la vista anima).
 - **Ubicaciones**: `src/data/location_db.gd` (nombre, descripción, posición en el mapa y paleta del fondo provisional).
-- **Fondos reales**: deja `assets/backgrounds/<id>.png` (p. ej. `plaza.png`, 1920×1080) y sustituye automáticamente al fondo generado.
+- **Personajes integrados en un lugar (poses)**: `assets/escenas/<lugar>/<personaje>.png` (recorte con transparencia) y un nodo `<personaje>` en la escena `layout` del lugar (`src/rooms/<lugar>_layout.tscn`, como los objetos de casa) que marca su sitio sobre el fondo; se ajusta a mano en Godot. Sin pose, el personaje sale con su retrato de pie. Ejemplo: Cloacas.
+- **Modelos 3D de enemigos** (p. ej. de Meshy): descárgalos en **GLB**, en metros, con el origen en los pies y mirando hacia delante (+Z); casilla 2 × 2 m, paredes 2,5 m, enemigos ~1,9 m. Pásalos por `tools/modelos/reducir_glb.py ~/Downloads/<id>.glb`, que reduce las texturas a 1024 px (JPG si no hay transparencia; `--max 2048` para más) y lo guarda como `assets/modelos/<id>.glb`. El nombre del archivo es el id del enemigo (`oni`, `imp`, `turbina`...). Si sale de Meshy en centímetros (diminuto), añade `--altura <metros>` (el Tiranosaurio va con `--altura 1.7`, porque es el doble de largo que de alto). Las criaturas que vuelan llevan `"hover": <metros>` en su ficha de `character_db.gd`: flotan a esa altura, suben y bajan despacio y dejan una sombra en el suelo (el Querubín, a 0,7 m).
+- **Fondos reales**: deja `assets/backgrounds/<id>.png` (p. ej. `plaza.png`, 1920×1080) y sustituye automáticamente al fondo generado. Para una franja del día, `<id>_<franja>.png` (`manana`, `dia`, `tarde`, `noche`; p. ej. `instituto_noche.png`) tiene prioridad en esa franja; el fondo cambia al pasar el tiempo.
 
 ## Estructura
 
@@ -297,12 +345,14 @@ src/
   data/                   Datos del juego (sin lógica)
     location_db.gd          Ubicaciones
     character_db.gd         Personajes
-    item_db.gd              Objetos (Pochicola)
+    item_db.gd              Objetos (curan PV/PM, atacan, cajas con botín, herramientas, tarjetas)
     texture_formats.gd      Medidas y formatos de textura del dungeon crawler
   systems/
     battle.gd               Lógica de combate del grupo contra un rival (eventos, sin interfaz)
     event_log.gd            Registro de acontecimientos: qué pasó y quién lo sabe
     social.gd               Relaciones, ánimo y cansancio: cómo reaccionan los personajes
+    romance.gd              Citas, parejas y rupturas (GameState.partners)
+    lies.gd                 Mentiras ([#miente=tema]), testigos que cubren o delatan y secretos (GameState.secrets)
   ui/
     ui_style.gd             Paleta, tipografías y utilidades de dibujo (UIStyle)
     ui_icons.gd             Iconos vectoriales (chevrons, play, calendario, bocadillo...)
