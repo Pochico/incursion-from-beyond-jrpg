@@ -32,7 +32,7 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 		if Story.persona == "yuna"
 			$> Story.set_flag("dia1_cita_yuna")
 			Kenji: ...
-			Kenji: ¿Con Yuna? ¿Con MI Yuna?
+			Kenji: ¿Con Yuna? ¿Con MI Yuna? [#cara=enfado]
 			Kenji: Tío, eso no se dice ni en broma. Que me da algo.
 			- Es broma, hombre. Relaja. [#conciliador]
 				Kenji: Ya sé que es broma. Pero me ha dado un vuelco el corazón igual. Estas cosas no, loco.
