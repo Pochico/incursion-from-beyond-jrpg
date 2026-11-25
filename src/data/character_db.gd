@@ -37,7 +37,7 @@ const ALL := {
 		"face": Rect2(470, 110, 400, 400),
 		"nature": "biological",
 		"gear": {"arma": "Cúter retráctil", "accesorio": "Auriculares rotos", "modulo": ""},
-		"bio": "Estudia en el instituto de Leganés, última fila junto a la ventana. Lleva semanas viviendo en piloto automático: clase, pantalla, cama. Kenji es el único que sigue insistiendo en sacarlo de casa.",
+		"bio": "Estudia en el instituto de Leganés, última fila junto a la ventana. Perdió a su padre hace tiempo y le costó levantar cabeza; ahora vuelve a ser el de antes: bromista, despistado y con los cascos al cuello. Kenji no le ha soltado en ningún momento.",
 		"combat": {"level": 1, "attack": "Corte rápido",
 			"stats": {"FUE": 12, "TEC": 9, "INT": 9, "VOL": 10, "RES": 11, "AGI": 12},
 			"skills": ["BIO-03", "bio_impulso_organico", "BIO-04", "BIO-05"]},

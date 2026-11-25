@@ -12,7 +12,7 @@
 	Mamá: ¡Hola, cariño! ¿Has comido? Hay croquetas en el congelador.
 %
 	Ren: ¿Qué tal el turno?
-	Mamá: Largo, pero bien. ¡Qué raro que me escribas tú! ¿Estás bien? ¿Necesitas dinero?
+	Mamá: Largo, pero bien. ¿Y ese mensajito? ¿Necesitas dinero o es que me quieres?
 %
 	Ren: Ey.
 	Mamá: «Ey». Te he parido yo, ¿sabes? Un «hola, mamá» no cuesta tanto. Te quiero.
@@ -22,7 +22,7 @@
 # cuando: movil, veces >= 2
 %
 	Ren: Hola otra vez.
-	Mamá: Dos mensajes en un día. Me voy a emocionar. ¿Seguro que estás bien?
+	Mamá: Dos mensajes en un día. Me voy a emocionar.
 %
 	Ren: ¿Sigues ahí?
 	Mamá: Siempre, cariño. Estoy en el trabajo, luego te llamo.

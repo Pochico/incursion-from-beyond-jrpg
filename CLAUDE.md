@@ -32,6 +32,8 @@ trabajar».
 
 - **Todo en español de España**: interfaz, diálogos, comentarios, documentación, mensajes de commit y respuestas al usuario.
 - Textos del juego: naturales, coloquiales cuando toca, sin anglicismos innecesarios.
+- **Estilo de los diálogos (el del usuario)**: frases cortas y reacciones reales («¿Y eso? ¿Ha pasado algo?») antes que remates ingeniosos; jerga de barrio («loco», «socio», «my brodel», «No me jodas», «echa el freno magdaleno», «Obvio»); sin detalles de más. Lo que el usuario escribe en el editor web (`dia1_despertar`, `dia1_clase`, `dia1_camas`) es la referencia: no lo reescribas.
+- **Ren**: perdió a su padre hace tiempo y lo está superando. Es alegre, bromista y algo sarcástico; el padre sale poco y con cariño (la foto de la entrada, la gorra del Lega), sin dramatizar. Los demás **no** le tratan de ermitaño ni insisten en «sacarle de casa».
 
 ## Dónde va cada cosa
 

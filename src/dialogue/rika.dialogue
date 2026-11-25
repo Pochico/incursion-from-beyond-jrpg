@@ -10,11 +10,11 @@
 
 ~ rika_hablar_primera
 # cuando: hablar, una vez, fase = rutina
-Rika: ¡Anda, Ren! ¿Tú fuera de clase y a la luz del día? Pensaba que te recargabas en un enchufe hasta el lunes.
-- Me han dejado salir por buen comportamiento. [#bromista, #desenfadado]
-	Rika: ¡Jajaja! Mira, si hasta tienes sentido del humor. Todo el curso sentado dos filas detrás de mí y yo sin enterarme.
+Rika: ¡Anda, Ren! ¿Qué haces tú por aquí?
+- Buscar a alguien que me invite a algo. [#bromista, #desenfadado]
+	Rika: ¡Jajaja! Qué morro tienes. Me caes bien, ¿eh?
 - Iba a casa. [#reservado]
-	Rika: Qué hablador. Vale, vale, no te entretengo... Bueno, sí. Un poquito.
+	Rika: Vale, vale, no te entretengo... Bueno, sí. Un poquito.
 - ¿Y tú qué haces aquí sola? [#curioso, #protector]
 	Rika: ¿Sola? Cielo, yo nunca estoy sola. Estoy esperando, que es distinto.
 Rika: Mi amiga llega tardísimo, como siempre. Así que me haces compañía un ratito.
@@ -48,11 +48,11 @@ Rika: Venga, ya te dejo. Pero la próxima vez me invitas a algo. Una Pochicola, 
 	- ¿Y no te molestan para escribir? [#curioso, #pragmático]
 		Rika: Uf, muchísimo. Por eso escribo poco. Es una decisión de estilo de vida.
 %
-	Rika: ¿Sabes qué? El sábado hay una fiesta en casa de una de mi grupo. Si vienes, te presento a gente. Gente con color, no como tú.
+	Rika: ¿Sabes qué? El sábado hay una fiesta en casa de una de mi grupo. Si vienes, te presento a gente maja.
 	- Igual me paso. [#dubitativo]
 		Rika: «Igual» no es una respuesta. Te lo vuelvo a preguntar el viernes.
 	- No me van mucho las fiestas. [#reservado, #franco]
-		Rika: Ya lo sé, por eso te invito. Alguien tiene que sacarte de la cueva.
+		Rika: Porque no has ido a una mía. Las mías son otra cosa.
 	- Solo si vienes tú conmigo. [#coqueto, #atrevido]
 		Rika: ...Vaya, vaya. Pues claro que voy, es la fiesta de mi amiga. Pero me lo apunto.
 => END
@@ -308,7 +308,7 @@ $> Story.set_mood("rika", "ansioso", 65)
 # cuando: movil
 %
 	Ren: Hola, Rika.
-	Rika: ¡Ren! Qué milagro. Pensaba que tu móvil solo servía para poner la alarma.
+	Rika: ¡Ren! ¿Qué pasa, cielo?
 %
 	Ren: ¿Qué tal?
 	Rika: Bien, probándome tres outfits para no ir a ningún sitio. Lo normal.
@@ -322,7 +322,7 @@ $> Story.set_mood("rika", "ansioso", 65)
 # cuando: movil, veces >= 2
 %
 	Ren: Ey, otra vez yo.
-	Rika: Jajaja, ¿hoy estás hablador o qué? Me gusta esta versión de ti.
+	Rika: Jajaja, ¿hoy estás hablador o qué? Me gusta.
 %
 	Ren: ¿Sigues por ahí?
 	Rika: Te he leído, eh. No me hagas spam, que me lo creo.
@@ -382,7 +382,7 @@ Rika: Ren, me duelen partes del cuerpo que no sabía que tenía. Las camas elás
 	Rika: Divertidísimo. Lo repetiría mañana. Pero hoy no me pidas que suba escaleras.
 - Yo estoy perfectamente. [#provocador]
 	Rika: Mentira. Te he visto bajar del autobús. Has bajado como mi abuelo.
-Rika: Por cierto, gracias por venir ayer. Kenji decía que no vendrías. Yo aposté que sí. Me debe un batido.
+Rika: Por cierto, Kenji dice que el que más alto saltó fue él. Mentira. Fuiste tú. Lo tengo grabado.
 => END
 
 ~ rika_hablar_miercoles
@@ -468,7 +468,7 @@ if Story.partner("rika") == "ren"
 	Rika: ¿Una cita con tu novia? Cielo, eso no se pregunta, se reserva.
 	Rika: {{Story.date_place()}}. Ponte algo que no sea esa sudadera.
 else
-	Rika: ¿Me estás pidiendo una cita? ¿Tú? ¿Ren el ermitaño?
+	Rika: ¿Me estás pidiendo una cita? ¿Tú? ¿A mí? ¿Ahora?
 	Rika: (Sonríe con todos los dientes.) Sí. Obvio que sí. {{Story.date_place()}}. No llegues tarde, que me pongo de mal humor y estoy menos mona.
 => END
 

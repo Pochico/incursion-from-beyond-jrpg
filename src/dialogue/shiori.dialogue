@@ -355,7 +355,7 @@ Shiori: Hay más de los que debería. Mañana te enseño lo que he encontrado.
 
 ~ shiori_hablar_martes
 # cuando: hablar, flag dia_2, no hoy >= 2, fase = rutina
-Shiori: Ayer te reíste en las camas elásticas. Kenji lo ha apuntado como «hito histórico». Yo lo he apuntado como «dato».
+Shiori: Ayer saltaste más alto que Kenji. Él dice que fue el viento. Dentro de un recinto cerrado. Lo he apuntado como «dato».
 - ¿Por qué apuntas esas cosas? [#curioso]
 	Shiori: Porque si no las apunto se olvidan. Y luego nadie se acuerda de que fueron verdad.
 - Vaya, me tenéis vigilado. [#bromista]

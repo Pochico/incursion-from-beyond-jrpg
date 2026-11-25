@@ -12,7 +12,7 @@
 ~ intro
 if Story.phase("reunion") and not Story.flag("intro_tras_reunion")
 	$> Story.set_flag("intro_tras_reunion")
-	Te despiertas antes que la alarma. Por primera vez en semanas, no te pesa la cabeza.
+	Te despiertas antes que la alarma. Con la cabeza despejada y ganas de saber qué pone el grupo.
 	El grupo del móvil ha cambiado de nombre esta noche. Ahora se llama «Cloacas FC». Ha sido Kenji, claro.
 	Shiori ha mandado un documento de once páginas. Rika, un audio de cuatro minutos. Akane, un pulgar.
 	Ren: Vale. Esto va en serio.
@@ -46,8 +46,8 @@ if Story.phase("incursion_1")
 	Ren: Busqué «criatura plaza Leganés» y solo salen vídeos borrosos y gente diciendo que es marketing de una película.
 	Ren: Ojalá tuvieran razón.
 else
-	Ren: Aquí se me van las noches. Partidas a medias, vídeos que no recuerdo haber puesto, pestañas abiertas desde hace semanas.
-	Ren: Tendría que apagarla más a menudo. Mañana. Seguro que mañana.
+	Ren: Partidas a medias y cuarenta pestañas abiertas. Un día de estos la ordeno.
+	Ren: Hoy no. Hoy hay cosas que hacer.
 => END
 
 ~ examinar_cama
@@ -55,7 +55,7 @@ if Story.phase("incursion_1")
 	Ren: Sigo notando el temblor en las piernas. No sé si voy a poder dormir esta noche.
 else
 	Ren: Nunca la hago. Total, por la noche se va a deshacer igual.
-	Ren: Es el único sitio de la casa donde el día deja de pedirme cosas.
+	Ren: Lógica pura. Mamá no lo ve así.
 => END
 
 # Cama: siesta (pasa una franja del día) y dormir (hasta la mañana siguiente).
@@ -80,6 +80,7 @@ else
 Ren: Lo que no me atrevo a tirar: cómics de cuando era crío, cables «por si acaso» y cajas que no he abierto desde la mudanza.
 % Ren: Y la planta sigue viva. No sé cómo; yo siempre me olvido de regarla.
 % Ren: Hay una foto de Kenji y yo con diez años, disfrazados de robots con cajas de cartón. Él sigue diciendo que ganamos el concurso.
+% Ren: La gorra del Lega de papá. Todavía me queda grande. Algún día me valdrá.
 => END
 
 # --- Primera incursión --------------------------------------------------------------
@@ -123,7 +124,7 @@ Todo se vuelve negro. Cuando abres los ojos, la figura ya no está. Solo queda u
 ~ generico_hablar
 # cuando: hablar
 {{Story.speaker}}: ¿Qué tal, Ren?
-Ren: Tirando.
+Ren: Aquí, dando guerra.
 => END
 
 ~ generico_ligar

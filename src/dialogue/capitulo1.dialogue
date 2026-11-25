@@ -157,8 +157,8 @@ Rika: ¡Sí! Camas elásticas. Ren, tú vienes.
 - Vale, me apunto. [#decidido]
 	Kenji: ¡Ese es mi Ren!
 - No sé... Estoy cansado. [#dubitativo]
-	Kenji: Estás cansado desde 2019. Vienes.
-	Rika: Te vas a reír, ya verás. Te lo prometo.
+	Kenji: Siempre dices eso y luego eres el que más salta. Vienes.
+	Rika: Va, que sin ti no tiene gracia.
 - Solo si no grabáis vídeos. [#bromista]
 	Rika: No prometo nada.
 Shiori: Yo también voy. Alguien tendrá que llamar a la ambulancia cuando Kenji intente un mortal.
@@ -178,13 +178,13 @@ Yuna: Yo también. Desde dos ángulos.
 Kenji: Ha sido intencionado. Es arte contemporáneo.
 Rika: ¡Ren, salta conmigo! ¡A la de tres!
 - (Saltar con todas tus fuerzas.) [#decidido, #desenfadado]
-	Saltas tan alto que, durante un segundo, no piensas en nada. Ni en la pantalla, ni en la cama, ni en mañana.
+	Saltas tan alto que, durante un segundo, no piensas en nada. Te acuerdas de tu padre lanzándote a la piscina de pequeño. Por una vez, el recuerdo te hace sonreír.
 	Rika: ¡Eso! ¡Así se hace!
 - (Saltar sin muchas ganas.) [#reservado]
 	Rika: ¡Venga ya, que no muerde! ¡Más alto!
-	Al tercer salto se te escapa una risa. No recuerdas la última vez.
-Shiori: Ren se está riendo. Kenji, apúntalo.
-Kenji: Lunes, dieciséis de noviembre. Ren se ríe. Hito histórico.
+	Al tercer salto se te escapa la risa. Aquí es imposible hacerse el serio.
+Shiori: Kenji, Ren salta más alto que tú.
+Kenji: Porque yo cargo con el peso del arte. Es otra liga.
 if Story.flag("dia1_cita_akane")
 	Kenji: Por cierto, he pasado por las recreativas a preguntarle a Akane por vuestra «cita».
 	Kenji: Me ha mirado tres segundos sin pestañear y me ha dicho: «¿Y a ti qué te importa?». [#cara=sorpresa]
@@ -213,7 +213,7 @@ Madre de Kenji: Pues dale recuerdos a tu madre. ¡Y abrígate!
 Kenji: Bueno, cada mochuelo a su olivo. Ren, contesta los mensajes, que te conozco.
 - Que sí, pesado. [#bromista]
 	Kenji: Eso dices siempre. Y luego, nada.
-- Gracias por sacarme de casa. [#cariñoso, #franco]
+- Gracias por el plan. Me hacía falta. [#cariñoso, #franco]
 	Kenji: ...Vale, eso no me lo esperaba. Me has pillado sin respuesta graciosa.
 	Kenji: De nada, tío. Cuando quieras.
 Cada uno se va a su casa.
@@ -224,9 +224,12 @@ Cada uno se va a su casa.
 ~ dia1_casa
 Mamá: ¿Ren? ¿Ya estás aquí, cariño? ¿Has cenado?
 Ren: Algo en Parquesur. Buah... Estoy hecho polvo.
-Mamá: Pues a la cama, que mañana hay clase. Me alegro de que hayas salido con los chicos.
+Mamá: Pues a la cama, que mañana hay clase. ¿Qué tal con los chicos? Ya me contarás.
+Ren: Muy bien. Kenji se ha intentado matar con un mortal. Lo normal.
+Mamá: Ese niño... Dale un beso de mi parte.
 $> Story.text("kenji", "El vídeo del mortal ya está en el grupo. Ni se te ocurra silenciarlo.")
-Ren: Ni pantalla ni nada. A dormir.
+Al pasar por la entrada, le das un toquecito a la foto de tu padre. Costumbre.
+Ren: Buenas noches, papá. Hoy ha sido un buen día.
 Te dejas caer en la cama con la ropa puesta. Esta noche ni siquiera oyes el frigorífico.
 => END
 
@@ -265,7 +268,7 @@ Profesora: Buenos días. Cuadernos fuera. Corregimos los ejercicios en la pizarr
 Nadie se mueve. Rika encuentra algo fascinante en su estuche. Kenji, en el techo.
 Profesora: Muy bien. Pues elijo yo. A ver... Ren.
 - (Salir a la pizarra con decisión.) [#decidido]
-	Escribes la derivada. Te sale. Por un momento, toda la clase te mira como si fueras otra persona.
+	Escribes la derivada. Te sale a la primera. Hasta tú te sorprendes.
 	Profesora: Correcto. ¿Ves como cuando quieres...?
 	Rika: (Bajito.) ¡Toma ya!
 	$> Story.change("rika", "respeto", 2)
@@ -323,7 +326,7 @@ Shiori: Gracias por venir, Ren. No hace falta que se lo cuentes a nadie.
 
 ~ dia2_bowls
 Bowls. Las rampas de hormigón están todavía húmedas. Kenji ha traído un altavoz del tamaño de una tostadora.
-Kenji: ¡Ren! ¡Has venido! Yuna, apunta la fecha. Dos planes en dos días. Esto es un récord.
+Kenji: ¡Ren! ¡Socio! Ya estamos todos. Bueno, todos los importantes.
 Yuna: Apuntado. Hola, Ren. Hay bocadillos de tortilla. Si no comes, se los come él y luego le duele la tripa.
 Kenji: Eso era una vez.
 Yuna: Eran tres.
@@ -344,9 +347,9 @@ Akane: No. Estoy haciendo la compra. Claro que patino.
 	Yuna: Es malísima idea. Siéntate, osito.
 	Akane: Déjale. Yo llamo a la ambulancia. Tengo el número de memoria.
 Yuna se sienta a tu lado en el bordillo mientras Kenji y Akane discuten sobre una canción.
-Yuna: ¿Sabes? Kenji habla de ti todo el rato. «Ren esto, Ren aquello». Estaba preocupado. Llevabas semanas sin salir.
-- Estoy mejor. [#franco]
-	Yuna: Se nota. Tienes otra cara.
+Yuna: ¿Sabes? Kenji está contentísimo. Dice que vuelves a ser el de antes. El de antes de lo de tu padre.
+- Estoy mejor, sí. Ya tocaba. [#franco]
+	Yuna: Se nota. Te ríes más.
 - No hacía falta que se preocupara. [#reservado, #independiente]
 	Yuna: Ya. Pero es Kenji. Se preocupa por las plantas de su madre. Imagínate por ti.
 - Gracias por cuidarle tanto. [#cariñoso]
@@ -419,12 +422,12 @@ Kenji: ¡Gracias, amor!
 	$> Story.change("yuna", "afecto", 2)
 Después, os sentáis en la hierba. Rika comparte unas patatas. El perro se queda con la mitad.
 Rika: Oye, Ren. ¿Puedo preguntarte una cosa en serio? Solo una, que luego me pongo nerviosa.
-Rika: ¿Por qué estuviste tanto tiempo sin salir? No te lo pregunto por cotillear. Bueno, un poco. Pero sobre todo no.
-- Me costaba encontrar motivos. [#franco]
-	Rika: ...Vale. Pues aquí tienes uno. Vóley los miércoles. Es obligatorio. Lo digo yo.
+Rika: ¿Cómo lo llevas? Lo de tu padre, digo. Nunca te lo he preguntado y me sabe mal.
+- Mejor. Ahora me acuerdo de él y me río más de lo que lloro. [#franco]
+	Rika: ...Jo. Eso es muy bonito. Seguro que era un cachondo, como tú.
 	$> Story.change("rika", "confianza", 3)
-- No lo sé ni yo. [#dubitativo]
-	Rika: Bueno. No hace falta saberlo todo. Ya estás aquí.
+- Depende del día. Hoy, bien. [#dubitativo]
+	Rika: Pues apunto «bien». Y vóley los miércoles, que es obligatorio. Lo digo yo.
 - Prefiero no hablar de eso. [#reservado]
 	Rika: Vale. Lo pillo. Pero si un día quieres, yo escucho. Se me da fatal callarme, pero escuchar sí.
 if Story.phase("incursion_1")

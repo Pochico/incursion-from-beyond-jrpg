@@ -11,7 +11,7 @@ Kenji: ¡Ren! ¿Qué tal las piernas después de las camas elásticas? Yo no sie
 - Más o menos vivo. [#franco]
 	Kenji: «Más o menos». Me vale. Es más de lo que dice la mitad del barrio un martes.
 - Holograma. Bájame el brillo, que deslumbro. [#bromista, #desenfadado]
-	Kenji: ¡Ja! Ese es mi Ren. Sabía que seguías ahí dentro, debajo de tanta capucha.
+	Kenji: ¡Ja! Ese es mi Ren. Así me gusta, loco.
 - (Encogerte de hombros.) [#reservado]
 	Kenji: Vale, vale. Modo ahorro de energía. Lo respeto.
 Kenji: Oye, ya que estás aquí... ¿Te puedo contar una cosa rara sin que me mires como si estuviera mal de la cabeza?
@@ -26,7 +26,7 @@ Kenji: No es ruido. No es una radio. Es como... una voz metida entre los datos. 
 	$> Story.set_flag("kenji_voz_abre")
 - Duerme más, Kenji. [#sarcástico]
 	Kenji: Ya, ya... Tú también estás a una mala noche de oír cosas, no te creas.
-Kenji: En fin. Si un día te da por aburrirte un poco menos, pásate por el estudio y lo escuchas tú mismo.
+Kenji: En fin. Pásate un día por el estudio y lo escuchas tú mismo.
 Kenji: Y tráete algo de comer. El genio creativo no se alimenta del aire.
 => END
 
@@ -212,7 +212,7 @@ Kenji: ¿Para la próxima vez que salga un bicho de una grieta? ...Vale. Pero si
 
 ~ kenji_luchar_gana
 # cuando: luchar_fin, resultado = gana
-Kenji: Vale, vale, me rindo. ¿Desde cuándo sabes moverte así? Pensaba que tu único deporte era hacer scroll.
+Kenji: Vale, vale, me rindo. ¿Desde cuándo sabes moverte así, loco?
 Ren: Desde hoy, parece.
 Kenji: Pues que no se entere nadie del barrio. Tengo una reputación de tipo duro que mantener. ...Bueno, no la tengo. Pero podría.
 => END
@@ -282,8 +282,7 @@ $> Story.set_mood("kenji", "ansioso", 60)
 # cuando: movil
 %
 	Ren: Ey.
-	Kenji: ¡¿Ren escribiendo primero?! Voy a hacer captura. Esto va al museo.
-	Kenji: ¿Qué pasa, tío?
+	Kenji: ¡Socio! ¿Qué pasa?
 %
 	Ren: ¿Qué haces?
 	Kenji: Aquí, cortando un sample de una puerta que chirría. Suena a gato triste. Me encanta.
@@ -296,7 +295,7 @@ $> Story.set_mood("kenji", "ansioso", 60)
 # cuando: movil, veces >= 2
 %
 	Ren: Ey, otra vez yo.
-	Kenji: Dos mensajes en un día. ¿Estás bien? ¿Te han cambiado por un clon simpático?
+	Kenji: ¿Otra vez tú? Me vas a quitar el puesto de pesado del grupo.
 %
 	Ren: ¿Sigues por ahí?
 	Kenji: Jajaja vale, vale, ya te he leído. Sigo aquí.

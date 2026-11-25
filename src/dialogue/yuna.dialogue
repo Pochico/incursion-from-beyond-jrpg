@@ -50,7 +50,7 @@ Yuna: A mí me lo cuenta en broma. Pero a ti te lo cuenta en serio. Si te dice a
 # cuando: hablar, hoy >= 2, no flag kenji_yuna_rotos
 % Yuna: ¿Otra vez por aquí? Kenji sigue sin volver de las pipas.
 % Yuna: Hola de nuevo. Si buscas conversación, Kenji tiene para los dos.
-% Yuna: Te noto con ganas de hablar hoy. Me gusta. No es lo normal en ti.
+% Yuna: Te noto con ganas de hablar hoy. Me gusta.
 => END
 
 ~ yuna_hablar_con_kenji
