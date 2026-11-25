@@ -30,7 +30,7 @@ func _draw() -> void:
 	var m := explorer.map
 	var lvl := m.level
 	if big:
-		draw_string(UIStyle.FONT_MEDIUM, Vector2(220, 54), m.level_name() + "   ·   [M] Cerrar", HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
+		draw_string(UIStyle.FONT_MEDIUM, Vector2(220, 54), m.level_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
 				Color(UIStyle.WHITE, 0.65))
 	else:
 		draw_string(UIStyle.FONT_MEDIUM, Vector2(s.x - 140, 40), m.level_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 20,

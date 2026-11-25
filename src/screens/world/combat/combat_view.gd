@@ -28,6 +28,7 @@ const VIEWPORT_RECT := Rect2(10, 96, 1418, 782)
 const COMMAND_Y := 898.0
 const OPTION_ROW := Rect2(30, 990, 1864, 70)
 const RIGHT_X := 1440.0
+const COMMANDS_END_X := 1890.0   ## borde derecho de la fila de comandos (base 1920)
 
 const COMMANDS := [
 	{"id": "attack", "label": "Atacar", "icon": "swords", "desc": "Ataque básico con lo que tengas a mano."},
@@ -73,10 +74,39 @@ var _banner_color := UIStyle.WHITE
 var _banner_t := 0.0
 
 
+## Ancho de más sobre 1920 (pantallas alargadas): lo gana el visor.
+var _extra := 0.0
+
+
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	resized.connect(_layout)
+	_layout()
+
+
+## Maqueta a lo ancho: la base es 1920×1080; en pantallas más alargadas el visor
+## crece y la columna derecha y la cabecera se pegan al borde.
+func _layout() -> void:
+	_extra = maxf(size.x - 1920.0, 0.0)
+	_viewport.size = Vector2(VIEWPORT_RECT.size.x - 4 + _extra, VIEWPORT_RECT.size.y - 4)
+	_minimap.position.x = RIGHT_X + _extra
+	for card in _cards:
+		card.position.x = RIGHT_X + _extra
+	var x0 := 74.0
+	var gap := 8.0
+	var w := (COMMANDS_END_X + _extra - x0 - gap * (COMMANDS.size() - 1)) / COMMANDS.size()
+	for i in _commands.size():
+		_commands[i].position = Vector2(x0 + i * (w + gap), COMMAND_Y)
+		_commands[i].size = Vector2(w, 72)
+		_commands[i].custom_minimum_size = Vector2(w, 72)
+	_info.size.x = OPTION_ROW.size.x + _extra
+	_status.size = size
+	if _battle != null:
+		_layout_foes(false)
+	queue_redraw()
+	_info.queue_redraw()
 
 
 # --- Construcción ----------------------------------------------------------------------
@@ -93,16 +123,19 @@ func _build() -> void:
 	_backdrop = LocationBackdrop.new()
 	_backdrop.size = _viewport.size
 	_viewport.add_child(_backdrop)
+	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	var shade := ColorRect.new()
 	shade.color = Color(UIStyle.INK, 0.25)
 	shade.size = _viewport.size
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_viewport.add_child(shade)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	for i in Battle.MAX_FOES:
 		var sprite := CharacterSprite.new()
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE   # los toques los mira _gui_input
 		sprite.visible = false
 		_viewport.add_child(sprite)
 		_enemies.append(sprite)
@@ -118,6 +151,7 @@ func _build() -> void:
 	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fx.draw.connect(_draw_fx)
 	_viewport.add_child(_fx)
+	_fx.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	# Columna derecha
 	_minimap = MiniMap.new()
@@ -237,7 +271,7 @@ func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vi
 const FOE_SLOTS := {1: [0.56], 2: [0.3, 0.72], 3: [0.18, 0.5, 0.82]}
 const FOE_SCALE := {1: 1.0, 2: 0.74, 3: 0.58}
 
-func _layout_foes() -> void:
+func _layout_foes(reset: bool = true) -> void:
 	var vs := _viewport.size
 	var n := _battle.foes.size()
 	var plate_w := 560.0 if n < 3 else 440.0
@@ -251,11 +285,18 @@ func _layout_foes() -> void:
 		var f := _battle.fighter(_battle.foes[i])
 		var default_rect := Rect2(Vector2(vs.x * 0.56 - DEFAULT_ENEMY_SIZE.x * 0.5, vs.y - DEFAULT_ENEMY_SIZE.y), DEFAULT_ENEMY_SIZE)
 		var rect: Rect2 = CharacterDB.get_character(f.id).get("battle_rect", default_rect)
+		rect.position.x += _extra * 0.56   # el sitio de siempre, en el visor más ancho
 		if n > 1:
 			var s: float = FOE_SCALE[n]
 			var cx: float = vs.x * FOE_SLOTS[n][i]
 			rect = Rect2(Vector2(cx - rect.size.x * s * 0.5, rect.end.y - rect.size.y * s), rect.size * s)
 		sprite.position = rect.position
+		plate.size = Vector2(plate_w, 120)
+		plate.position = Vector2(26 + i * (plate_w + 16), 22)
+		if not reset:
+			sprite.size = rect.size
+			sprite.pivot_offset = Vector2(rect.size.x * 0.5, rect.size.y)
+			continue
 		sprite.size = rect.size
 		sprite.pivot_offset = Vector2(rect.size.x * 0.5, rect.size.y)
 		sprite.texture = CharacterDB.portrait(f.id)
@@ -315,6 +356,7 @@ func begin() -> void:
 # --- Estados y entrada ---------------------------------------------------------------------
 
 func _enter_command_state(index: int) -> void:
+	_pending_action = ""
 	for i in _battle.party.size():
 		_cards[i].active = _battle.party.size() > 1 and _battle.party[i] == _actor
 	_state = State.COMMAND
@@ -347,6 +389,12 @@ func _on_command_pressed(index: int) -> void:
 	if _state != State.COMMAND:
 		return
 	_current_command = index
+	# Un toque basta: si el comando tiene una sola opción (Atacar, Defender,
+	# Analizar, Huir), se hace ya; con varios rivales, Atacar pasa a elegir a quién.
+	var opts := _options_for(COMMANDS[index].id)
+	if opts.size() == 1 and opts[0].has("action") and not opts[0].get("disabled", false):
+		_execute(opts[0].action)
+		return
 	var first := _first_enabled_option()
 	if first:
 		_state = State.OPTION
@@ -515,6 +563,31 @@ func _gui_input(event: InputEvent) -> void:
 		_state = State.IDLE
 		accept_event()
 		finished.emit(_battle.player_won())
+		return
+	# Tocar a un rival: si se está eligiendo contra quién, va contra él; si no,
+	# lo ataca directamente.
+	if (_state == State.COMMAND or _state == State.OPTION) and event is InputEventMouseButton \
+			and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var who := _foe_at(event.position)
+		if who == "":
+			return
+		accept_event()
+		var action := _pending_action if _pending_action != "" else "attack"
+		if action == "attack" and not _battle.can_attack(_actor):
+			return
+		_highlight_foe(who)
+		_execute("%s@%s" % [action, who])
+
+
+## Rival en pie bajo el punto `p` (coordenadas de la vista), o "".
+func _foe_at(p: Vector2) -> String:
+	var best := ""
+	for who in _battle.alive_foes():
+		var s := _sprite(who)
+		var r := Rect2(_viewport.position + s.position, s.size)
+		if r.has_point(p):
+			best = who   # el último de la fila manda si se solapan
+	return best
 
 
 # --- Ejecución de turnos ---------------------------------------------------------------------
@@ -532,6 +605,7 @@ func _execute(action: String) -> void:
 	if not action.contains("@") and _battle.alive_foes().size() > 1 and _needs_foe_target(action):
 		_show_foe_targets(action)
 		return
+	_pending_action = ""
 	await _run_action(action)
 	await _prompt()
 
@@ -567,7 +641,7 @@ func _show_foe_targets(action: String) -> void:
 			_highlight_foe(who))
 		b.pressed.connect(_execute.bind("%s@%s" % [action, who]))
 		_options.add_child(b)
-	_log("¿Contra quién?")
+	_log("¿Contra quién? Toca al rival o elige abajo.")
 	_state = State.OPTION
 	(_options.get_child(0) as Control).grab_focus.call_deferred()
 
@@ -1057,24 +1131,25 @@ func _draw() -> void:
 	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(72, 74), sub, 18, 1.5, Color(UIStyle.WHITE, 0.9))
 
 	# Línea de marco superior con quiebros (une cabecera y columna derecha).
+	var e := _extra
 	draw_polyline(PackedVector2Array([
 		Vector2(0, 112), Vector2(24, 88), Vector2(500, 88), Vector2(522, 70),
-		Vector2(1400, 70), Vector2(1430, 40), Vector2(1440, 40),
+		Vector2(1400 + e, 70), Vector2(1430 + e, 40), Vector2(1440 + e, 40),
 	]), UIStyle.LINE, 1.5, true)
 
 	# Cabecera derecha: fecha y dinero.
-	var hdr := PackedVector2Array([Vector2(1440, 40), Vector2(1470, 6), Vector2(1790, 6), Vector2(1760, 40)])
+	var hdr := PackedVector2Array([Vector2(1440 + e, 40), Vector2(1470 + e, 6), Vector2(1790 + e, 6), Vector2(1760 + e, 40)])
 	draw_colored_polygon(hdr, Color(UIStyle.INK, 1.0))
-	UIIcons.calendar(self, Vector2(1490, 26), 26, UIStyle.WHITE)
-	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
-	draw_line(Vector2(1592, 14), Vector2(1592, 40), UIStyle.WHITE, 1.5)
-	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608, 36), "¥ %s" % UIStyle.format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	UIIcons.calendar(self, Vector2(1490 + e, 26), 26, UIStyle.WHITE)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516 + e, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	draw_line(Vector2(1592 + e, 14), Vector2(1592 + e, 40), UIStyle.WHITE, 1.5)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608 + e, 36), "¥ %s" % UIStyle.format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
 	for i in 7:
 		var sx := w - 120 + i * 14
 		draw_line(Vector2(sx, 40), Vector2(sx + 16, 6), UIStyle.WHITE, 2.5, true)
 
 	# Marco del visor.
-	var vp := UIStyle.chamfer_rect(VIEWPORT_RECT, [0.0, 0.0, 22.0, 0.0])
+	var vp := UIStyle.chamfer_rect(Rect2(VIEWPORT_RECT.position, VIEWPORT_RECT.size + Vector2(e, 0)), [0.0, 0.0, 22.0, 0.0])
 	UIStyle.draw_outline(self, vp, UIStyle.LINE, 1.5)
 
 	# Línea de guía a la izquierda de los comandos.
