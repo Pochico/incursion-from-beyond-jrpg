@@ -1,7 +1,8 @@
 class_name EnemyPlate
 extends Control
 ## Placa del rival dentro del visor: nombre, nivel, barra de PV y, si se ha
-## analizado, los PV numéricos y su ataque.
+## analizado, los PV numéricos y su ataque. Con estados alterados, pastillas bajo
+## la placa y la barra late con el color del estado perjudicial (StatusBadges).
 
 var character_id := ""
 var level := 1
@@ -16,6 +17,11 @@ var analyzed := false:
 		queue_redraw()
 var attack_text := ""
 var tag := "RIVAL"
+## Estados alterados: [{id, turns}] (StatusBadges.from_fighter).
+var statuses: Array = []:
+	set(value):
+		statuses = value
+		queue_redraw()
 
 
 func _ready() -> void:
@@ -33,6 +39,11 @@ func setup(fighter: Dictionary) -> void:
 		attack_text += " · " + SkillDB.display_name(skill_id)
 	var nature: String = fighter.get("nature", "")
 	tag = SkillDB.NATURE_NAMES.get(nature, "RIVAL").to_upper() if CharacterDB.is_enemy(character_id) else "RIVAL"
+
+
+func _process(_delta: float) -> void:
+	if StatusBadges.debuff_color(statuses).a > 0.0:
+		queue_redraw()
 
 
 func animate_pv(value: int) -> void:
@@ -62,6 +73,18 @@ func _draw() -> void:
 	var bar := Rect2(Vector2(bx, 88), Vector2(bw, 7))
 	draw_rect(bar, Color(UIStyle.WHITE, 0.15))
 	draw_rect(Rect2(bar.position, Vector2(bw * clampf(pv / pv_max, 0.0, 1.0), 7)), color)
+	var bad := StatusBadges.debuff_color(statuses)
+	if bad.a > 0.0:
+		# Marco que late alrededor de la barra y rayas del color del estado.
+		var p := StatusBadges.pulse()
+		draw_rect(bar.grow(3.0), Color(bad, 0.45 + 0.55 * p), false, 2.0)
+		for i in int(bw / 18.0):
+			var sx := bx + i * 18.0
+			draw_line(Vector2(sx, bar.end.y), Vector2(sx + 6, bar.position.y), Color(bad, 0.35 + 0.3 * p), 2.0)
+
+	# Estados: pastillas justo debajo de la placa.
+	if not statuses.is_empty():
+		StatusBadges.draw_row(self, Vector2(20, size.y + 6), statuses, 15, size.x - 20)
 
 	# Fila 3: ataque (tras analizar).
 	if analyzed:

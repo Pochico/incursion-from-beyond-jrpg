@@ -64,7 +64,6 @@ var _options: HBoxContainer
 var _info: Control
 var _status: StatusPanel
 var _tension_shown := 0.0
-var _slash_t := -1.0             # animación del tajo (−1 = inactiva)
 var _banner_text := ""           # nombre de la habilidad en curso
 var _banner_color := UIStyle.WHITE
 var _banner_t := 0.0
@@ -189,7 +188,6 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vita
 	_result_sub = ""
 	_result_levels = ""
 	_result_t = 0.0
-	_slash_t = -1.0
 	_banner_text = ""
 	_log_text = ""
 
@@ -212,10 +210,12 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vita
 	_enemy.scale = Vector2.ONE
 	_plate.setup(_battle.enemy())
 	_plate.analyzed = false
+	_plate.statuses = []
 
 	for i in _cards.size():
 		_cards[i].guarding = false
 		_cards[i].status_text = ""
+		_cards[i].statuses = []
 		_cards[i].active = false
 		if i < _battle.party.size():
 			var f := _battle.fighter(_battle.party[i])
@@ -634,16 +634,14 @@ func _anim_player_hits(ev: Dictionary) -> void:
 		_log("%s recibe %d de daño." % [e.name, ev.amount])
 	else:
 		_log("%s usa %s. %s recibe %d de daño." % [_fighter_name(ev.source), ev.move, e.name, ev.amount])
-	# Tajo lima que cruza al rival.
-	var t := create_tween()
-	t.tween_method(func(v: float) -> void:
-		_slash_t = v
-		_fx.queue_redraw(), 0.0, 1.0, 0.28)
-	await t.finished
-	_slash_t = -1.0
-	_fx.queue_redraw()
+	# Animación del tipo de golpe sobre el rival (ver AttackFx).
+	var kind := AttackFx.kind_for(ev.skill)
+	var fx := AttackFx.play(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 260), kind)
+	await get_tree().create_timer(AttackFx.DURATION[kind] * 0.6).timeout
 	_flash_enemy()
-	_shake(_enemy, 14.0)
+	_shake(_enemy, 24.0 if kind == "mechanical" else 14.0)
+	if is_instance_valid(fx):
+		await fx.done
 	_plate.animate_pv(e.pv)
 	DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.WHITE)
 	await get_tree().create_timer(0.7).timeout
@@ -661,7 +659,11 @@ func _anim_enemy_hits(ev: Dictionary) -> void:
 	t.tween_property(_enemy, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD)
 	t.tween_property(_enemy, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_QUAD)
 	await get_tree().create_timer(0.12).timeout
-	_shake(self, 10.0)
+	# Animación del tipo de golpe sobre la ficha de quien lo recibe.
+	var kind := AttackFx.kind_for(ev.skill, e.get("nature", ""))
+	var card := _card(ev.target)
+	AttackFx.play(self, card.position + card.size * 0.5, kind, 0.3)
+	_shake(self, 16.0 if kind == "mechanical" else 10.0)
 	_card(ev.target).flash(UIStyle.RED)
 	_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
 	DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), str(ev.amount), Color("ff6b7d"), false)
@@ -799,6 +801,8 @@ func _update_status_tags() -> void:
 		for status: String in statuses:
 			parts.append("%s %d" % [SkillDB.STATUS_NAMES.get(status, status).to_upper(), statuses[status].turns])
 		_card(who).status_text = " · ".join(parts)
+		_card(who).statuses = StatusBadges.from_fighter(_battle.fighter(who))
+	_plate.statuses = StatusBadges.from_fighter(_battle.enemy())
 
 
 func _pname() -> String:
@@ -969,15 +973,6 @@ func _draw_fx() -> void:
 		_fx.draw_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(lx + 48, ty + 34), _log_text, HORIZONTAL_ALIGNMENT_LEFT,
 				vs.x - lx - 90, 21, UIStyle.WHITE)
 
-	# Tajo lima/blanco en diagonal sobre el rival.
-	if _slash_t >= 0.0:
-		var c := _enemy.position + Vector2(_enemy.size.x * 0.5, 260)
-		var a := c + Vector2(-260, 200)
-		var b := c + Vector2(260, -200)
-		var head := a.lerp(b, minf(_slash_t * 1.4, 1.0))
-		var tail := a.lerp(b, maxf(_slash_t * 1.4 - 0.5, 0.0))
-		_fx.draw_line(tail, head, Color(UIStyle.LIME, 0.9), 18.0, true)
-		_fx.draw_line(tail, head, UIStyle.WHITE, 6.0, true)
 	# Nombre de la habilidad: entra deslizándose, se mantiene y se desvanece.
 	if _banner_text != "":
 		var bt := _banner_t

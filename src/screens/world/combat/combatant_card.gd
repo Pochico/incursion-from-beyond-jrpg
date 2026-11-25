@@ -37,6 +37,11 @@ var status_text := "":
 	set(value):
 		status_text = value
 		queue_redraw()
+## Los mismos estados, para marcarlos sobre el retrato: [{id, turns}].
+var statuses: Array = []:
+	set(value):
+		statuses = value
+		queue_redraw()
 
 var _flash := 0.0
 var _texture: Texture2D
@@ -47,6 +52,11 @@ var _face_region := Rect2()
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+
+func _process(_delta: float) -> void:
+	if StatusBadges.debuff_color(statuses).a > 0.0:
+		queue_redraw()
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -115,6 +125,14 @@ func _draw() -> void:
 	if _texture:
 		draw_texture_rect_region(_texture, thumb, _face_region)
 	draw_rect(thumb, Color(UIStyle.WHITE, 0.35), false, 1.0)
+	if not statuses.is_empty():
+		# Retrato teñido y con marco que late si hay un estado perjudicial; rombos abajo.
+		var bad := StatusBadges.debuff_color(statuses)
+		if bad.a > 0.0:
+			var p := StatusBadges.pulse()
+			draw_rect(thumb, Color(bad, 0.12 + 0.18 * p))
+			draw_rect(thumb.grow(1.0), Color(bad, 0.5 + 0.5 * p), false, 3.0)
+		StatusBadges.draw_dots(self, Vector2(thumb.get_center().x, thumb.end.y - 9), statuses, 7.5)
 
 	# Textos.
 	var x := thumb.end.x + 18
@@ -125,7 +143,8 @@ func _draw() -> void:
 	if status_text != "":
 		var sw := UIStyle.FONT_MEDIUM.get_string_size(status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 		var pill := Rect2(Vector2(s.x - sw - 34, -7), Vector2(sw + 20, 18))
-		draw_colored_polygon(UIStyle.slanted_rect(pill, 6), UIStyle.VIOLET)
+		var pill_col := StatusBadges.debuff_color(statuses)
+		draw_colored_polygon(UIStyle.slanted_rect(pill, 6), pill_col if pill_col.a > 0.0 else UIStyle.VIOLET)
 		draw_string(UIStyle.FONT_MEDIUM, pill.position + Vector2(10, 14), status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UIStyle.WHITE)
 
 	_bar(Vector2(x, 44), right - x, "PV", pv, pv_max, UIStyle.LIME)
