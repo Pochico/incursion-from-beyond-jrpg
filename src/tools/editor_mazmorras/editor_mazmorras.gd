@@ -1348,6 +1348,15 @@ func _draw_things() -> void:
 				var dia := PackedVector2Array([dc + Vector2(0, -k), dc + Vector2(k, 0), dc + Vector2(0, k), dc + Vector2(-k, 0)])
 				_plan.draw_colored_polygon(dia, UIStyle.LIME)
 				UIStyle.draw_outline(_plan, dia, UIStyle.INK, 1.5)
+			# Grupo (`group`: cuántos son) y jefe (`boss`), abajo.
+			var group: Array = th.get("group", [])
+			var label := ("×%d" % (group.size() + 1) if not group.is_empty() else "") + (" JEFE" if th.get("boss", false) else "")
+			if label != "" and _cell_px >= 18.0:
+				var fs := maxi(int(_cell_px * 0.3), 10)
+				_plan.draw_string_outline(UIStyle.FONT_BOLD, r.position + Vector2(0, r.size.y - 2), label.strip_edges(),
+						HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, 4, UIStyle.INK)
+				_plan.draw_string(UIStyle.FONT_BOLD, r.position + Vector2(0, r.size.y - 2), label.strip_edges(),
+						HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, UIStyle.RED if th.get("boss", false) else UIStyle.WHITE)
 		elif th.type == DungeonMap.SAVE:
 			var center := r.get_center()
 			var k := _cell_px * 0.3

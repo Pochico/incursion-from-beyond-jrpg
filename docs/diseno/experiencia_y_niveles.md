@@ -74,7 +74,7 @@ factor de nivel = clamp(1 + 0,15 × (nivel criatura − nivel medio del grupo), 
 
 | Extra | Multiplicador | Para qué |
 |---|---|---|
-| Jefe (`combat.boss` en la ficha; hoy el Tiranosaurio) | ×1,5 | Premiar los combates difíciles |
+| Jefe (`combat.boss` en la ficha, hoy el Tiranosaurio, o `boss` en la cosa del mapa) | ×1,5 | Premiar los combates difíciles |
 | Duelo con una persona (Kenji, Rika…) | ×0,5 | Entrenar enseña, pero menos que una amenaza real |
 
 Ejemplos:
@@ -125,7 +125,7 @@ Sale en el registro de la mazmorra: «Pasadizo descubierto: + 20 EXP».
 Con todo a nivel 1, una criatura del mismo nivel mantiene la proporción con el
 grupo:
 
-| Nivel | Ren PV / PM / FUE | Oni (×1,5 PV) PV / FUE |
+| Nivel | Ren PV / PM / FUE | Oni (×1,5 PV, valores de antes de los tiers) PV / FUE |
 |---|---|---|
 | 1 | 165 / 58 / 12 | 248 / 11 |
 | 10 | 275 / 93 / 16 | 413 / 15 |
@@ -167,7 +167,7 @@ combate depende del sitio:
 | Duelos con personas | El suyo (su EXP propia) | `GameState.level_of` |
 
 Las criaturas escalan con las mismas fórmulas que el grupo: atributos
-(`stats_at`), PV con su `pv_mult`, PM, daño y costes. El dinero de la victoria
+(`stats_at`), PV con su tier (`CharacterDB.ENEMY_TIERS`: tier 2 ×1,7 PV y +1 a los atributos; jefe ×1,25 más; en grupo, menos PV y daño por criatura con `GROUP_SCALE`), PM, daño y costes. En combates de varias criaturas, la EXP y el dinero son la suma de las de cada una. El dinero de la victoria
 (`Battle.reward`) ya dependía de su nivel, así que también crece.
 
 **[PENDIENTE]**

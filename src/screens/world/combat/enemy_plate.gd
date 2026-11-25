@@ -59,8 +59,14 @@ func _draw() -> void:
 	# Fila 1: barra de color, nombre, etiqueta RIVAL y nivel.
 	draw_colored_polygon(UIStyle.slanted_rect(Rect2(20, 16, 12, 40), 6), color)
 	var name_text := CharacterDB.display_name(character_id)
-	draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(46, 50), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, UIStyle.WHITE)
-	var nw := UIStyle.FONT_BOLD_ITALIC.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36).x
+	# Nombre, etiqueta y nivel tienen que caber: si no, el nombre se encoge.
+	var tag_w := UIStyle.FONT_MEDIUM.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + tag.length() * 3.0
+	var room := size.x - 46 - 16 - tag_w - 110
+	var fs := 36
+	while fs > 22 and UIStyle.FONT_BOLD_ITALIC.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
+		fs -= 2
+	draw_string(UIStyle.FONT_BOLD_ITALIC, Vector2(46, 50), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIStyle.WHITE)
+	var nw := UIStyle.FONT_BOLD_ITALIC.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	UIStyle.draw_spaced(self, UIStyle.FONT_MEDIUM, Vector2(46 + nw + 16, 48), tag, 14, 3.0, color)
 	draw_string(UIStyle.FONT_REGULAR, Vector2(0, 46), "Nivel %d" % level, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 36, 20, UIStyle.WHITE)
 

@@ -4,8 +4,9 @@ extends Control
 ##
 ## Composición (base 1920×1080):
 ##  - Cabecera roja con el nombre del combate; fecha y dinero arriba a la derecha.
-##  - Visor grande: fondo de la ubicación, el rival con su silueta de color,
-##    su placa de PV y el medidor de Tensión.
+##  - Visor grande: fondo de la ubicación, los rivales (uno a tres) con su silueta
+##    de color, sus placas de PV y el medidor de Tensión. Con varios rivales, al
+##    atacar o usar algo contra uno se elige a cuál.
 ##  - Columna derecha: minimapa y fichas del grupo.
 ##  - Fila de comandos (Atacar, Habilidad, Objeto, Defender, Analizar, Huir).
 ##  - Fila de opciones del comando seleccionado + descripción / registro.
@@ -15,6 +16,7 @@ extends Control
 ##
 ## Uso:
 ##   combat.setup("kenji")         # mientras la transición tapa la pantalla
+##   combat.setup(["imp", "imp", "engendro"], "kenji")   # grupo de hasta tres
 ##   combat.begin()               # tras descubrirla
 ##   var won: bool = await combat.finished
 
@@ -43,6 +45,7 @@ var _actor := Battle.PLAYER       # miembro del grupo al que le toca elegir
 var _state := State.IDLE
 var _enemy_id := ""
 var _pending_item := ""       ## objeto elegido mientras se escoge sobre quién usarlo
+var _pending_action := ""     ## acción elegida mientras se escoge a qué rival va
 var _current_command := 0
 var _info_text := ""
 var _log_text := ""             # última acción del combate (registro)
@@ -54,8 +57,9 @@ var _result_t := 0.0
 
 var _viewport: Control
 var _backdrop: LocationBackdrop
-var _enemy: CharacterSprite
-var _plate: EnemyPlate
+## Un sprite y una placa por puesto de rival (Battle.FOES).
+var _enemies: Array[CharacterSprite] = []
+var _plates: Array[EnemyPlate] = []
 var _fx: Control                 # capa de efectos dentro del visor (tajos, popups)
 var _minimap: MiniMap
 var _cards: Array[CombatantCard] = []
@@ -96,16 +100,18 @@ func _build() -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_viewport.add_child(shade)
 
-	_enemy = CharacterSprite.new()
-	_enemy.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_enemy.size = Vector2(560, 600)
-	_enemy.position = Vector2(_viewport.size.x * 0.56 - 280, _viewport.size.y - 600)
-	_enemy.pivot_offset = Vector2(280, 600)
-	_viewport.add_child(_enemy)
-
-	_plate = EnemyPlate.new()
-	_plate.position = Vector2(26, 22)
-	_viewport.add_child(_plate)
+	for i in Battle.MAX_FOES:
+		var sprite := CharacterSprite.new()
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.visible = false
+		_viewport.add_child(sprite)
+		_enemies.append(sprite)
+	for i in Battle.MAX_FOES:
+		var plate := EnemyPlate.new()
+		plate.position = Vector2(26, 22)
+		plate.visible = false
+		_viewport.add_child(plate)
+		_plates.append(plate)
 
 	_fx = Control.new()
 	_fx.size = _viewport.size
@@ -171,15 +177,17 @@ func _build() -> void:
 const DEFAULT_ENEMY_SIZE := Vector2(560, 600)
 
 
-## Prepara el combate contra `enemy_id` y lo hace visible (sin dar el control).
-## Con `ally_id`, un compañero lucha junto al protagonista; `ally_skills`
-## sustituye sus habilidades. `vitals` (Battle.party_vitals) = PV y PM con los
-## que empieza el grupo (vacío = al máximo); al acabar, `party_vitals()`.
-## `enemy_level` > 0 fija el nivel de la criatura (ver ProgressionDB).
-func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vitals: Dictionary = {},
-		enemy_level: int = 0) -> void:
-	_enemy_id = enemy_id
-	_battle = Battle.new(CharacterDB.PROTAGONIST, enemy_id, ally_id, ally_skills, enemy_level)
+## Prepara el combate contra `enemy_ids` (un id o una lista de hasta tres) y lo
+## hace visible (sin dar el control). Con `ally_id`, un compañero lucha junto al
+## protagonista; `ally_skills` sustituye sus habilidades. `vitals`
+## (Battle.party_vitals) = PV y PM con los que empieza el grupo (vacío = al
+## máximo); al acabar, `party_vitals()`. `enemy_level` > 0 fija el nivel de las
+## criaturas (ver ProgressionDB). `boss`: el primero es el jefe de la zona.
+func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vitals: Dictionary = {},
+		enemy_level: int = 0, boss: bool = false) -> void:
+	var ids: Array = enemy_ids if enemy_ids is Array else [enemy_ids]
+	_enemy_id = ids[0]
+	_battle = Battle.new(CharacterDB.PROTAGONIST, ids, ally_id, ally_skills, enemy_level, boss)
 	_battle.set_party_vitals(vitals, 1)
 	_actor = Battle.PLAYER
 	_state = State.IDLE
@@ -197,20 +205,7 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vita
 	_minimap.location_id = GameState.location_id
 	_minimap.queue_redraw()
 
-	var vs := _viewport.size
-	var default_rect := Rect2(Vector2(vs.x * 0.56 - DEFAULT_ENEMY_SIZE.x * 0.5, vs.y - DEFAULT_ENEMY_SIZE.y), DEFAULT_ENEMY_SIZE)
-	var rect: Rect2 = CharacterDB.get_character(enemy_id).get("battle_rect", default_rect)
-	_enemy.position = rect.position
-	_enemy.size = rect.size
-	_enemy.pivot_offset = Vector2(rect.size.x * 0.5, rect.size.y)
-	_enemy.texture = CharacterDB.portrait(enemy_id)
-	_enemy.glow_color = CharacterDB.color(enemy_id)
-	_enemy.glow_idle = 0.9
-	_enemy.modulate = Color.WHITE
-	_enemy.scale = Vector2.ONE
-	_plate.setup(_battle.enemy())
-	_plate.analyzed = false
-	_plate.statuses = []
+	_layout_foes()
 
 	for i in _cards.size():
 		_cards[i].guarding = false
@@ -224,15 +219,83 @@ func setup(enemy_id: String, ally_id: String = "", ally_skills: Array = [], vita
 			_cards[i].setup("", i + 1)
 
 	_build_options(0)
+	var who := _foe_names()
+	var verb := "te cierran" if _battle.foes.size() > 1 else "te cierra"
 	if ally_id != "":
-		_log("¡%s te cierra el paso! %s lucha a tu lado." % [_battle.enemy().name, CharacterDB.display_name(ally_id)])
-	elif CharacterDB.is_enemy(enemy_id):
-		_log("¡%s te cierra el paso!" % _battle.enemy().name)
+		_log("¡%s %s el paso! %s lucha a tu lado." % [who, verb, CharacterDB.display_name(ally_id)])
+	elif CharacterDB.is_enemy(_enemy_id):
+		_log("¡%s %s el paso!" % [who, verb])
 	else:
-		_log("¡%s acepta el duelo!" % _battle.enemy().name)
+		_log("¡%s acepta el duelo!" % who)
 	visible = true
 	queue_redraw()
 	_fx.queue_redraw()
+
+
+## Coloca a los rivales en fila: uno, en su sitio de siempre (`battle_rect`); dos o
+## tres, más pequeños y repartidos, cada uno con su placa encima.
+const FOE_SLOTS := {1: [0.56], 2: [0.3, 0.72], 3: [0.18, 0.5, 0.82]}
+const FOE_SCALE := {1: 1.0, 2: 0.74, 3: 0.58}
+
+func _layout_foes() -> void:
+	var vs := _viewport.size
+	var n := _battle.foes.size()
+	var plate_w := 560.0 if n < 3 else 440.0
+	for i in Battle.MAX_FOES:
+		var sprite := _enemies[i]
+		var plate := _plates[i]
+		sprite.visible = i < n
+		plate.visible = i < n
+		if i >= n:
+			continue
+		var f := _battle.fighter(_battle.foes[i])
+		var default_rect := Rect2(Vector2(vs.x * 0.56 - DEFAULT_ENEMY_SIZE.x * 0.5, vs.y - DEFAULT_ENEMY_SIZE.y), DEFAULT_ENEMY_SIZE)
+		var rect: Rect2 = CharacterDB.get_character(f.id).get("battle_rect", default_rect)
+		if n > 1:
+			var s: float = FOE_SCALE[n]
+			var cx: float = vs.x * FOE_SLOTS[n][i]
+			rect = Rect2(Vector2(cx - rect.size.x * s * 0.5, rect.end.y - rect.size.y * s), rect.size * s)
+		sprite.position = rect.position
+		sprite.size = rect.size
+		sprite.pivot_offset = Vector2(rect.size.x * 0.5, rect.size.y)
+		sprite.texture = CharacterDB.portrait(f.id)
+		sprite.glow_color = CharacterDB.color(f.id)
+		sprite.glow_idle = 0.9
+		sprite.modulate = Color.WHITE
+		sprite.scale = Vector2.ONE
+		plate.setup(f)
+		plate.size = Vector2(plate_w, 120)
+		plate.position = Vector2(26 + i * (plate_w + 16), 22)
+		plate.analyzed = false
+		plate.statuses = []
+		plate.modulate = Color.WHITE
+		plate.tag = "JEFE" if f.boss else "RIVAL"
+
+
+func _foe_index(who: String) -> int:
+	return maxi(Battle.FOES.find(who), 0)
+
+
+func _sprite(who: String) -> CharacterSprite:
+	return _enemies[_foe_index(who)]
+
+
+func _plate_of(who: String) -> EnemyPlate:
+	return _plates[_foe_index(who)]
+
+
+## Punto del visor sobre el rival `who` (a qué altura sale un número o un efecto).
+func _foe_point(who: String, y: float) -> Vector2:
+	var s := _sprite(who)
+	return s.position + Vector2(s.size.x * 0.5, minf(y, s.size.y * 0.45))
+
+
+## «Imp», «Imp y Engendro», «Imp, Imp y Engendro».
+func _foe_names() -> String:
+	var names: Array = _battle.foes.map(func(w: String) -> String: return _battle.fighter(w).name)
+	if names.size() == 1:
+		return names[0]
+	return ", ".join(names.slice(0, -1)) + " y " + names.back()
 
 
 ## PV y PM del grupo al terminar (ver `setup`).
@@ -465,8 +528,57 @@ func _execute(action: String) -> void:
 		_pending_item = parts[1]
 		_show_item_targets()
 		return
+	# Con varios rivales en pie, las acciones contra uno solo piden a cuál.
+	if not action.contains("@") and _battle.alive_foes().size() > 1 and _needs_foe_target(action):
+		_show_foe_targets(action)
+		return
 	await _run_action(action)
 	await _prompt()
+
+
+## ¿La acción va contra un único rival? (ataque básico, habilidad «enemy», objeto de ataque)
+func _needs_foe_target(action: String) -> bool:
+	if action == "attack":
+		return true
+	if action.begins_with("skill:"):
+		var skill := SkillDB.get_skill(action.substr(6))
+		return skill.get("target", "") == "enemy"
+	if action.begins_with("item:"):
+		return ItemDB.is_attack(action.split(":")[1])
+	return false
+
+
+## Cambia las opciones por los rivales en pie: «Imp · 23 PV».
+func _show_foe_targets(action: String) -> void:
+	_pending_action = action
+	for c in _options.get_children():
+		c.queue_free()
+	for who in _battle.alive_foes():
+		var f := _battle.fighter(who)
+		var b := PillButton.new()
+		b.label = f.name + ("  %d PV" % f.pv if _plate_of(who).analyzed else "")
+		b.icon_name = "slash"
+		b.selectable = true
+		b.description = "Contra %s (puesto %d)." % [f.name, Battle.FOES.find(who) + 1]
+		b.font_size = 24
+		b.custom_minimum_size = Vector2(250, 50)
+		b.focus_entered.connect(func() -> void:
+			_set_info(b.description)
+			_highlight_foe(who))
+		b.pressed.connect(_execute.bind("%s@%s" % [action, who]))
+		_options.add_child(b)
+	_log("¿Contra quién?")
+	_state = State.OPTION
+	(_options.get_child(0) as Control).grab_focus.call_deferred()
+
+
+## Resalta un momento al rival que se está señalando.
+func _highlight_foe(who: String) -> void:
+	for w in _battle.foes:
+		_sprite(w).glow_idle = 1.0 if w == who else (0.9 if _battle.is_alive(w) else 0.0)
+	var t := create_tween()
+	_sprite(who).modulate = Color(1.5, 1.5, 1.5)
+	t.tween_property(_sprite(who), "modulate", Color.WHITE, 0.25)
 
 
 ## Da el turno a `_actor`: si pierde el turno (aturdido, desactivado...) o tiene
@@ -497,9 +609,13 @@ func _run_action(action: String) -> void:
 
 	var events: Array = []
 	var uses_turn := true
+	var target := ""
+	if action.contains("@"):
+		target = action.get_slice("@", 1)
+		action = action.get_slice("@", 0)
 	match action:
 		"attack":
-			events = _battle.attack(_actor)
+			events = _battle.attack(_actor, target)
 		"defend":
 			events = _battle.defend(_actor)
 		"analyze":
@@ -510,9 +626,9 @@ func _run_action(action: String) -> void:
 		_:
 			if action.begins_with("item:"):
 				var parts := action.split(":")
-				events = _battle.use_item(_actor, parts[1], parts[2] if parts.size() > 2 else "")
+				events = _battle.use_item(_actor, parts[1], parts[2] if parts.size() > 2 else target)
 			elif action.begins_with("skill:"):
-				events = _battle.use_skill(_actor, action.substr(6))
+				events = _battle.use_skill(_actor, action.substr(6), target)
 	await _play_events(events)
 	if not _battle.is_over() and uses_turn:
 		await _advance()
@@ -524,8 +640,15 @@ func _advance() -> void:
 	if next != "":
 		_actor = next
 		return
-	await get_tree().create_timer(0.35).timeout
-	await _play_events(_battle.enemy_turn())
+	# Cada rival en pie actúa por orden; la guardia dura hasta que acaban todos.
+	for who in _battle.foes:
+		if _battle.is_over():
+			break
+		if not _battle.is_alive(who):
+			continue
+		await get_tree().create_timer(0.35).timeout
+		await _play_events(_battle.enemy_turn(who))
+	_battle.end_round()
 	var alive := _battle.alive_party()
 	if not alive.is_empty():
 		_actor = alive[0]
@@ -552,7 +675,7 @@ func _play_events(events: Array) -> void:
 					await _anim_immune(ev)
 				elif ev.get("shared", false):
 					await _anim_shared(ev)
-				elif ev.target == Battle.ENEMY:
+				elif Battle.is_enemy(ev.target):
 					await _anim_player_hits(ev)
 				else:
 					await _anim_enemy_hits(ev)
@@ -568,7 +691,7 @@ func _play_events(events: Array) -> void:
 				await get_tree().create_timer(0.7).timeout
 			"pm_restore":
 				_log("%s: %s recupera %d PM." % [SkillDB.display_name(ev.skill), _fighter_name(ev.target), ev.amount])
-				if ev.target != Battle.ENEMY:
+				if not Battle.is_enemy(ev.target):
 					_card(ev.target).animate_pm(_battle.fighter(ev.target).pm)
 				_popup(ev.target, "+%d PM" % ev.amount, CombatantCard.PM_COLOR)
 				await get_tree().create_timer(0.7).timeout
@@ -611,15 +734,18 @@ func _play_events(events: Array) -> void:
 				_log("%s se pone en guardia." % _fighter_name(ev.target))
 				await get_tree().create_timer(0.6).timeout
 			"analyze":
-				_plate.analyzed = true
-				var e := _battle.enemy()
-				var text := "Analizas a %s (nivel %d): %d / %d PV. Ataque: %s (~%d de daño)." % [e.name, e.level, e.pv, e.pv_max, e.attack, _battle.attack_preview(Battle.ENEMY)]
-				if e.nature != "":
-					text += " Naturaleza: %s." % SkillDB.NATURE_NAMES.get(e.nature, e.nature)
-				if not e.skills.is_empty():
-					text += " Técnicas: %s." % ", ".join(e.skills.map(SkillDB.display_name))
-				_log(text)
-				await get_tree().create_timer(0.8).timeout
+				var parts: Array[String] = []
+				for who in _battle.foes:
+					_plate_of(who).analyzed = true
+					var e := _battle.fighter(who)
+					var text := "%s (nivel %d, tier %d): %d / %d PV" % [e.name, e.level, e.tier, e.pv, e.pv_max]
+					if e.nature != "":
+						text += ", %s" % SkillDB.NATURE_NAMES.get(e.nature, e.nature).to_lower()
+					if not e.skills.is_empty():
+						text += ", %s" % ", ".join(e.skills.map(SkillDB.display_name))
+					parts.append(text)
+				_log("Analizas: " + ". ".join(parts) + ".")
+				await get_tree().create_timer(0.8 + 0.4 * (_battle.foes.size() - 1)).timeout
 			"surrender":
 				_log("%s levanta las manos. Se acabó el duelo." % _pname())
 				await get_tree().create_timer(0.8).timeout
@@ -629,26 +755,40 @@ func _play_events(events: Array) -> void:
 
 
 func _anim_player_hits(ev: Dictionary) -> void:
-	var e := _battle.enemy()
+	var e := _battle.fighter(ev.target)
+	var sprite := _sprite(ev.target)
 	if ev.skill != "":
 		_log("%s recibe %d de daño." % [e.name, ev.amount])
 	else:
 		_log("%s usa %s. %s recibe %d de daño." % [_fighter_name(ev.source), ev.move, e.name, ev.amount])
 	# Animación del tipo de golpe sobre el rival (ver AttackFx).
 	var kind := AttackFx.kind_for(ev.skill)
-	var fx := AttackFx.play(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 260), kind)
+	var fx := AttackFx.play(_fx, _foe_point(ev.target, 260), kind)
 	await get_tree().create_timer(AttackFx.DURATION[kind] * 0.6).timeout
-	_flash_enemy()
-	_shake(_enemy, 24.0 if kind == "mechanical" else 14.0)
+	_flash_enemy(ev.target)
+	_shake(sprite, 24.0 if kind == "mechanical" else 14.0)
 	if is_instance_valid(fx):
 		await fx.done
-	_plate.animate_pv(e.pv)
-	DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.WHITE)
+	_plate_of(ev.target).animate_pv(e.pv)
+	DamagePopup.spawn(_fx, _foe_point(ev.target, 160), str(ev.amount), UIStyle.WHITE)
 	await get_tree().create_timer(0.7).timeout
+	if e.pv <= 0:
+		await _anim_foe_down(ev.target)
+
+
+## Un rival cae: se apaga y su placa se atenúa (los demás siguen).
+func _anim_foe_down(who: String) -> void:
+	_log("¡%s cae!" % _fighter_name(who))
+	var t := create_tween().set_parallel(true)
+	t.tween_property(_sprite(who), "modulate", Color(0.25, 0.25, 0.3, 0.0), 0.5)
+	t.tween_property(_plate_of(who), "modulate", Color(1, 1, 1, 0.35), 0.5)
+	await t.finished
+	_sprite(who).glow_idle = 0.0
 
 
 func _anim_enemy_hits(ev: Dictionary) -> void:
-	var e := _battle.enemy()
+	var e := _battle.fighter(ev.source) if Battle.is_enemy(ev.source) else _battle.enemy()
+	var sprite := _sprite(ev.source)
 	var extra := " (guardia)" if ev.get("guarded", false) else ""
 	if ev.skill != "":
 		_log("%s recibe %d de daño%s." % [_fighter_name(ev.target), ev.amount, extra])
@@ -656,8 +796,8 @@ func _anim_enemy_hits(ev: Dictionary) -> void:
 		_log("%s usa %s. %s recibe %d de daño%s." % [e.name, ev.move, _fighter_name(ev.target), ev.amount, extra])
 	# El rival se abalanza hacia la cámara.
 	var t := create_tween()
-	t.tween_property(_enemy, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD)
-	t.tween_property(_enemy, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_QUAD)
+	t.tween_property(sprite, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD)
+	t.tween_property(sprite, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_QUAD)
 	await get_tree().create_timer(0.12).timeout
 	# Animación del tipo de golpe sobre la ficha de quien lo recibe.
 	var kind := AttackFx.kind_for(ev.skill, e.get("nature", ""))
@@ -674,7 +814,7 @@ func _anim_heal(ev: Dictionary) -> void:
 	var item_name: String = ItemDB.get_item(ev.item).get("name", "objeto")
 	var pm: int = ev.get("pm", 0)
 	var gain := ("%d PM" % pm) if pm > 0 and ev.amount <= 0 else ("%d PV" % ev.amount)
-	if ev.target != Battle.ENEMY:
+	if not Battle.is_enemy(ev.target):
 		if ev.get("source", ev.target) != ev.target:
 			_log("%s le da un %s a %s. Recupera %s." % [_fighter_name(ev.source), item_name, _fighter_name(ev.target), gain]
 					if pm > 0 else "%s le da una %s a %s. Recupera %s." % [_fighter_name(ev.source), item_name, _fighter_name(ev.target), gain])
@@ -687,10 +827,10 @@ func _anim_heal(ev: Dictionary) -> void:
 		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30),
 				("+%d PM" % pm) if pm > 0 and ev.amount <= 0 else "+%d" % ev.amount, col, false)
 	else:
-		var e := _battle.enemy()
+		var e := _battle.fighter(ev.target)
 		_log("%s bebe una %s. Recupera %d PV." % [e.name, item_name, ev.amount])
-		_plate.animate_pv(e.pv)
-		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), "+%d" % ev.amount, UIStyle.LIME)
+		_plate_of(ev.target).animate_pv(e.pv)
+		DamagePopup.spawn(_fx, _foe_point(ev.target, 160), "+%d" % ev.amount, UIStyle.LIME)
 	await get_tree().create_timer(0.8).timeout
 
 
@@ -699,30 +839,31 @@ func _anim_skill(ev: Dictionary) -> void:
 	var skill := SkillDB.get_skill(ev.skill)
 	var color := SkillDB.nature_color(skill.nature)
 	_log("%s usa %s." % [_fighter_name(ev.source), skill.name])
-	if ev.source != Battle.ENEMY:
+	if not Battle.is_enemy(ev.source):
 		_card(ev.source).animate_pm(_battle.fighter(ev.source).pm)
 		_card(ev.source).flash(color)
 		DamagePopup.spawn(self, _card(ev.source).position + Vector2(_card(ev.source).size.x * 0.3, 60), "−%d PM" % ev.cost, CombatantCard.PM_COLOR, false)
 	else:
 		var t := create_tween()
-		_enemy.modulate = Color(color.r * 1.8, color.g * 1.8, color.b * 1.8)
-		t.tween_property(_enemy, "modulate", Color.WHITE, 0.45)
+		var sprite := _sprite(ev.source)
+		sprite.modulate = Color(color.r * 1.8, color.g * 1.8, color.b * 1.8)
+		t.tween_property(sprite, "modulate", Color.WHITE, 0.45)
 	_skill_banner(skill.name, color)
 	await get_tree().create_timer(0.6).timeout
 
 
 func _anim_restore(ev: Dictionary) -> void:
 	var skill_name := SkillDB.display_name(ev.skill)
-	if ev.target != Battle.ENEMY:
+	if not Battle.is_enemy(ev.target):
 		_log("%s: %s recupera %d PV." % [skill_name, _fighter_name(ev.target), ev.amount])
 		_card(ev.target).flash(UIStyle.LIME)
 		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
 		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), "+%d" % ev.amount, UIStyle.LIME, false)
 	else:
-		var e := _battle.enemy()
+		var e := _battle.fighter(ev.target)
 		_log("%s: %s recupera %d PV." % [skill_name, e.name, ev.amount])
-		_plate.animate_pv(e.pv)
-		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), "+%d" % ev.amount, UIStyle.LIME)
+		_plate_of(ev.target).animate_pv(e.pv)
+		DamagePopup.spawn(_fx, _foe_point(ev.target, 160), "+%d" % ev.amount, UIStyle.LIME)
 	await get_tree().create_timer(0.8).timeout
 
 
@@ -735,11 +876,11 @@ func _anim_status(ev: Dictionary) -> void:
 		_log("A %s no le afecta: %s." % [who, status_name.to_lower()])
 	elif ev.applied and debuff:
 		_log("¡%s sufre %s durante %s! (%d %%)" % [who, status_name.to_lower(), turns, roundi(ev.chance)])
-		if ev.target != Battle.ENEMY:
+		if not Battle.is_enemy(ev.target):
 			_card(ev.target).flash(UIStyle.VIOLET)
 	elif ev.applied:
 		_log("%s: %s durante %s." % [who, status_name, turns])
-		if ev.target != Battle.ENEMY:
+		if not Battle.is_enemy(ev.target):
 			_card(ev.target).flash(UIStyle.LIME)
 	else:
 		_log("%s resiste: %s. (%d %%)" % [who, status_name.to_lower(), roundi(ev.chance)])
@@ -750,15 +891,17 @@ func _anim_status(ev: Dictionary) -> void:
 func _anim_tick(ev: Dictionary) -> void:
 	var status_name: String = SkillDB.STATUS_NAMES.get(ev.status, ev.status)
 	_log("%s: %s pierde %d PV." % [status_name, _fighter_name(ev.target), ev.amount])
-	if ev.target != Battle.ENEMY:
+	if not Battle.is_enemy(ev.target):
 		_card(ev.target).flash(UIStyle.VIOLET)
 		_card(ev.target).animate_pv(_battle.fighter(ev.target).pv)
 		DamagePopup.spawn(self, _card(ev.target).position + Vector2(_card(ev.target).size.x * 0.55, 30), str(ev.amount), UIStyle.VIOLET, false)
 	else:
-		_plate.animate_pv(_battle.enemy().pv)
-		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), str(ev.amount), UIStyle.VIOLET)
+		_plate_of(ev.target).animate_pv(_battle.fighter(ev.target).pv)
+		DamagePopup.spawn(_fx, _foe_point(ev.target, 160), str(ev.amount), UIStyle.VIOLET)
 	_update_status_tags()
 	await get_tree().create_timer(0.7).timeout
+	if Battle.is_enemy(ev.target) and _battle.fighter(ev.target).pv <= 0:
+		await _anim_foe_down(ev.target)
 
 
 ## Golpe sin efecto: el objetivo está fuera de su cuerpo.
@@ -771,7 +914,7 @@ func _anim_immune(ev: Dictionary) -> void:
 ## Parte del daño que llega por Empatía.
 func _anim_shared(ev: Dictionary) -> void:
 	_log("Empatía: %s comparte el golpe y recibe %d de daño." % [_fighter_name(ev.target), ev.amount])
-	if ev.target != Battle.ENEMY:
+	if not Battle.is_enemy(ev.target):
 		_card(ev.target).flash(UIStyle.RED)
 	_refresh_pv(ev.target)
 	_popup(ev.target, str(ev.amount), Color("ff6b7d"))
@@ -780,16 +923,16 @@ func _anim_shared(ev: Dictionary) -> void:
 
 ## Actualiza la barra de PV de `who` (ficha o placa del rival).
 func _refresh_pv(who: String) -> void:
-	if who == Battle.ENEMY:
-		_plate.animate_pv(_battle.enemy().pv)
+	if Battle.is_enemy(who):
+		_plate_of(who).animate_pv(_battle.fighter(who).pv)
 	else:
 		_card(who).animate_pv(_battle.fighter(who).pv)
 
 
 ## Número flotante sobre `who`.
 func _popup(who: String, text: String, color: Color) -> void:
-	if who == Battle.ENEMY:
-		DamagePopup.spawn(_fx, _enemy.position + Vector2(_enemy.size.x * 0.5, 160), text, color)
+	if Battle.is_enemy(who):
+		DamagePopup.spawn(_fx, _foe_point(who, 160), text, color)
 	else:
 		DamagePopup.spawn(self, _card(who).position + Vector2(_card(who).size.x * 0.55, 30), text, color, false)
 
@@ -802,7 +945,8 @@ func _update_status_tags() -> void:
 			parts.append("%s %d" % [SkillDB.STATUS_NAMES.get(status, status).to_upper(), statuses[status].turns])
 		_card(who).status_text = " · ".join(parts)
 		_card(who).statuses = StatusBadges.from_fighter(_battle.fighter(who))
-	_plate.statuses = StatusBadges.from_fighter(_battle.enemy())
+	for who in _battle.foes:
+		_plate_of(who).statuses = StatusBadges.from_fighter(_battle.fighter(who))
 
 
 func _pname() -> String:
@@ -849,8 +993,10 @@ func _show_result() -> void:
 			_cards[i].setup(f.id, i + 1, f)
 	_result_sub = "   ·   ".join(gains)
 	if won:
-		var t := create_tween()
-		t.tween_property(_enemy, "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
+		var t := create_tween().set_parallel(true)
+		for who in _battle.foes:
+			if _sprite(who).modulate.a > 0.0:
+				t.tween_property(_sprite(who), "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
 	_set_info("Pulsa Enter para continuar.")
 	var tw := create_tween()
 	tw.tween_method(func(v: float) -> void:
@@ -862,10 +1008,11 @@ func _show_result() -> void:
 
 # --- Efectos --------------------------------------------------------------------------------
 
-func _flash_enemy() -> void:
+func _flash_enemy(who: String) -> void:
 	var t := create_tween()
-	_enemy.modulate = Color(2.2, 2.2, 2.2)
-	t.tween_property(_enemy, "modulate", Color.WHITE, 0.3)
+	var sprite := _sprite(who)
+	sprite.modulate = Color(2.2, 2.2, 2.2)
+	t.tween_property(sprite, "modulate", Color.WHITE, 0.3)
 
 
 func _shake(node: Control, strength: float) -> void:
@@ -904,7 +1051,7 @@ func _draw() -> void:
 
 	# Cabecera izquierda: barra roja, título y subtítulo.
 	draw_rect(Rect2(28, 16, 12, 50), UIStyle.RED)
-	var title := "Combate - %s" % (CharacterDB.display_name(_enemy_id) if _enemy_id != "" else "")
+	var title := "Combate - %s" % (_foe_names() if _battle != null else "")
 	draw_string(UIStyle.FONT_MEDIUM, Vector2(70, 46), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, UIStyle.WHITE)
 	var sub := "%s / Zona: %s" % [GameState.region_name, LocationDB.display_name(GameState.location_id)]
 	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(72, 74), sub, 18, 1.5, Color(UIStyle.WHITE, 0.9))

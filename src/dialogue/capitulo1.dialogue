@@ -622,7 +622,7 @@ Rika: (A ti.) Qué envidia me dais. Yo esta tarde tengo una emergencia de vestid
 => END
 
 ~ dia4_clase_fundido
-Cincuenta minutos sobre la Revolución Industrial. El sustituto llama «Raquel» a Rika cuatro veces. Rika contesta las cuatro.
+Cincuenta minutos sobre la Revolución Industrial. El sustituto llama «Riko» a Rika cuatro veces. Rika contesta las cuatro.
 Shiori dibuja un plano de algo en el margen. No es la Revolución Industrial.
 Suena el timbre.
 => END
@@ -638,7 +638,7 @@ Ren: Catorce. Hoy tiene trece.
 Shiori: Eso no es lo importante. Mira quién firma la foto.
 Debajo, en letra pequeña\: «Foto\: T. Kurosawa».
 Ren: ¿Kurosawa? ¿Como tú?
-Shiori: Mi abuelo. Tomás. Trabajó cuarenta años en la estación de Zarzaquemada. Todas las leyendas que sé me las contó él.
+Shiori: Mi abuelo. Tetsuo. Trabajó cuarenta años en la estación de Zarzaquemada. Todas las leyendas que sé me las contó él.
 Shiori: Ahora vive en una residencia. Tiene alzhéimer. Hay días que me llama por el nombre de mi madre.
 Shiori: Por eso lo apunto todo. Si yo no me acuerdo de sus historias, no se acuerda nadie. Y entonces es como si no hubieran pasado.
 - Lo siento mucho, Shiori. [#empático]
@@ -681,14 +681,14 @@ Yuna: Duerme fatal. Se pasa las noches grabando y luego en clase parece un zombi
 Yuna: Bueno. Ya está. Ya he soltado lo de Kenji. Ahora come, que se enfría. Bueno, la tortilla está fría ya. Es de anoche.
 - Oye, ¿y tú qué? Siempre estás pendiente de todos. [#empático, #curioso]
 	Yuna: ¿Yo?
-	Yuna: ...Mis padres tienen un bar en Zarza. Trabajan todo el día. Por las tardes cuido de mi hermano, Hugo. Tiene siete años y la energía de un dinosaurio.
+	Yuna: ...Mis padres tienen un bar en Zarza. Trabajan todo el día. Por las tardes cuido de mi hermano, Haruto. Tiene siete años y la energía de un dinosaurio.
 	Yuna: Le hago los deberes con él, la cena, el baño. Luego estudio yo. Luego Kenji me manda audios de nueve minutos.
 	Yuna: No me quejo, ¿eh? Pero a veces estoy muy cansada. Y como no grito, nadie se da cuenta.
 	- Yo me he dado cuenta. [#cariñoso]
 		Yuna: (Se queda callada un rato. Luego te roba un trozo de tortilla de tu lado.) Gracias, Ren.
 		$> Story.change("yuna", "confianza", 4)
 		$> Story.change("yuna", "afecto", 2)
-	- Pues un día te cuido yo a Hugo y descansas. [#protector, #decidido]
+	- Pues un día te cuido yo a Haruto y descansas. [#protector, #decidido]
 		Yuna: ¿Tú? ¿Sabes lo que es un niño de siete años con un dinosaurio de plástico?
 		Ren: He sido amigo de Kenji toda la vida. Estoy entrenado.
 		Yuna: (Se ríe de verdad.) Vale. Te tomo la palabra.
@@ -975,29 +975,29 @@ Ren: Está buenísima de verdad, mamá.
 Mamá: Ya lo sé. Es la de papá.
 => END
 
-# --- Sábado: Hugo con Yuna (mediodía) -------------------------------------------------
+# --- Sábado: Haruto con Yuna (mediodía) -------------------------------------------------
 
 ~ dia6_hugo
 Colinas. Los columpios. Un niño de siete años con un dinosaurio de plástico te mira de arriba abajo como un portero de discoteca.
-Yuna: Hugo, este es Ren. El de la foto.
-Hugo te pregunta si sabes hacer volcanes con bicarbonato. Luego si sabes qué dinosaurio es el más rápido. Luego si eres el novio de su hermana.
-Yuna: ¡Hugo!
+Yuna: Haruto, este es Ren. El de la foto.
+Haruto te pregunta si sabes hacer volcanes con bicarbonato. Luego si sabes qué dinosaurio es el más rápido. Luego si eres el novio de su hermana.
+Yuna: ¡Haruto!
 - No, es Kenji. Yo soy el que hace volcanes. [#bromista]
-	Hugo asiente muy serio. Parece que es la respuesta correcta.
+	Haruto asiente muy serio. Parece que es la respuesta correcta.
 - El más rápido es el velocirraptor. [#curioso]
-	Hugo te corrige. Es el gallimimus. Te lo explica durante cinco minutos sin respirar.
+	Haruto te corrige. Es el gallimimus. Te lo explica durante cinco minutos sin respirar.
 	Yuna: (Bajito.) Ya está. Te ha aceptado. Corrige solo a la gente que le cae bien.
-Durante una hora, eres un tobogán, un caballo, un dinosaurio herido y el árbitro de una carrera que gana siempre Hugo.
+Durante una hora, eres un tobogán, un caballo, un dinosaurio herido y el árbitro de una carrera que gana siempre Haruto.
 Yuna se sienta en el banco. Con los ojos cerrados. Al sol. Sin hacer nada.
 Yuna: No te imaginas lo que es esto. Una hora sin tener que estar pendiente. Solo una.
 - Cuando quieras, repetimos. [#cariñoso, #protector]
-	Yuna: No me lo digas dos veces, que te tomo la palabra. Y Hugo también.
+	Yuna: No me lo digas dos veces, que te tomo la palabra. Y Haruto también.
 	$> Story.change("yuna", "afecto", 3)
 	$> Story.change("yuna", "confianza", 2)
 - Tu hermano es agotador. ¿Cómo lo haces? [#franco]
 	Yuna: Como tú con Kenji. Queriéndole mucho y respirando hondo.
 	$> Story.change("yuna", "confianza", 2)
-Al irse, Hugo te da el dinosaurio. Para que lo cuides hasta la próxima. Es un honor. Lo sabes por la cara de Yuna.
+Al irse, Haruto te da el dinosaurio. Para que lo cuides hasta la próxima. Es un honor. Lo sabes por la cara de Yuna.
 $> Story.set_flag("ren_dinosaurio_hugo")
 => END
 
@@ -1031,7 +1031,7 @@ Kenji: Y le habrían echado. Jajaja.
 
 ~ dia6_fiesta
 La terraza de Westlake de noche. Guirnaldas de luces, un altavoz con más bajos que canciones y gente del grupo de Rika que no conoces.
-Rika: ¡Has venido! Mira, mira. Esta es Lucía, esta es Marta, este es el primo de Marta que nadie sabe cómo se llama.
+Rika: ¡Has venido! Mira, mira. Esta es Mio, esta es Natsuki, este es el primo de Natsuki que nadie sabe cómo se llama.
 Rika: Y esa de ahí apoyada en la barandilla, con cara de querer estar en otro sitio, es Akane. La he invitado yo. No preguntes.
 Akane: Me ha invitado. No me ha preguntado si quería.
 Rika: ¡Porque sabía que sí!
@@ -1073,7 +1073,7 @@ Mamá: Oye, esta noche hay capítulo nuevo de la serie de los médicos. ¿Te hac
 
 ~ dia7_abuelo
 Residencia de la Ribera. Un jardín con bancos verdes que da al río. Shiori empuja una silla de ruedas por el camino de grava.
-En la silla, un hombre pequeño con boina y una sonrisa enorme. El abuelo Tomás.
+En la silla, un hombre pequeño con boina y una sonrisa enorme. El abuelo Tetsuo.
 Shiori: Abuelo, este es Ren. El de la foto de La Torre. Bueno, no sale en la foto. Es el que la ha visto conmigo.
 El abuelo te da la mano. Aprieta fuerte. Te pregunta si eres el novio de Shiori.
 Shiori: ¡Abuelo!
@@ -1091,7 +1091,7 @@ Shiori lo apunta todo. Con el boli bueno.
 	Shiori: ...Eso es verdad. No lo recordaba.
 	El abuelo dice que él sí. Y por una vez, es verdad.
 	$> Story.change("shiori", "afecto", 3)
-Desde la sala de dentro se oye una voz conocida. «¡Señora Pilar, no se mueva, que se le corre el esmalte!».
+Desde la sala de dentro se oye una voz conocida. «¡Señora Fumiko, no se mueva, que se le corre el esmalte!».
 Es Rika. Con un neceser enorme y una fila de señoras esperando su turno.
 Rika: ¡Ren! ¡Shiori! ¿Qué hacéis aquí? ...Ah. Ah, vale. (Mira al abuelo, mira a Shiori.) Hola, señor. ¿Quiere unas uñas? Le hago precio.
 El abuelo dice que sí. Rika se las pinta de azul marino. Muy serio. Muy elegante.

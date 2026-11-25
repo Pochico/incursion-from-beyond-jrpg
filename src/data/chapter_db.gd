@@ -240,11 +240,11 @@ const PLANS := {
 		"advance_time": true,
 	},
 	"hugo_yuna": {
-		"title": "Cuidar de Hugo con Yuna", "day": 6, "slots": ["dia"], "target": "plaza",
+		"title": "Cuidar de Haruto con Yuna", "day": 6, "slots": ["dia"], "target": "plaza",
 		"cast": ["yuna"],
 		"scenes": [{"cue": "dia6_hugo", "npc": "yuna"}],
-		"invite": {"from": "yuna", "text": "¿Sigue en pie lo de Hugo? Estaremos a mediodía en los columpios de Colinas. Trae paciencia. Mucha."},
-		"missed_text": "Hugo ha preguntado por ti once veces. He contado. Le he dicho que te había comido un dinosaurio.",
+		"invite": {"from": "yuna", "text": "¿Sigue en pie lo de Haruto? Estaremos a mediodía en los columpios de Colinas. Trae paciencia. Mucha."},
+		"missed_text": "Haruto ha preguntado por ti once veces. He contado. Le he dicho que te había comido un dinosaurio.",
 		"advance_time": true,
 	},
 	"partido_lega": {

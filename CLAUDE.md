@@ -34,6 +34,7 @@ trabajar».
 - Textos del juego: naturales, coloquiales cuando toca, sin anglicismos innecesarios.
 - En narración, «: » se escribe «\: » o Dialogue Manager lo toma por un personaje hablando. `ConversationView.play` pone `Story.speaker` (para `{{Story.speaker}}` en general.dialogue).
 - **Estilo de los diálogos (el del usuario)**: frases cortas y reacciones reales («¿Y eso? ¿Ha pasado algo?») antes que remates ingeniosos; jerga de barrio («loco», «socio», «my brodel», «No me jodas», «echa el freno magdaleno», «Obvio»); sin detalles de más. Lo que el usuario escribe en el editor web (`dia1_despertar`, `dia1_clase`, `dia1_camas`) es la referencia: no lo reescribas.
+- **Nombres** de personajes y secundarios: japoneses (Haruto, el abuelo Tetsuo, Mio, Natsuki, la señora Fumiko…), aunque la ciudad y los sitios son de Leganés.
 - **Ren**: perdió a su padre hace tiempo y lo está superando. Es alegre, bromista y algo sarcástico; el padre sale poco y con cariño (la foto de la entrada, la gorra del Lega), sin dramatizar. Los demás **no** le tratan de ermitaño ni insisten en «sacarle de casa».
 
 ## Dónde va cada cosa
@@ -155,6 +156,8 @@ también se leen de `story.gd` (`cfg.storyApi`): no hay lista a mano.
 - `SkillDB` (datos y fórmulas) + `Battle` (lógica, devuelve eventos) + `CombatView` (anima). Las habilidades son declarativas: `ops` (`damage`, `heal`, `status`, `self_damage`, `recover_pm`, `cleanse`, `reveal`) y los estados (`SkillDB.STATUSES`) llevan banderas y valores por aplicación. Si añades una habilidad, usa esas piezas antes de tocar `Battle`.
 - Todo se calcula por fórmula para el nivel exacto (1..60): PV, PM, daño, curación, coste y valores escalables `[base, cada, paso]`. **Todos empiezan en el nivel 1** (decisión del usuario) y suben con EXP (`ProgressionDB`, `GameState.level_of`/`grant_xp`; ver `experiencia_y_niveles.md`). Los atributos de las fichas son los de nivel 1 y crecen con `ProgressionDB.stats_at` (referencia `10 + floor((L−1)/2)`); las criaturas toman el nivel de la zona (`Battle.new(..., enemy_level)`, `DungeonMap.creature_level`).
 - Vista: cada golpe se anima según su tipo con `AttackFx` (naturaleza de la habilidad, o la de la criatura en su ataque básico; «fisico» para el básico del grupo). Si añades una naturaleza, añade su dibujo ahí. Los estados se marcan con `StatusBadges` (color por `origin` del estado) en `EnemyPlate.statuses` y `CombatantCard.statuses`, que rellena `CombatView._update_status_tags`.
+- **Hasta 3 rivales** (`Battle.FOES` = `enemy`/`enemy2`/`enemy3`, `Battle.is_enemy`, `alive_foes`, `enemy_turn(who)` + `end_round`; `Battle.new(..., ids, ..., enemy_level, boss)`; `CombatView.setup(ids, ...)` los pone en fila con `_layout_foes` y pide objetivo con `_show_foe_targets`). En la mazmorra, la cosa del mapa lleva `group` (escolta) y `boss`.
+- **Tiers de criaturas**: `combat.tier` en la ficha y `CharacterDB.ENEMY_TIERS` (PV, atributos, daño), `BOSS_PV_MULT`, `GROUP_SCALE` (menos PV y daño por criatura en grupo). Las habilidades de una criatura son de su tier o menos (las básicas sin tier = tier 1). Tier 2: Oni y Tiranosaurio. Ajustados con combates simulados a petición del usuario; si los tocas, vuelve a simular.
 - Compatibilidad por etiquetas (`SkillDB.NATURE_TAGS`, o `combat.tags`): se comprueba antes que la probabilidad.
 - Turnos: la vista llama a `Battle.start_turn(who)` antes de cada actuación (pierde el turno o acción forzada). Los estados puestos sobre quien actúa no cuentan su turno de uso (`fresh`).
 - Comprobación (no balance): muestras N1/N20/N40/N60 y costes del documento contra `SkillDB`, reglas de la sección 4.C y combates al azar para ver que nada se rompe. No ajustes números por simulación sin que el usuario lo pida.
@@ -222,7 +225,7 @@ Hecho: editor de diálogos web (también móvil), capítulo 1 (día guiado, día
 relaciones y ánimo, móvil, combate en grupo con 42 habilidades (tiers, escalado
 por nivel, estados y compatibilidades; todos en nivel 1), criaturas y
 recompensas, guardado automático, mapa 3D con luz por franjas, mazmorra de La
-Torre (cinco plantas, muros con grosor, palancas, puertas con tarjeta, paredes
+Torre (cinco plantas de 260-300 casillas, encuentros de 1 a 3 criaturas por tiers con un Oni en la planta 2 y el Tiranosaurio de jefe en la 4, muros con grosor, palancas, puertas con tarjeta, paredes
 secretas, compañero con comentarios),
 editores de mazmorras, relieve, mapa y Estudio de texturas.
 

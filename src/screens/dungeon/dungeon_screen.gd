@@ -589,7 +589,10 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
 	await SceneRouter.fade_out(0.25)
-	_combat.setup(enemy_id, ally, ally_skills, _vitals, _map.creature_level())
+	# Un encuentro puede ser un grupo (`group`: los que acompañan al líder) y el jefe (`boss`).
+	var th := _map.thing(cell)
+	var ids: Array = [enemy_id] + th.get("group", [])
+	_combat.setup(ids, ally, ally_skills, _vitals, _map.creature_level(), th.get("boss", false))
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -606,17 +609,25 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 		var drop := _explorer.drop_at(cell)
 		if drop != "":
 			GameState.add_item(drop)
-			_log("¡%s derrotado! Al caer suelta algo: %s. Lo guardas." % [CharacterDB.display_name(enemy_id), ItemDB.display_name(drop)])
+			_log("¡%s derrotado%s! Al caer suelta algo: %s. Lo guardas." % [_group_name(ids), "s" if ids.size() > 1 else "", ItemDB.display_name(drop)])
 		else:
-			_log("¡%s derrotado!" % CharacterDB.display_name(enemy_id))
+			_log("¡%s derrotado%s!" % [_group_name(ids), "s" if ids.size() > 1 else ""])
 	else:
-		_log("Retrocedes. %s sigue ahí." % CharacterDB.display_name(enemy_id))
+		_log("Retrocedes. %s sigue%s ahí." % [_group_name(ids), "n" if ids.size() > 1 else ""])
 		await _explorer.act("back")
 	queue_redraw()
 	_busy = false
 	_on_moved()
 	if not (won and _explorer.drop_at(cell) != ""):   # que se lea lo que ha soltado
 		_comment("victory" if won else "defeat", 1.4, true)
+
+
+## «Imp», «Imp y Engendro», «Imp, Imp y Engendro».
+static func _group_name(ids: Array) -> String:
+	var names: Array = ids.map(func(id: String) -> String: return CharacterDB.display_name(id))
+	if names.size() == 1:
+		return names[0]
+	return ", ".join(names.slice(0, -1)) + " y " + names.back()
 
 
 ## EXP por explorar para el grupo (y la parte del resto de compañeros).
