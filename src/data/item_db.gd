@@ -5,8 +5,11 @@ extends RefCounted
 ##   pm      PM que restaura a quien lo usa
 ##   damage  daño al rival (solo en combate)
 ##   tool    herramienta que no se gasta (el resonador, en la mazmorra)
-##   loot    se abre al cogerlo en la mazmorra y da una de estas cosas
-##           ([id de objeto o "money", cantidad, peso]); no va al inventario
+##   loot    caja: al cogerla se elige abrirla ya o guardarla (se abre cuando
+##           quieras desde Objetos o el móvil). Da `loot_always` ([id, cantidad])
+##           y una de `loot` ([id de objeto o "money", cantidad, peso])
+##   charges cargas del resonador: las que trae en cada incursión (el resonador)
+##           o las que añade al usarla (la batería)
 ##   image   imagen del objeto (si no tiene modelo 3D, se ve así en la mazmorra)
 ## El modelo 3D de la mazmorra, si existe, es assets/modelos/objetos/<id>.glb.
 
@@ -33,15 +36,23 @@ const ALL := {
 	},
 	"caja": {
 		"name": "Caja misteriosa",
-		"desc": "Una caja sellada. A saber qué lleva dentro.",
+		"desc": "Una caja sellada. Siempre trae una batería para el resonador, y algo más. Ábrela cuando quieras.",
+		"loot_always": [["bateria", 1]],
 		"loot": [["pochicola", 2, 35], ["batido", 1, 30], ["granada", 1, 20], ["money", 500, 15]],
 		"icon": "lock",
 	},
 	"resonador": {
 		"name": "Resonador",
-		"desc": "Aparato de bolsillo que emite un pulso: recorre 5 casillas alrededor y hace brillar las paredes que esconden algo. Cuanto más cerca, más brillan. No se gasta.",
+		"desc": "Aparato de bolsillo que emite un pulso: recorre 5 casillas alrededor y hace brillar las paredes que esconden algo. Cuanto más cerca, más brillan. Entra en cada incursión con %d cargas; las baterías le dan más.",
 		"icon": "antenna",
 		"tool": true,
+		"charges": 3,
+	},
+	"bateria": {
+		"name": "Batería del resonador",
+		"desc": "Pila recargable que encaja en el resonador. En la mazmorra le da %d carga más.",
+		"charges": 1,
+		"icon": "sparkle",
 	},
 	"tarjeta_torre": {
 		"name": "Tarjeta de acceso",
@@ -71,7 +82,17 @@ static func description(id: String) -> String:
 	var desc: String = item.get("desc", "")
 	if not desc.contains("%d"):
 		return desc
-	return desc % item.get("heal", item.get("pm", item.get("damage", 0)))
+	return desc % item.get("heal", item.get("pm", item.get("damage", item.get("charges", 0))))
+
+
+## ¿Es una caja que se abre? (ver `loot`)
+static func is_box(id: String) -> bool:
+	return get_item(id).has("loot")
+
+
+## Cargas del resonador que da (al entrar, el resonador; al usarla, una batería).
+static func charges(id: String) -> int:
+	return int(get_item(id).get("charges", 0))
 
 
 ## ¿Se bebe o se toma? (cura PV o PM a alguien del grupo)

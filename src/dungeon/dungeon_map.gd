@@ -71,6 +71,12 @@ var cells: Dictionary = {}
 var edges: Dictionary = {}
 ## Vector2i -> cosa (enemigo o escalera).
 var things: Dictionary = {}
+## Vector2i -> punto de luz {color ("rrggbb"), energy, range (m), decay (caída:
+## atenuación de OmniLight3D; 1 = normal, más = se apaga antes), height (m)}.
+## Aparte de las cosas: puede compartir casilla con un objeto o un enemigo.
+var lights: Dictionary = {}
+
+const LIGHT_DEFAULT := {"color": "ffc98a", "energy": 1.5, "range": 5.0, "decay": 1.0, "height": 2.2}
 
 
 func _init() -> void:
@@ -79,7 +85,7 @@ func _init() -> void:
 
 
 static func _empty_floor() -> Dictionary:
-	return {"cells": {}, "edges": {}, "things": {}}
+	return {"cells": {}, "edges": {}, "things": {}, "lights": {}}
 
 
 # --- Plantas ----------------------------------------------------------------------------
@@ -89,6 +95,9 @@ func set_level(i: int) -> void:
 	cells = floors[level].cells
 	edges = floors[level].edges
 	things = floors[level].things
+	if not floors[level].has("lights"):
+		floors[level].lights = {}
+	lights = floors[level].lights
 
 
 ## Número visible de una planta (0 = la de `ground`).
@@ -136,6 +145,26 @@ func remove_level(i: int) -> bool:
 	start_level = mini(start_level, floors.size() - 1)
 	set_level(clampi(cur, 0, floors.size() - 1))
 	return true
+
+
+# --- Luces ------------------------------------------------------------------------------
+
+func light(c: Vector2i) -> Dictionary:
+	return lights.get(c, {})
+
+
+## Pone (o cambia) la luz de una casilla; lo que falte, de LIGHT_DEFAULT.
+func set_light(c: Vector2i, data: Dictionary) -> bool:
+	if not has_cell(c):
+		return false
+	var l := LIGHT_DEFAULT.duplicate()
+	l.merge(data, true)
+	lights[c] = l
+	return true
+
+
+func erase_light(c: Vector2i) -> bool:
+	return lights.erase(c)
 
 
 # --- Cosas ------------------------------------------------------------------------------
@@ -305,6 +334,7 @@ func erase_cell(c: Vector2i) -> bool:
 		return false
 	if not erase_stairs(c):
 		things.erase(c)
+	lights.erase(c)
 	cells.erase(c)
 	# Los bordes que ya no tocan ninguna casilla sobran.
 	for d in 4:
@@ -496,7 +526,13 @@ func to_dict() -> Dictionary:
 		var th := {}
 		for p: Vector2i in f.things:
 			th[_key(p)] = f.things[p].duplicate()
-		fl.append({"cells": c, "edges": f.edges.duplicate(true), "things": th})
+		var li := {}
+		for p: Vector2i in f.get("lights", {}):
+			li[_key(p)] = f.lights[p].duplicate()
+		var entry := {"cells": c, "edges": f.edges.duplicate(true), "things": th}
+		if not li.is_empty():
+			entry.lights = li
+		fl.append(entry)
 	return {
 		"version": VERSION, "id": id, "theme": theme,
 		"start": {"x": start.x, "y": start.y, "dir": start_dir, "level": start_level},
@@ -531,6 +567,10 @@ static func from_dict(d: Dictionary) -> DungeonMap:
 			if t.has("count"):
 				t.count = int(t.count)
 			fl.things[_cell_of(k)] = t
+		for k: String in f.get("lights", {}):
+			var l: Dictionary = LIGHT_DEFAULT.duplicate()
+			l.merge(f.lights[k], true)
+			fl.lights[_cell_of(k)] = l
 		m.floors.append(fl)
 	if m.floors.is_empty():
 		m.floors.append(_empty_floor())
