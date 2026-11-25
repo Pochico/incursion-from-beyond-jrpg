@@ -188,11 +188,11 @@ Kenji: Lunes, dieciséis de noviembre. Ren se ríe. Hito histórico.
 if Story.flag("dia1_cita_akane")
 	Kenji: Por cierto, he pasado por las recreativas a preguntarle a Akane por vuestra «cita».
 	Kenji: Me ha mirado tres segundos sin pestañear y me ha dicho: «¿Y a ti qué te importa?». [#cara=sorpresa]
-	Kenji: Eso es un sí, tío. O un «te voy a matar». Con Akane nunca se sabe.
-	Rika: ¿Ren y Akane? ¿La punki? ...Vale, ahora sí que quiero detalles. [#cara=sorpresa]
+	Kenji: Eso es un sí, tío. No me jodas. [#cara=sorpresa]
+	Rika: ¿Ren y Akane? ¿La punki? ¿Pero me estáis vacilando? [#cara=sorpresa]
 elif Story.flag("dia1_cita_madre_kenji")
 	Kenji: Le he contado a mi madre lo de vuestra «cita».
-	Kenji: Me ha mandado tres corazones, un «ay, mi niño» y una foto de un táper. Dice que el viernes cenas en casa.
+	Kenji: Me ha mandado tres corazones y un «ay, mi niño».
 	Yuna: Tu madre es la mejor, cielo.
 => END
 
