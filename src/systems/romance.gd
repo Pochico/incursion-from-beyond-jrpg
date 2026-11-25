@@ -120,7 +120,7 @@ static func answer(who: String, place: String) -> String:
 ## se lo cuenta, si pilla a Ren mintiendo o si Ren confiesa.
 static func start_date(who: String, place: String, result: String) -> void:
 	if result == "rompe":
-		break_up(who, partner_of(who), "por_ren")
+		break_up(who, partner_of(who), "por_ren", Social.present())
 	var mine := ren_partner()
 	GameState.set_flag(PLACE_FLAG, place)
 	var id := GameState.record("date", PROTAGONIST, who, {"place": place, "result": "ok"}, Social.present())
@@ -134,7 +134,7 @@ static func start_date(who: String, place: String, result: String) -> void:
 
 ## La pareja de Ren se entera de que ha quedado con `who`.
 static func cheat_discovered(mine: String, who: String) -> void:
-	Social.change(mine, PROTAGONIST, CHEAT_COST)
+	Social.change(mine, PROTAGONIST, CHEAT_COST, 1.0, "infiel")
 	GameState.set_flag("infiel_" + mine, int(GameState.get_flag("infiel_" + mine, 0)) + 1)
 	GameState.set_flag("sospecha_" + mine, false)
 	Social.set_mood(mine, "triste", 70.0)
@@ -159,7 +159,7 @@ static func on_flirt(target: String) -> void:
 	var mine := ren_partner()
 	if mine == "" or mine == target or not mine in Social.present():
 		return
-	Social.change(mine, PROTAGONIST, CHEAT_COST, 0.5)
+	Social.change(mine, PROTAGONIST, CHEAT_COST, 0.5, "liga_delante")
 	Social.set_mood(mine, "irritado", 70.0)
 	GameState.add_message(mine, mine, FLIRT_TEXT % CharacterDB.display_name(target))
 
@@ -189,26 +189,26 @@ static func can_be_partner(who: String) -> bool:
 static func become_partner(who: String) -> void:
 	var old := ren_partner()
 	if old != "" and old != who:
-		break_up(PROTAGONIST, old, "ren_deja")
+		break_up(PROTAGONIST, old, "ren_deja", Social.present())
 	GameState.partners[PROTAGONIST] = who
 	GameState.partners[who] = PROTAGONIST
 	GameState.set_flag("pareja_" + who)
 	GameState.set_flag(NEGLECT_FLAG, 0)
 	GameState.flags.erase("ex_" + who)
-	GameState.record("couple", PROTAGONIST, who, {}, [PROTAGONIST, who])
+	RelationEvents.record_couple(PROTAGONIST, who, Social.present())
 
 
-## Rompen `a` y `b`. `why`: por_ren (uno deja al otro por Ren), descuido,
-## infiel, frio (dejan a Ren) o ren_deja.
-static func break_up(a: String, b: String, why: String) -> void:
+## Rompen `a` y `b` (`a` deja a `b`). `why`: por_ren (uno deja al otro por Ren),
+## descuido, infiel, frio (dejan a Ren) o ren_deja. `witnesses`: además de ellos.
+static func break_up(a: String, b: String, why: String, witnesses: Array = []) -> void:
 	GameState.partners.erase(a)
 	GameState.partners.erase(b)
-	GameState.record("breakup", a, b, {"why": why}, [a, b])
+	RelationEvents.record_breakup(a, b, why, witnesses)
 	if PROTAGONIST in [a, b]:
 		var other := b if a == PROTAGONIST else a
 		GameState.flags.erase("pareja_" + other)
 		GameState.set_flag("ex_" + other)
-		Social.change(other, PROTAGONIST, {"afecto": -15.0, "resentimiento": 15.0})
+		Social.change(other, PROTAGONIST, {"afecto": -15.0, "resentimiento": 15.0}, 1.0, "ruptura")
 		Social.set_mood(other, "triste", 75.0)
 		return
 	# Una pareja del grupo rompe por Ren: el dejado se lo toma fatal (con Ren y con su ex).
@@ -217,8 +217,8 @@ static func break_up(a: String, b: String, why: String) -> void:
 	pair.sort()
 	GameState.set_flag("%s_%s_rotos" % pair)   # kenji_yuna_rotos
 	GameState.set_flag("dejado_por_ren_" + left)   # dejado_por_ren_kenji: Yuna dejó a Kenji
-	Social.change(left, PROTAGONIST, {"afecto": -30.0, "confianza": -30.0, "resentimiento": 40.0})
-	Social.change(left, a, {"afecto": -25.0, "confianza": -30.0, "resentimiento": 30.0})
+	Social.change(left, PROTAGONIST, {"afecto": -30.0, "confianza": -30.0, "resentimiento": 40.0}, 1.0, "dejado_por_ren")
+	Social.change(left, a, {"afecto": -25.0, "confianza": -30.0, "resentimiento": 30.0}, 1.0, "le_deja")
 	Social.set_mood(left, "triste", 85.0)
 	GameState.add_message(left, left, LEFT_TEXT)
 
@@ -241,19 +241,19 @@ static func morning() -> String:
 		neglect = maxi(neglect - 1, 0)
 	else:
 		neglect += 1
-		Social.change(p, PROTAGONIST, NEGLECT_COST)
+		Social.change(p, PROTAGONIST, NEGLECT_COST, 1.0, "descuido")
 	# Planes que propuso y a los que Ren no fue.
 	for id: String in ChapterDB.PLANS:
 		if ChapterDB.plan(id).get("invite", {}).get("from", "") == p and int(ChapterDB.plan(id).get("day", 0)) == GameState.day_number() - 1 \
 				and GameState.get_flag(ChapterDB.PLAN_INVITED + id) and not GameState.get_flag(ChapterDB.PLAN_DONE + id):
-			Social.change(p, PROTAGONIST, MISSED_PLAN_COST)
+			Social.change(p, PROTAGONIST, MISSED_PLAN_COST, 1.0, "plan_plantado")
 	# La cita que pidió ayer.
 	if GameState.get_flag(PROPOSAL_FLAG + str(GameState.day_number() - 1)):
 		var dated := false
 		for ev in GameState.events.find({"kind": "date", "actor": PROTAGONIST, "target": p, "date": yesterday}):
 			dated = dated or ev.data.get("result", "") == "ok"
 		if not dated:
-			Social.change(p, PROTAGONIST, MISSED_DATE_COST)
+			Social.change(p, PROTAGONIST, MISSED_DATE_COST, 1.0, "cita_plantada")
 	GameState.set_flag(NEGLECT_FLAG, neglect)
 	var why := ""
 	if int(GameState.get_flag("infiel_" + p, 0)) >= 2 or Social.value(p, PROTAGONIST, "confianza") < 0.0:

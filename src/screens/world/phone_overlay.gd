@@ -11,8 +11,11 @@ extends Control
 ##  - Mensajes: conversaciones que ya existen (de la más reciente a la más antigua).
 ##  - Chat: burbujas de la conversación y botón «Saludar». La respuesta sale del
 ##    selector de Story (momento «movil» en el .dialogue de cada personaje).
-##  - Inventario: objetos de GameState.inventory.
+##  - Inventario: objetos de GameState.inventory. Tocar una caja la abre (`notice`
+##    cuenta lo que traía).
 ##  - Equipo: arma, accesorio y módulo de Ren y sus compañeros.
+## En versiones de depuración, tocar a alguien en Relaciones abre `DebugRelations`
+## (barras para editar en directo sus relaciones y su ánimo).
 ## Misiones, Ajustes y Criaturas aún no tienen contenido (`app_unavailable`).
 ##
 ## Ratón: clic en apps, filas, «<» y botones; rueda para desplazar; clic fuera cierra.
@@ -20,6 +23,8 @@ extends Control
 
 signal closed
 signal app_unavailable(id: String)
+## Aviso breve para mostrar fuera del móvil (p. ej. lo que traía una caja).
+signal notice(text: String)
 
 const BODY := Rect2(726, 40, 468, 1000)
 const SCREEN_INSET := 12.0
@@ -75,6 +80,7 @@ var _busy := false           ## el contacto está respondiendo
 var _typing := false
 var _phone: Control
 var _chat: Control           ## área recortada de las burbujas
+var _debug: DebugRelations
 
 
 func _ready() -> void:
@@ -100,6 +106,9 @@ func _ready() -> void:
 	timer.autostart = true
 	timer.timeout.connect(_redraw)
 	add_child(timer)
+	_debug = DebugRelations.new()
+	_debug.closed.connect(_redraw)
+	add_child(_debug)
 
 
 func open() -> void:
@@ -185,6 +194,16 @@ func _activate_row(i: int) -> void:
 		return
 	if _screen == "contacts" or _screen == "messages":
 		_open_chat(rows[i], _screen)
+	elif _screen == "inventory" and ItemDB.is_box(rows[i]):
+		var got := GameState.open_box(rows[i])
+		if got != "":
+			GameState.save_game()
+			notice.emit("%s: %s" % [ItemDB.display_name(rows[i]), got])
+			_selected = mini(i, _rows().size() - 1)
+			_keep_visible()
+			_redraw()
+	elif _screen == "relations" and DebugRelations.enabled():
+		_debug.open(rows[i], BODY.position + Vector2(18, 50))
 	else:
 		_redraw()
 
@@ -237,7 +256,7 @@ func _greet() -> void:
 # --- Entrada ----------------------------------------------------------------------------
 
 func _input(event: InputEvent) -> void:
-	if not visible:
+	if not visible or _debug.visible:
 		return
 	if not (event is InputEventKey or event is InputEventJoypadButton):
 		return
@@ -421,6 +440,9 @@ func _draw_phone() -> void:
 		_:
 			_draw_header(c, w, TITLES[_screen], true)
 			_draw_list(c)
+			if _screen == "relations" and DebugRelations.enabled():
+				c.draw_string(UIStyle.FONT_MEDIUM_ITALIC, Vector2(LIST_X, LIST_Y - 12), "Depuración: toca a alguien para editarlo",
+						HORIZONTAL_ALIGNMENT_LEFT, LIST_W, 14, Color(UIStyle.LIME, 0.75))
 	# Indicador de inicio.
 	c.draw_line(Vector2(w * 0.5 - 26, h - 34), Vector2(w * 0.5 + 26, h - 34), UIStyle.LIME, 5.0)
 

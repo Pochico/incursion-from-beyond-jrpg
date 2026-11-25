@@ -73,6 +73,8 @@ func _ready() -> void:
 			_update_empty_hint())
 	_phone.app_unavailable.connect(func(_id: String) -> void:
 		Toast.show_in(self, "Todavía no disponible", UIStyle.LIME, 1.6))
+	_phone.notice.connect(func(text: String) -> void:
+		Toast.show_in(self, text, UIStyle.LIME, 2.6))
 	_hint_bar.item_pressed.connect(_on_hint_pressed)
 	_interaction.action_chosen.connect(_on_action_chosen)
 	_interaction.closed.connect(_on_interaction_closed)
@@ -765,6 +767,7 @@ func _run_date(id: String, place: String) -> void:
 ## Cada mañana: se descubren secretos (Lies) y la pareja de Ren repasa el día
 ## anterior. Si le deja, se lo dice.
 func _check_partner() -> void:
+	RelationEvents.morning()   # antes: lo de esta mañana se cuenta mañana
 	Lies.morning()
 	var partner := Romance.ren_partner()
 	var why := Romance.morning()

@@ -118,6 +118,10 @@ func new_game() -> void:
 	partners = Romance.START_PARTNERS.duplicate()
 	secrets = []
 	events = EventLog.new()
+	# Kenji y Yuna ya salen al empezar: lo sabe todo el que los conoce.
+	for a: String in partners:
+		if a < partners[a]:
+			RelationEvents.record_couple(a, partners[a], CharacterDB.with_profile())
 	intro_done = false
 	story_step = ChapterDB.FIRST_STEP
 	_reset_incursion()
@@ -223,6 +227,30 @@ func use_item(item_id: String) -> bool:
 		return false
 	inventory[item_id] = item_count(item_id) - 1
 	return true
+
+
+## Abre una caja del inventario (ItemDB `loot`): se gasta y da lo que trae.
+## Devuelve lo conseguido como texto («Batería del resonador, Pochicola ×2»),
+## o "" si no había caja.
+func open_box(item_id: String) -> String:
+	if not ItemDB.is_box(item_id) or not use_item(item_id):
+		return ""
+	var got: Array[String] = []
+	var contents: Array = ItemDB.get_item(item_id).get("loot_always", []).duplicate()
+	var rolled := ItemDB.roll_loot(item_id)
+	if not rolled.is_empty():
+		contents.append([rolled.item, rolled.count])
+	for e: Array in contents:
+		var id: String = e[0]
+		var n: int = e[1]
+		if id == "money":
+			add_money(n)
+			got.append("¥ %d" % n)
+		else:
+			add_item(id, n)
+			got.append(ItemDB.display_name(id) + (" ×%d" % n if n > 1 else ""))
+	changed.emit()
+	return ", ".join(got)
 
 
 # --- Móvil ------------------------------------------------------------------------

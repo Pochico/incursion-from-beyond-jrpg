@@ -106,7 +106,7 @@ static func tell(target: String, topic: String) -> String:
 	var result := "creido"
 	if delator != "":
 		result = "delatado"
-		Social.change(target, PROTAGONIST, EXPOSED_COST)
+		Social.change(target, PROTAGONIST, EXPOSED_COST, 1.0, "mentira_delatada")
 		Social.change(target, delator, HONEST_GAIN)
 		Social.set_mood(target, "irritado", 70.0)
 		_reveal(target, ids)
@@ -153,10 +153,11 @@ static func morning() -> Array:
 			continue
 		GameState.secrets.erase(s)
 		var lied: bool = s.lied
-		Social.change(s.target, PROTAGONIST, DISCOVERED_LIE_COST if lied else DISCOVERED_SECRET_COST)
+		Social.change(s.target, PROTAGONIST, DISCOVERED_LIE_COST if lied else DISCOVERED_SECRET_COST, 1.0,
+				"mentira_descubierta" if lied else "secreto_descubierto")
 		Social.change(s.target, by, HONEST_GAIN)
 		for acc: String in s.accomplices:
-			Social.change(s.target, acc, ACCOMPLICE_COST)
+			Social.change(s.target, acc, ACCOMPLICE_COST, 1.0, "encubridor")
 		_reveal(s.target, s.events)
 		# Para los diálogos: «# cuando: hablar, flag pillado_rika» (el cue lo apaga).
 		GameState.set_flag("pillado_" + s.target)

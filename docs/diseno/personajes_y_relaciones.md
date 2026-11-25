@@ -247,3 +247,24 @@ El ánimo multiplica las reacciones. Si alguien está triste, lo *sarcástico* d
   - las conversaciones de «me dejaste plantado» de Kenji, Rika, Shiori y Akane: «me puse malo» con `#miente=dia_N`.
 
 **[PENDIENTE]**: más situaciones de mentira en la historia; que los testigos ausentes hablen solo a veces (ahora es determinista).
+
+## Sucesos de relación (registro)
+
+[DEFINIDO] la mecánica de registro; los diálogos que reaccionan están **[PENDIENTE]**. Lógica en `src/systems/relation_events.gd` (`RelationEvents`). Umbrales provisionales.
+
+- **Qué se registra** en el `EventLog`, con id fijo para usarlo en las reglas con `sabe`:
+  - `pareja_<a>_<b>`: empiezan a salir (nombres en orden alfabético). `pareja_kenji_yuna` existe desde el principio y lo saben todos.
+  - `ruptura_<a>_<b>`: lo dejan; `data.why` = por_ren, descuido, infiel, frio o ren_deja; `actor` es quien deja.
+  - `enfado_<quien>_<con>`: enfado grave. Es un solo cambio de relación que empeora la suma de dimensiones en 25 puntos o más (`GRUDGE_POINTS`): bajar afecto, confianza, respeto o atracción, o subir miedo, asco o resentimiento. `data.cause` dice qué lo provocó: infiel, liga_delante, ruptura, dejado_por_ren, le_deja, descuido, plan_plantado, cita_plantada, mentira_delatada, mentira_descubierta, secreto_descubierto, encubridor, guion o la opción elegida.
+  - Si se repite: `ruptura_kenji_yuna_2`, `enfado_yuna_ren_3`…
+- **Quién lo sabe**: los implicados y los presentes en ese momento.
+  - Cada mañana (`RelationEvents.morning`, antes que las mentiras y la pareja) la noticia avanza un salto: se entera quien tiene afinidad de 15 o más (`GOSSIP_AFFINITY`, `Lies.affinity`) con algún implicado y un amigo que ya lo sabe y le aprecia igual de bien.
+  - Ren no lo va contando solo.
+- **Enfado que sigue en pie**:
+  - mientras dura, `flag enfadado_<quien>` (solo con Ren);
+  - se pasa con `$> Story.reconcile("<quien>")` (registra `reconcile`) o a los 7 días (`GRUDGE_DAYS`).
+- **Para los diálogos**:
+  - reglas: `sabe ruptura_kenji_yuna`, `sabe enfado_yuna_ren`, `flag enfadado_yuna`;
+  - en el texto: `Story.angry(id)`, `Story.grudge_cause(id)`, `Story.knows_breakup(quien, a, b)`, `Story.knows_couple(quien, a, b)` (lo último que pasó entre `a` y `b`).
+
+**[PENDIENTE]**: los diálogos que reaccionan; quizá que las madres se enteren por sus hijos (ahora casi no tienen relaciones con el grupo, así que no les llega).

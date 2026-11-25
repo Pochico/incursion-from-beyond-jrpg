@@ -89,7 +89,7 @@ func value(who: String, dim: String) -> float:
 
 ## Cambio de guion en lo que `who` siente por Ren: $> Story.change("rika", "confianza", 3)
 func change(who: String, dim: String, amount: float) -> void:
-	Social.change(who, CharacterDB.PROTAGONIST, {dim: amount})
+	Social.change(who, CharacterDB.PROTAGONIST, {dim: amount}, 1.0, "guion")
 
 
 func set_mood(who: String, mood_id: String, intensity: float = 50.0) -> void:
@@ -179,7 +179,37 @@ func become_partner(who: String) -> void:
 ## Ren deja a su pareja.
 func break_up_with(who: String) -> void:
 	if Romance.ren_partner() == who:
-		Romance.break_up(CharacterDB.PROTAGONIST, who, "ren_deja")
+		Romance.break_up(CharacterDB.PROTAGONIST, who, "ren_deja", Social.present())
+
+
+
+# --- Sucesos de relación (RelationEvents) ---
+# En las reglas: `sabe ruptura_kenji_yuna`, `sabe pareja_ren_yuna`, `sabe enfado_yuna_ren`,
+# `flag enfadado_yuna` (enfado grave con Ren que sigue en pie).
+
+## ¿Sigue `who` enfadado de verdad con Ren (o con `to`)?
+func angry(who: String, to: String = CharacterDB.PROTAGONIST) -> bool:
+	return RelationEvents.angry(who, to)
+
+
+## Qué provocó el enfado que sigue en pie ("" si no hay): infiel, mentira_delatada...
+func grudge_cause(who: String, to: String = CharacterDB.PROTAGONIST) -> String:
+	return str(RelationEvents.grudge(who, to).get("data", {}).get("cause", ""))
+
+
+## Hacen las paces: $> Story.reconcile("yuna")
+func reconcile(who: String, to: String = CharacterDB.PROTAGONIST) -> void:
+	RelationEvents.reconcile(who, to)
+
+
+## ¿Sabe `who` que `a` y `b` lo han dejado (lo último entre ellos)?
+func knows_breakup(who: String, a: String, b: String) -> bool:
+	return RelationEvents.knows_last(who, "breakup", a, b)
+
+
+## ¿Sabe `who` que `a` y `b` salen juntos (lo último entre ellos)?
+func knows_couple(who: String, a: String, b: String) -> bool:
+	return RelationEvents.knows_last(who, "couple", a, b)
 
 
 func day() -> int:
