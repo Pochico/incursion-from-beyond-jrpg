@@ -50,7 +50,7 @@ Yuna: A mí me lo cuenta en broma. Pero a ti te lo cuenta en serio. Si te dice a
 # cuando: hablar, hoy >= 2, no flag kenji_yuna_rotos
 % Yuna: ¿Otra vez por aquí? Kenji sigue sin volver de las pipas.
 % Yuna: Hola de nuevo. Si buscas conversación, Kenji tiene para los dos.
-% Yuna: Te noto con ganas de hablar hoy. Me gusta. No es lo normal en ti.
+% Yuna: Te noto con ganas de hablar hoy. Me gusta.
 => END
 
 ~ yuna_hablar_con_kenji
@@ -449,4 +449,101 @@ else
 	$> Story.change("yuna", "resentimiento", -3)
 - ¿Y {{Story.snitch("yuna")}} qué sabrá? [#provocador]
 	$> Story.change("yuna", "confianza", -3)
+=> END
+
+# --- Planes: respuestas por el móvil y plantones (Invites) --------------------------
+
+~ yuna_movil_plan
+if Story.plan_reply() == "si"
+	Ren: Allí estaré.
+	Yuna: Bien. Llevo tenedor para ti. No preguntes de qué.
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}. Otro día, ¿vale?
+	Yuna: Vale. Te guardo un trozo. Si sobrevive a Kenji.
+else
+	Ren: Hoy no puedo, Yuna. Lo siento.
+	Yuna: No pasa nada. Otro día.
+=> END
+
+~ yuna_movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento, Yuna. De verdad.
+	Yuna: Vale. Gracias por escribir. Muchos no lo hacen.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Tenía que haberte avisado.
+	Yuna: Sí. Con un mensaje me valía, Ren. No soy difícil.
+else
+	Ren: Se me olvidó.
+	Yuna: Ah.
+	Yuna: Vale.
+=> END
+
+~ yuna_hablar_plantado_lago
+# cuando: hablar, flag reproche:lago_yuna, flag plan_plantado:lago_yuna, no flag plan_hecho:lago_yuna, una vez
+$> Story.set_flag("reproche:lago_yuna", false)
+Yuna: Hola, Ren.
+Yuna: No te voy a montar una escena. No grito, ya lo sabes. Pero me sentó mal.
+Yuna: Quería hablar contigo de una cosa. Ya da igual.
+- No da igual. Cuéntamelo ahora. [#empático, #franco]
+	Yuna: ...Otro día. Hoy no me sale. Pero gracias por insistir.
+	$> Story.change("yuna", "resentimiento", -2)
+- Lo siento, Yuna. [#conciliador]
+	Yuna: Ya. Vale.
+=> END
+
+~ yuna_hablar_tras_lago
+# cuando: hablar, flag plan_hecho:lago_yuna, una vez, no hoy >= 2, no flag kenji_yuna_rotos
+Yuna: Ayer Haruto me preguntó quién era «el del tenedor de Hello Kitty». Le enseñé una foto tuya.
+Yuna: Dice que tienes cara de saber hacer volcanes con bicarbonato. Es lo mejor que puede decir de alguien.
+if Story.flag("ren_cuida_hugo")
+	Yuna: Te espera el sábado. Con el dinosaurio. Avisado estás.
+=> END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ yuna_quedar
+Ren: Yuna, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Yuna: Vale. ¿Se lo digo a Kenji o es un plan tuyo y mío?
+	if Story.other_guests("yuna") != ""
+		Yuna: Ah, que viene {{Story.other_guests("yuna")}}. Perfecto.
+elif Story.plan_reply() == "ocupado"
+	Yuna: No puedo, tengo {{Story.other_plan_title()}}. Lo siento. De verdad.
+elif Story.plan_reply() == "ya"
+	Yuna: Ya me lo dijiste, Ren. Ahí estaré.
+else
+	Yuna: Hoy no. Tengo a Haruto y estoy muerta. Otro día, ¿vale?
+=> END
+
+~ yuna_quedada
+if Story.activity() == "westlake"
+	Yuna: Aquí se está bien. Haruto diría que hay patos y que eso lo arregla todo.
+	Yuna mira el agua un rato largo, sin decir nada. Parece que descansa.
+elif Story.activity() == "cine"
+	Yuna: Hace siglos que no vengo al cine sin Haruto. Puedo ver una película sin dibujos. Qué lujo.
+else
+	Yuna: Me ha venido bien salir. En casa siempre hay ruido.
+if Story.present("kenji")
+	Kenji: ¿Estáis hablando de mí?
+	Yuna: Siempre, osito.
+- Gracias por venir. [#cariñoso]
+	Yuna: Gracias por llamarme. No me llama casi nadie para nada que no sea un favor.
+	$> Story.change("yuna", "afecto", 2)
+- Hay que hacer esto más. [#decidido]
+	Yuna: Sí. Hay que hacerlo más.
+	$> Story.change("yuna", "confianza", 1)
+=> END
+
+~ yuna_hablar_plantado
+if Story.plan_is_ren()
+	Yuna: Me invitaste a {{Story.plan_title()}}. Dejé a Haruto con mi madre para ir. No estabas.
+else
+	Yuna: Dijiste que vendrías a {{Story.plan_title()}}.
+Yuna: No grito, ya lo sabes. Pero me sentó mal.
+- Lo siento, Yuna. No volverá a pasar. [#franco, #conciliador]
+	Yuna: Vale. Te creo.
+	$> Story.change("yuna", "resentimiento", -2)
+- Se me olvidó. [#evasivo]
+	Yuna: Ah. Vale.
+	$> Story.change("yuna", "afecto", -1)
 => END

@@ -32,8 +32,10 @@ const RANDOM_ENEMIES: Array[String] = ["tiranosaurio", "oni", "engendro", "turbi
 
 const ALL := {
 	"casa": {
-		"name": "Casa", "desc": "Tu habitación. Aquí no te espera nadie.",
+		"name": "Casa", "desc": "Tu habitación. Mamá entra y sale según el turno.",
 		"on_map": true, "pos": Vector2(0.08, 0.52),
+		# Mamá está en casa por la mañana y por la noche desde el jueves (día 4).
+		"cast": ["madre_ren"], "cast_when": {"madre_ren": {"slots": ["manana", "noche"], "from_day": 4}},
 		"layout": "res://src/rooms/casa_layout.tscn",
 		"props": [
 			{"id": "pantalla", "name": "Pantalla", "texture": "res://assets/props/pantalla.png"},
@@ -78,6 +80,13 @@ const ALL := {
 		"cast": ["kenji", "shiori", "rika", "akane", "yuna"], "cast_phase": "incursion_1",
 		"layout": "res://src/rooms/cloacas_layout.tscn",
 		"sky_top": Color("120d0a"), "sky_bottom": Color("6a4a2e"), "water": true,
+	},
+	"lago": {
+		"name": "Westlake", "desc": "La terraza junto al lago del Parquesur: tarima, barandilla de cristal y las terrazas al otro lado del agua.",
+		"on_map": true, "pos": Vector2(0.72, 0.74), "safe": true,
+		"cast": ["kenji", "shiori", "rika", "akane", "yuna"],
+		"layout": "res://src/rooms/lago_layout.tscn",
+		"sky_top": Color("1f4f9a"), "sky_bottom": Color("8fc4e8"), "trees": true, "water": true,
 	},
 	"torre": {
 		"name": "La Torre", "desc": "Mazmorra. El acceso al Corredor de la Torre está aquí.",
@@ -154,7 +163,12 @@ static func cast(id: String) -> Array:
 	var loc := get_location(id)
 	if loc.has("cast_phase") and not GameState.phase_at_least(loc.cast_phase):
 		return []
-	var all: Array = loc.get("cast", [])
+	var when: Dictionary = loc.get("cast_when", {})
+	var all: Array = loc.get("cast", []).filter(func(c: String) -> bool:
+		if not when.has(c):
+			return true
+		var w: Dictionary = when[c]
+		return GameState.day_number() >= int(w.get("from_day", 0)) and GameState.slot_id() in w.get("slots", [GameState.slot_id()]))
 	var limit := capacity(id)
 	if all.size() <= limit:
 		return all.duplicate()

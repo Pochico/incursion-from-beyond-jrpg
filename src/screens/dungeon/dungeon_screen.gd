@@ -24,6 +24,10 @@ extends Control
 ## sitio se pierde y los objetos vuelven a su sitio. Por eso no se guarda la
 ## partida hasta salir.
 ##
+## Resonador: cada incursión empieza con ItemDB.charges("resonador") cargas; cada
+## pulso gasta una y las baterías (que traen las cajas) dan más. Al coger una caja
+## se ofrece abrirla ya o guardarla (se abre luego desde Objetos o el móvil).
+##
 ## El compañero comenta de vez en cuando en el registro del visor (DungeonBanter):
 ## al andar, ante una criatura, junto a una pared falsa, al coger algo…
 
@@ -61,6 +65,8 @@ var _log_text := ""
 var _target: Dictionary = {}
 var _target_rect := Rect2()
 var _hover_target := false
+var _console_rect := Rect2()   ## consola junto a la puerta de delante (se puede señalar)
+var _hover_console := false
 var _busy := false          ## combate o salida en curso
 var _status: StatusPanel
 
@@ -71,6 +77,7 @@ var _party_battle: Battle    ## PV/PM del grupo fuera del combate, fichas y pant
 var _vitals: Dictionary = {}  ## PV y PM del grupo en esta incursión (Battle.party_vitals)
 var _run_start: Dictionary = {}  ## inventario, dinero y objetos cogidos al entrar
 var _was_extraction := false
+var _charges := 0              ## cargas del resonador en esta incursión
 
 # Comentarios del compañero.
 const IDLE_STEPS := Vector2i(9, 17)    ## pasos entre comentarios sueltos
@@ -96,7 +103,9 @@ func _ready() -> void:
 	_companion_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(_companion), CharacterDB.get_character(_companion).get("nature", ""))
 	_next_idle = randi_range(IDLE_STEPS.x, IDLE_STEPS.y)
 	_explorer.setup(_map, GameState.dungeon_state(_map_id))
+	DungeonLook.apply(_view, _explorer)
 	_mark_run_start()
+	_charges = ItemDB.charges("resonador")
 	_was_extraction = _explorer.at_extraction()
 	_refresh_party()
 	_set_info(COMMANDS[0].desc)
@@ -115,7 +124,7 @@ func _build() -> void:
 	add_child(_view)
 	var vp := SubViewport.new()
 	vp.own_world_3d = true
-	vp.msaa_3d = Viewport.MSAA_4X
+	vp.msaa_3d = Viewport.MSAA_4X   # (el estilo visual lo cambia: DungeonLook)
 	_view.add_child(vp)
 	_explorer = DungeonExplorer.new()
 	vp.add_child(_explorer)
@@ -128,7 +137,10 @@ func _build() -> void:
 	_explorer.pulse_finished.connect(_on_pulse_finished)
 	_explorer.save_point_used.connect(func(_c: Vector2i) -> void: _use_save_point())
 	_explorer.encounter.connect(_on_encounter)
-	_explorer.item_taken.connect(func(_id: String, _n: int) -> void: _comment("item", 1.3))
+	_explorer.item_taken.connect(func(id: String, _n: int) -> void:
+		if not ItemDB.is_box(id):   # con la caja, la pregunta se queda a la vista
+			_comment("item", 1.3))
+	_explorer.box_found.connect(_offer_box)
 	_explorer.noticed.connect(func(kind: String) -> void:
 		_comment(kind, 1.6 if kind == "secret_found" else 1.3, kind == "secret_found")
 		if kind == "secret_found":
@@ -258,6 +270,7 @@ func _open_status(slot: int) -> void:
 
 func _on_moved() -> void:
 	_target = _explorer.front()
+	_hover_console = false
 	var safe := _explorer.at_extraction()
 	if safe and not _was_extraction:
 		_log("Zona de extracción segura: desde aquí puedes salir sin perder nada.")
@@ -274,8 +287,13 @@ func _process(_delta: float) -> void:
 		return
 	# El recuadro sigue a la cámara mientras se anima (pasos, giros, puertas).
 	var r := _explorer.front_rect(_target) if not _target.is_empty() else Rect2()
-	if r != _target_rect:
+	var cr := _explorer.front_rect({"node": _target.console}) if _target.has("console") else Rect2()
+	# La vista 3D puede ir a menos resolución (DungeonLook): a píxeles del visor.
+	r = Rect2(r.position * _view.stretch_shrink, r.size * _view.stretch_shrink)
+	cr = Rect2(cr.position * _view.stretch_shrink, cr.size * _view.stretch_shrink)
+	if r != _target_rect or cr != _console_rect:
 		_target_rect = r
+		_console_rect = cr
 		_fx.queue_redraw()
 
 
@@ -310,6 +328,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_F:
 			if not key.echo:
 				_use_resonator()
+		KEY_V:
+			if not key.echo:
+				DungeonLook.next()
+				DungeonLook.apply(_view, _explorer)
+				_log("Estilo visual: %s  (V para cambiar)" % DungeonLook.label(_view))
 		KEY_ESCAPE:
 			if _big_map.visible:
 				_toggle_map()
@@ -333,13 +356,17 @@ func _on_view_input(event: InputEvent) -> void:
 	if _busy or _combat.visible or _status.visible:
 		return
 	if event is InputEventMouseMotion:
-		var inside := _target_rect.has_area() and _target_rect.grow(12).has_point(event.position)
-		if inside != _hover_target:
+		var on_console := _console_rect.has_area() and _console_rect.grow(10).has_point(event.position)
+		var inside := not on_console and _target_rect.has_area() and _target_rect.grow(12).has_point(event.position)
+		if inside != _hover_target or on_console != _hover_console:
 			_hover_target = inside
-			_fx.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if inside else Control.CURSOR_ARROW
+			_hover_console = on_console
+			_fx.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if inside or on_console else Control.CURSOR_ARROW
 			_fx.queue_redraw()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _target_rect.has_area() and _target_rect.grow(12).has_point(event.position):
+		if _console_rect.has_area() and _console_rect.grow(10).has_point(event.position):
+			_log("Consola de acceso. Hace falta un dispositivo para hackearla.")
+		elif _target_rect.has_area() and _target_rect.grow(12).has_point(event.position):
 			_use()
 		_fx.accept_event()
 
@@ -438,10 +465,16 @@ func _show_items() -> void:
 			continue
 		any = true
 		var name_text := ItemDB.display_name(id)
-		_add_option("%s  ×%d" % [name_text, n], func() -> void:
+		var label := ("%s  ·  %d carga%s" % [name_text, _charges, "" if _charges == 1 else "s"]) if id == "resonador" \
+				else "%s  ×%d" % [name_text, n]
+		_add_option(label, func() -> void:
 			_set_info(ItemDB.description(id))
 			if ItemDB.get_item(id).get("tool", false):
 				_use_resonator()
+			elif ItemDB.is_box(id):
+				_open_box(id)
+			elif ItemDB.charges(id) > 0:
+				_use_battery(id)
 			elif ItemDB.restores(id):
 				_choose_item_target(id)
 			elif ItemDB.is_attack(id):
@@ -459,18 +492,56 @@ func _use_resonator() -> void:
 	_clear_options()
 	if _explorer.is_pulsing():
 		return
-	_log("Activas el resonador. Un pulso rosado recorre los pasillos…")
+	if _charges <= 0:
+		_log("El resonador está sin carga. Hace falta una batería (las traen las cajas).")
+		if GameState.item_count("bateria") > 0:
+			_add_option("Poner una batería  ×%d" % GameState.item_count("bateria"), _use_battery.bind("bateria"))
+		return
+	_charges -= 1
+	_log("Activas el resonador. Un pulso rosado recorre los pasillos… (quedan %d carga%s)" % [_charges, "" if _charges == 1 else "s"])
 	_explorer.pulse()
+
+
+## Batería: gasta una y le da sus cargas al resonador (solo dura esta incursión).
+func _use_battery(id: String) -> void:
+	_clear_options()
+	if not GameState.use_item(id):
+		return
+	_charges += ItemDB.charges(id)
+	_log("Encajas la batería en el resonador. Cargas: %d." % _charges)
+
+
+## Caja recién cogida: abrirla ya o guardarla para luego.
+func _offer_box(id: String, count: int) -> void:
+	_clear_options()
+	var name_text := ItemDB.display_name(id)
+	_log("Coges: %s%s. ¿La abres ya o la guardas?" % [name_text, " ×%d" % count if count > 1 else ""])
+	_add_option("Abrir ya", _open_box.bind(id))
+	_add_option("Guardar", func() -> void:
+		_clear_options()
+		_log("Guardas %s. Puedes abrirla cuando quieras desde Objetos o el móvil." % name_text.to_lower()))
+
+
+func _open_box(id: String) -> void:
+	_clear_options()
+	var got := GameState.open_box(id)
+	if got == "":
+		return
+	_log("Abres: %s. Dentro hay: %s." % [ItemDB.display_name(id), got])
+	if GameState.item_count(id) > 0:
+		_add_option("Abrir otra  ×%d" % GameState.item_count(id), _open_box.bind(id))
+		_add_option("Guardar", _clear_options)
 
 
 func _on_pulse_finished(found: int) -> void:
 	_on_moved()
+	var left := " Quedan %d carga%s." % [_charges, "" if _charges == 1 else "s"]
 	if found == 0:
-		_log("El pulso se apaga. Nada ha respondido.")
+		_log("El pulso se apaga. Nada ha respondido." + left)
 	elif found == 1:
-		_log("Algo ha respondido al pulso: una pared brilla. Cuanto más intenso el brillo, más cerca estaba.")
+		_log("Algo ha respondido al pulso: una pared brilla. Cuanto más intenso el brillo, más cerca estaba." + left)
 	else:
-		_log("%d paredes han respondido al pulso. Cuanto más intenso el brillo, más cerca estaban." % found)
+		_log(("%d paredes han respondido al pulso. Cuanto más intenso el brillo, más cerca estaban." % found) + left)
 
 
 ## Objeto que cura: a quién del grupo se le da.
@@ -567,7 +638,10 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
 	await SceneRouter.fade_out(0.25)
-	_combat.setup(enemy_id, ally, ally_skills, _vitals, _map.creature_level())
+	# Un encuentro puede ser un grupo (`group`: los que acompañan al líder) y el jefe (`boss`).
+	var th := _map.thing(cell)
+	var ids: Array = [enemy_id] + th.get("group", [])
+	_combat.setup(ids, ally, ally_skills, _vitals, _map.creature_level(), th.get("boss", false))
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -584,17 +658,25 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 		var drop := _explorer.drop_at(cell)
 		if drop != "":
 			GameState.add_item(drop)
-			_log("¡%s derrotado! Al caer suelta algo: %s. Lo guardas." % [CharacterDB.display_name(enemy_id), ItemDB.display_name(drop)])
+			_log("¡%s derrotado%s! Al caer suelta algo: %s. Lo guardas." % [_group_name(ids), "s" if ids.size() > 1 else "", ItemDB.display_name(drop)])
 		else:
-			_log("¡%s derrotado!" % CharacterDB.display_name(enemy_id))
+			_log("¡%s derrotado%s!" % [_group_name(ids), "s" if ids.size() > 1 else ""])
 	else:
-		_log("Retrocedes. %s sigue ahí." % CharacterDB.display_name(enemy_id))
+		_log("Retrocedes. %s sigue%s ahí." % [_group_name(ids), "n" if ids.size() > 1 else ""])
 		await _explorer.act("back")
 	queue_redraw()
 	_busy = false
 	_on_moved()
 	if not (won and _explorer.drop_at(cell) != ""):   # que se lea lo que ha soltado
 		_comment("victory" if won else "defeat", 1.4, true)
+
+
+## «Imp», «Imp y Engendro», «Imp, Imp y Engendro».
+static func _group_name(ids: Array) -> String:
+	var names: Array = ids.map(func(id: String) -> String: return CharacterDB.display_name(id))
+	if names.size() == 1:
+		return names[0]
+	return ", ".join(names.slice(0, -1)) + " y " + names.back()
 
 
 ## EXP por explorar para el grupo (y la parte del resto de compañeros).
@@ -788,36 +870,44 @@ func _draw_info() -> void:
 	var div_x := 960.0
 	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
 	if _options.get_child_count() == 0:
-		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[W A S D] Moverte   [Q E] De lado   [Espacio] Usar   [F] Resonador   [M] Mapa   [Tab] Equipo",
-				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 21, Color(UIStyle.WHITE, 0.6))
+		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[WASD] Moverte  [Q E] De lado  [Espacio] Usar  [F] Resonador  [M] Mapa  [Tab] Equipo  [V] Estilo",
+				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 19, Color(UIStyle.WHITE, 0.6))
 	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
 	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,
 			r.size.x - div_x - 80, 21, UIStyle.WHITE)
 
 
+## Esquinas lima alrededor de `rect` y la etiqueta de lo que se puede hacer.
+func _draw_target(rect: Rect2, label: String, hover: bool, accent: Color) -> void:
+	var vs := _fx.size
+	var r := rect.grow(14).intersection(Rect2(Vector2(8, 8), vs - Vector2(16, 70)))
+	var col := Color(UIStyle.LIME, 1.0 if hover else 0.75)
+	var k := minf(36.0, minf(r.size.x, r.size.y) * 0.3)
+	var lw := 4.0 if hover else 3.0
+	for corner in [[r.position, Vector2(1, 0), Vector2(0, 1)], [Vector2(r.end.x, r.position.y), Vector2(-1, 0), Vector2(0, 1)],
+			[r.end, Vector2(-1, 0), Vector2(0, -1)], [Vector2(r.position.x, r.end.y), Vector2(1, 0), Vector2(0, -1)]]:
+		_fx.draw_line(corner[0], corner[0] + corner[1] * k, col, lw)
+		_fx.draw_line(corner[0], corner[0] + corner[2] * k, col, lw)
+	var font := UIStyle.FONT_BOLD_ITALIC
+	var fs := 26
+	var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var tag_pos := Vector2(clampf(r.get_center().x - tw * 0.5 - 24, 10, vs.x - tw - 60), maxf(r.position.y - 54, 12))
+	var tag := UIStyle.slanted_rect(Rect2(tag_pos, Vector2(tw + 48, 44)), 12)
+	_fx.draw_colored_polygon(tag, Color(UIStyle.INK, 0.85))
+	UIStyle.draw_outline(_fx, tag, col, 1.5)
+	_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(tag_pos + Vector2(14, 10), Vector2(7, 24)), 5), accent)
+	_fx.draw_string(font, tag_pos + Vector2(30, 32), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIStyle.WHITE)
+
+
 func _draw_fx() -> void:
 	var vs := _fx.size
 	# Lo de delante: esquinas lima alrededor y una etiqueta con lo que se puede hacer.
-	if not _target.is_empty() and _target_rect.has_area():
-		var r := _target_rect.grow(14).intersection(Rect2(Vector2(8, 8), vs - Vector2(16, 70)))
-		var col := Color(UIStyle.LIME, 1.0 if _hover_target else 0.75)
-		var k := minf(36.0, minf(r.size.x, r.size.y) * 0.3)
-		var lw := 4.0 if _hover_target else 3.0
-		for corner in [[r.position, Vector2(1, 0), Vector2(0, 1)], [Vector2(r.end.x, r.position.y), Vector2(-1, 0), Vector2(0, 1)],
-				[r.end, Vector2(-1, 0), Vector2(0, -1)], [Vector2(r.position.x, r.end.y), Vector2(1, 0), Vector2(0, -1)]]:
-			_fx.draw_line(corner[0], corner[0] + corner[1] * k, col, lw)
-			_fx.draw_line(corner[0], corner[0] + corner[2] * k, col, lw)
-		var label := "%s  ·  %s" % [_target.verb, _target.name]
-		var font := UIStyle.FONT_BOLD_ITALIC
-		var fs := 26
-		var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var tag_pos := Vector2(clampf(r.get_center().x - tw * 0.5 - 24, 10, vs.x - tw - 60), maxf(r.position.y - 54, 12))
-		var tag := UIStyle.slanted_rect(Rect2(tag_pos, Vector2(tw + 48, 44)), 12)
-		_fx.draw_colored_polygon(tag, Color(UIStyle.INK, 0.85))
-		UIStyle.draw_outline(_fx, tag, col, 1.5)
+	# Junto a una puerta, la consola se marca en su lugar cuando el cursor está encima.
+	if _hover_console and _console_rect.has_area():
+		_draw_target(_console_rect, "Examinar  ·  Consola de acceso", true, UIStyle.LIME)
+	elif not _target.is_empty() and _target_rect.has_area():
 		var accent := UIStyle.RED if _target.kind == "enemy" else (DungeonScreen.PULSE_PINK if _target.kind == "secret" else UIStyle.LIME)
-		_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(tag_pos + Vector2(14, 10), Vector2(7, 24)), 5), accent)
-		_fx.draw_string(font, tag_pos + Vector2(30, 32), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIStyle.WHITE)
+		_draw_target(_target_rect, "%s  ·  %s" % [_target.verb, _target.name], _hover_target, accent)
 
 	# Brújula (arriba a la derecha del visor).
 	if _map:

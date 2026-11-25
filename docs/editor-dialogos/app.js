@@ -942,6 +942,8 @@
 				<div class="small muted">Menciona a… (si está presente, se da por aludido: reacciona como si le hablaras a él o ella). «•» = sale su nombre en el texto.</div>
 				<div class="chips">${mentionChips}</div>
 				<input type="hidden" name="mentions" value="${esc(sm.mentions.join("|"))}">
+				<div class="small muted">Solo sale si… (opcional; p. ej. Story.has_conflict("cena_mama"))</div>
+				<input class="input" name="cond" value="${esc(o.cond || "")}" placeholder="Siempre">
 				<div class="small muted">Al elegirla, ¿salta a otro diálogo?</div>
 				<select class="input" name="jump"><option value="">No, sigue aquí</option>${["END"].concat(allCues().map((c) => c.name)).map((c) => `<option ${c === o.jump ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>`;
 			return `<div class="fform" data-path="${key}" data-kind="option">${fields}${reactHTML(o.body, true)}${buttons(
@@ -1094,7 +1096,7 @@
 				}
 				const mentions = val("mentions").split("|").filter(Boolean);
 				if (mentions.length) tags.push(MENTION + "=" + mentions.join("|"));
-				text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), jump: val("jump") });
+				text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), cond: val("cond"), jump: val("jump") });
 			} else {
 				text = val("raw");
 			}

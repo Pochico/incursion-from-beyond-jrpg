@@ -12,7 +12,7 @@
 ~ intro
 if Story.phase("reunion") and not Story.flag("intro_tras_reunion")
 	$> Story.set_flag("intro_tras_reunion")
-	Te despiertas antes que la alarma. Por primera vez en semanas, no te pesa la cabeza.
+	Te despiertas antes que la alarma. Con la cabeza despejada y ganas de saber qué pone el grupo.
 	El grupo del móvil ha cambiado de nombre esta noche. Ahora se llama «Cloacas FC». Ha sido Kenji, claro.
 	Shiori ha mandado un documento de once páginas. Rika, un audio de cuatro minutos. Akane, un pulgar.
 	Ren: Vale. Esto va en serio.
@@ -26,12 +26,22 @@ elif Story.phase("incursion_1") and not Story.flag("intro_tras_incursion")
 elif Story.flag("dia_2")
 	Martes. La alarma suena y, por una vez, la apagas a la primera.
 	Te duelen las piernas de las camas elásticas. Es un dolor raro. Casi agradable.
-	En la nevera hay una nota de tu madre: «Turno doble. Hay lentejas. Come algo verde. Te quiero, pesado».
+	En la nevera hay una nota de tu madre\: «Turno doble. Hay lentejas. Come algo verde. Te quiero, pesado».
 	Ren: Algo verde... Las lentejas son marrones.
 elif Story.flag("dia_3")
 	Miércoles. Llueve fino, de ese que no moja pero se queda en el pelo.
 	Anoche soñaste con una pantalla que se encendía sola. No recuerdas qué ponía. Solo que era tu nombre.
 	Ren: Mitad de semana. Se puede.
+elif Story.flag("dia_5")
+	Viernes. La alarma suena y la apagas con una sonrisa. Hoy es viernes. Eso lo arregla todo.
+	En la entrada hay un billete de veinte con un pósit\: «Para el finde. PARA EL FINDE. Te quiero».
+	Ren: Para el finde. Entendido. El finde empieza esta tarde, ¿no? Técnicamente.
+elif Story.flag("dia_6")
+	Sábado. Sin alarma. Te despierta el olor a café y la radio de la cocina con un pasodoble.
+	Ren: Mamá está contenta. O ha perdido una apuesta. Una de dos.
+elif Story.flag("dia_7")
+	Domingo. Las campanas de la iglesia, el perro del vecino y un mensaje de Kenji a las nueve de la mañana que solo dice «buenos días».
+	Ren: ¿Kenji despierto un domingo a las nueve? Algo pasa.
 else
 	Despiertas un día más.
 	El mismo techo. La misma grieta junto a la lámpara. El mismo zumbido del frigorífico al otro lado de la pared.
@@ -46,8 +56,8 @@ if Story.phase("incursion_1")
 	Ren: Busqué «criatura plaza Leganés» y solo salen vídeos borrosos y gente diciendo que es marketing de una película.
 	Ren: Ojalá tuvieran razón.
 else
-	Ren: Aquí se me van las noches. Partidas a medias, vídeos que no recuerdo haber puesto, pestañas abiertas desde hace semanas.
-	Ren: Tendría que apagarla más a menudo. Mañana. Seguro que mañana.
+	Ren: Partidas a medias y cuarenta pestañas abiertas. Un día de estos la ordeno.
+	Ren: Hoy no. Hoy hay cosas que hacer.
 => END
 
 ~ examinar_cama
@@ -55,7 +65,7 @@ if Story.phase("incursion_1")
 	Ren: Sigo notando el temblor en las piernas. No sé si voy a poder dormir esta noche.
 else
 	Ren: Nunca la hago. Total, por la noche se va a deshacer igual.
-	Ren: Es el único sitio de la casa donde el día deja de pedirme cosas.
+	Ren: Lógica pura. Mamá no lo ve así.
 => END
 
 # Cama: siesta (pasa una franja del día) y dormir (hasta la mañana siguiente).
@@ -80,6 +90,7 @@ else
 Ren: Lo que no me atrevo a tirar: cómics de cuando era crío, cables «por si acaso» y cajas que no he abierto desde la mudanza.
 % Ren: Y la planta sigue viva. No sé cómo; yo siempre me olvido de regarla.
 % Ren: Hay una foto de Kenji y yo con diez años, disfrazados de robots con cajas de cartón. Él sigue diciendo que ganamos el concurso.
+% Ren: La gorra del Lega de papá. Todavía me queda grande. Algún día me valdrá.
 => END
 
 # --- Primera incursión --------------------------------------------------------------
@@ -123,7 +134,7 @@ Todo se vuelve negro. Cuando abres los ojos, la figura ya no está. Solo queda u
 ~ generico_hablar
 # cuando: hablar
 {{Story.speaker}}: ¿Qué tal, Ren?
-Ren: Tirando.
+Ren: Aquí, dando guerra.
 => END
 
 ~ generico_ligar
@@ -218,4 +229,89 @@ Pasáis un buen rato en {{Story.date_place()}}. Habláis de todo y de nada.
 ~ generico_deja_a_ren
 # cuando: deja_a_ren
 {{Story.speaker}}: Lo siento, Ren. Lo dejamos.
+=> END
+
+# --- Planes (respaldo para quien no tenga sus propias respuestas; ver Invites) -------
+
+~ movil_plan
+if Story.plan_reply() == "si"
+	Ren: Me apunto.
+	{{Story.speaker}}: ¡Genial!
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}.
+	{{Story.speaker}}: Vale, otro día.
+else
+	Ren: Hoy no puedo.
+	{{Story.speaker}}: Vale.
+=> END
+
+~ movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento mucho.
+	{{Story.speaker}}: Vale. Gracias por decirlo.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Tenía que haberte avisado.
+	{{Story.speaker}}: Pues sí.
+else
+	Ren: Se me olvidó.
+	{{Story.speaker}}: Ya.
+=> END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+# quedar: respaldo de <id>_quedar (qué contesta cada uno). quedada_<actividad>: cómo
+# empieza el plan (los invitados están en Story.other_guests()); después cada
+# invitado dice lo suyo en <id>_quedada (o quedada_generica).
+
+~ quedar
+Ren: ¿Te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	{{Story.speaker}}: ¡Vale! Allí nos vemos.
+elif Story.plan_reply() == "ocupado"
+	{{Story.speaker}}: No puedo, ya tengo plan: {{Story.other_plan_title()}}.
+elif Story.plan_reply() == "ya"
+	{{Story.speaker}}: Que sí, que ya me lo has dicho.
+else
+	{{Story.speaker}}: Uf, hoy no me apetece. Otro día.
+=> END
+
+~ quedada_cine
+Cola del cine de Parquesur. Huele a palomitas y a moqueta. Has quedado con {{Story.other_guests()}}.
+Echan una de miedo y una de dibujos. Gana la de miedo por votación. La de dibujos tenía mejores críticas.
+=> END
+
+~ quedada_recreativas
+Recreativas de Parquesur. Luces, ruido y el chico de siempre jugando al de baile como si le fuera la vida. Has quedado con {{Story.other_guests()}}.
+=> END
+
+~ quedada_westlake
+Westlake. La tarima, el agua quieta y una terraza con sillas que no pegan entre sí. Has quedado con {{Story.other_guests()}}.
+Pedís algo. Os lo traen mal. Da igual.
+=> END
+
+~ quedada_bowls
+Bowls, junto a la Ribera. El hormigón está seco por una vez. Has quedado con {{Story.other_guests()}}.
+=> END
+
+~ quedada_voley
+Colinas. La red atada entre los dos árboles de siempre. El perro que no es de nadie ya os está esperando. Has quedado con {{Story.other_guests()}}.
+=> END
+
+~ quedada_biblioteca
+Biblioteca del campus. Silencio, calefacción a tope y un señor dormido encima de un libro de derecho. Has quedado con {{Story.other_guests()}}.
+=> END
+
+~ quedada_generica
+{{Story.speaker}}: Me alegro de que me hayas llamado. Ha estado bien.
+=> END
+
+# Reproche en persona si Ren dio plantón y no contestó al mensaje (Invites.reproach_cue).
+~ hablar_plantado
+if Story.plan_is_ren()
+	{{Story.speaker}}: Me invitaste tú a {{Story.plan_title()}}. Y no viniste.
+else
+	{{Story.speaker}}: Dijiste que vendrías a {{Story.plan_title()}}.
+- Lo siento. No volverá a pasar. [#franco, #conciliador]
+	{{Story.speaker}}: Vale. Eso espero.
+- Se me complicó. [#evasivo]
+	{{Story.speaker}}: Ya.
 => END

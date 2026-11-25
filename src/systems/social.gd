@@ -300,19 +300,26 @@ static func _cmp(a: float, op: String, b: float) -> bool:
 
 
 ## Cambia lo que `from` siente por `to`. Valores fuera de rango se recortan.
-static func change(from: String, to: String, deltas: Dictionary, weight: float = 1.0) -> void:
+## `cause`: qué lo provoca; si el cambio es grave queda como enfado en el registro
+## (RelationEvents.check_grudge).
+static func change(from: String, to: String, deltas: Dictionary, weight: float = 1.0, cause: String = "") -> void:
 	if deltas.is_empty() or weight == 0.0:
 		return
 	if not GameState.relations.has(from):
 		GameState.relations[from] = {}
 	var r := relation(from, to)
+	var delta := {}
 	for dim: String in deltas:
 		if not DIMENSIONS.has(dim):
 			push_warning("Social: dimensión desconocida '%s'" % dim)
 			continue
 		var range_: Vector2 = DIMENSIONS[dim]
+		var before: float = r[dim]
 		r[dim] = snappedf(clampf(r[dim] + deltas[dim] * weight, range_.x, range_.y), 0.01)
+		if r[dim] != before:
+			delta[dim] = r[dim] - before
 	GameState.relations[from][to] = r
+	RelationEvents.check_grudge(from, to, delta, cause)
 
 
 # --- Internos ----------------------------------------------------------------------
@@ -334,7 +341,7 @@ static func _apply(who: String, deltas: Dictionary, weight: float, reason: Strin
 		if negative:
 			d *= (1.0 + sensitivity / 100.0 * k) if bad else (1.0 - 0.5 * k)
 		final[dim] = d
-	change(who, CharacterDB.PROTAGONIST, final, weight)
+	change(who, CharacterDB.PROTAGONIST, final, weight, reason)
 	if OS.is_debug_build():
 		print("[Social] %s → ren (%s, %s %d, ×%.2f): %s" % [who, reason, m.id, m.intensity, weight, final])
 	var applied := {}

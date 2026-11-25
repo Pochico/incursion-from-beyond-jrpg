@@ -372,7 +372,8 @@ Akane: Esta tarde estoy en las recres. Pásate si quieres. O no. Me da igual. P�
 => END
 
 ~ akane_hablar_plantada_recreativas
-# cuando: hablar, flag plan_invitado:recreativas, no flag plan_hecho:recreativas, no flag dia_2, no flag dia_3, una vez
+# cuando: hablar, flag reproche:recreativas, flag plan_plantado:recreativas, no flag plan_hecho:recreativas, una vez
+$> Story.set_flag("reproche:recreativas", false)
 Akane: Te guardé la ficha. La de la primera partida gratis. Sigue en el mostrador. Cogiendo polvo.
 - Lo siento, me lié. [#conciliador]
 	Akane: Ya. Todos os liais. La ficha no caduca. Yo sí me canso.
@@ -576,4 +577,126 @@ else
 	$> Story.change("akane", "resentimiento", -3)
 - ¿Y {{Story.snitch("akane")}} qué sabrá? [#provocador]
 	$> Story.change("akane", "confianza", -3)
+=> END
+
+# --- Planes: invitaciones, respuestas por el móvil y plantones (Invites) -----------
+
+~ akane_hablar_invita_concierto
+# cuando: hablar, flag por_proponer:concierto_akane, flag dia_4, una vez
+Akane: Eh. Esta noche tocamos en el garito de debajo de la estación de Zarzaquemada. A las diez.
+Akane: No te estoy invitando. Te estoy informando.
+- Allí estaré. [#decidido, #cariñoso]
+	$> Story.plan_answer("concierto_akane", "si")
+	Akane: Ya. Eso dicen todos. ...Ponte atrás. En el pogo no hay amigos.
+- Ya he quedado para {{Story.conflict_title("concierto_akane")}}. [#franco] [if Story.has_conflict("concierto_akane") /]
+	$> Story.plan_answer("concierto_akane", "otro")
+	Akane: Vale. Me da igual. ...Tocamos cada dos semanas, por si te interesa.
+- No es lo mío, Akane. [#franco, #reservado]
+	$> Story.plan_answer("concierto_akane", "no")
+	Akane: Normal. Tampoco es lo nuestro. Lo hacemos igual.
+=> END
+
+~ akane_movil_plan
+if Story.plan_reply() == "si"
+	Ren: Allí estaré.
+	Akane: Vale.
+	Akane: Que no me importa, ¿eh? Pero vale.
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}. Otra vez será.
+	Akane: Ya. Otra vez.
+else
+	Ren: Hoy no puedo.
+	Akane: Ok.
+=> END
+
+~ akane_movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento, Akane. Tenía que haber ido.
+	Akane: Ya.
+	Akane: Bueno. Por lo menos no me pones una excusa de mierda. Eso te lo reconozco.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Debí avisarte.
+	Akane: Pues sí. Que no soy adivina.
+else
+	Ren: Se me olvidó.
+	Akane: Vale. No pasa nada. A mí también se me olvidan cosas. Como tu número, por ejemplo.
+=> END
+
+~ akane_hablar_plantado_concierto
+# cuando: hablar, flag reproche:concierto_akane, flag plan_plantado:concierto_akane, no flag plan_hecho:concierto_akane, una vez
+$> Story.set_flag("reproche:concierto_akane", false)
+Akane: Mira quién viene.
+Akane: Te busqué entre la gente. Tres canciones. Luego dejé de buscar. No es que me importe.
+if Story.went_instead("concierto_akane") != ""
+	Akane: Ya sé que estabas en {{Story.went_instead("concierto_akane")}}. Me parece bien. Lo que me jode es que dijeras que sí.
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	Akane: ...Vale. Tocamos dentro de dos semanas. Esta vez no digas que sí si no vas a venir.
+	$> Story.change("akane", "resentimiento", -2)
+- Bueno, tampoco es para tanto. [#provocador]
+	Akane: Para ti no. Ya me ha quedado claro.
+	$> Story.change("akane", "confianza", -2)
+=> END
+
+~ akane_hablar_tras_concierto
+# cuando: hablar, flag plan_hecho:concierto_akane, una vez, no hoy >= 2
+Akane: Mi abuela quiere conocerte.
+Akane: Le dije que vino «un amigo» al concierto. Me miró y dijo: «Tú no tienes amigos, tú tienes gente que aguantas».
+Akane: Así que ahora quiere ver al que aguanto. El domingo hace cocido. No es una invitación. Es...
+- Información. Ya lo sé. [#bromista]
+	Akane: (Casi sonríe.) Eres idiota.
+	$> Story.change("akane", "afecto", 2)
+	$> Story.set_flag("akane_cocido_abuela")
+- Allí estaré. Con postre. [#cariñoso, #decidido]
+	Akane: Sin postre. Mi abuela se ofende si le llevas postre. Dice que en su casa sobra.
+	$> Story.set_flag("akane_cocido_abuela")
+	$> Story.change("akane", "confianza", 2)
+=> END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ akane_quedar
+Ren: Akane, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Akane: ...Vale.
+	Akane: No pongas esa cara. He dicho vale, no te he pedido matrimonio.
+elif Story.plan_reply() == "ocupado"
+	Akane: No puedo. Tengo {{Story.other_plan_title()}}. Otro día. Si eso.
+elif Story.plan_reply() == "ya"
+	Akane: Ya me lo has dicho. No soy tonta.
+else
+	Akane: Paso. No es lo mío.
+=> END
+
+~ akane_quedada
+if Story.activity() == "recreativas"
+	Akane: En mi día libre, en mi curro. Qué triste soy. Venga, a la de lucha.
+	Te gana cuatro seguidas. La quinta la gana el chico de siempre, que se ha metido sin pedir permiso.
+elif Story.activity() == "bowls"
+	Akane baja la rampa grande sin frenar. Luego la tuya, por si acaso. Luego otra vez la grande.
+	Akane: Venga, ahora tú. Te enseño a caerte otra vez, que se te ha olvidado.
+elif Story.activity() == "cine"
+	Akane: Si alguien habla durante la peli, le tiro las palomitas. Te lo digo para que no seas tú.
+else
+	Akane: Esto no está mal. Lo digo una vez. No me hagas repetirlo.
+- Me ha encantado verte así de tranquila. [#cariñoso]
+	Akane: ¿Tranquila? Yo no estoy tranquila nunca. ...Bueno. Hoy un poco.
+	$> Story.change("akane", "afecto", 2)
+- Eres una bestia. [#bromista]
+	Akane: Gracias. Es lo más bonito que me han dicho esta semana.
+	$> Story.change("akane", "confianza", 1)
+=> END
+
+~ akane_hablar_plantado
+if Story.plan_is_ren()
+	Akane: Me invitaste tú a {{Story.plan_title()}}. Y me dejaste tirada.
+else
+	Akane: Lo de {{Story.plan_title()}}. Dijiste que sí.
+if Story.other_plan_title() != ""
+	Akane: Ya sé que estabas en {{Story.other_plan_title()}}. Me la suda dónde estuvieras. Me jode que dijeras que sí.
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	Akane: Vale. Una. Te dejo pasar una.
+	$> Story.change("akane", "resentimiento", -2)
+- Relájate un poco. [#provocador]
+	Akane: Relájate tú. Lejos de mí.
+	$> Story.change("akane", "confianza", -2)
 => END

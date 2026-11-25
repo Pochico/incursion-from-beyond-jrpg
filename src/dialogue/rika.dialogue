@@ -10,11 +10,11 @@
 
 ~ rika_hablar_primera
 # cuando: hablar, una vez, fase = rutina
-Rika: ¡Anda, Ren! ¿Tú fuera de clase y a la luz del día? Pensaba que te recargabas en un enchufe hasta el lunes.
-- Me han dejado salir por buen comportamiento. [#bromista, #desenfadado]
-	Rika: ¡Jajaja! Mira, si hasta tienes sentido del humor. Todo el curso sentado dos filas detrás de mí y yo sin enterarme.
+Rika: ¡Anda, Ren! ¿Qué haces tú por aquí?
+- Buscar a alguien que me invite a algo. [#bromista, #desenfadado]
+	Rika: ¡Jajaja! Qué morro tienes. Me caes bien, ¿eh?
 - Iba a casa. [#reservado]
-	Rika: Qué hablador. Vale, vale, no te entretengo... Bueno, sí. Un poquito.
+	Rika: Vale, vale, no te entretengo... Bueno, sí. Un poquito.
 - ¿Y tú qué haces aquí sola? [#curioso, #protector]
 	Rika: ¿Sola? Cielo, yo nunca estoy sola. Estoy esperando, que es distinto.
 Rika: Mi amiga llega tardísimo, como siempre. Así que me haces compañía un ratito.
@@ -48,11 +48,11 @@ Rika: Venga, ya te dejo. Pero la próxima vez me invitas a algo. Una Pochicola, 
 	- ¿Y no te molestan para escribir? [#curioso, #pragmático]
 		Rika: Uf, muchísimo. Por eso escribo poco. Es una decisión de estilo de vida.
 %
-	Rika: ¿Sabes qué? El sábado hay una fiesta en casa de una de mi grupo. Si vienes, te presento a gente. Gente con color, no como tú.
+	Rika: ¿Sabes qué? El sábado hay una fiesta en casa de una de mi grupo. Si vienes, te presento a gente maja.
 	- Igual me paso. [#dubitativo]
 		Rika: «Igual» no es una respuesta. Te lo vuelvo a preguntar el viernes.
 	- No me van mucho las fiestas. [#reservado, #franco]
-		Rika: Ya lo sé, por eso te invito. Alguien tiene que sacarte de la cueva.
+		Rika: Porque no has ido a una mía. Las mías son otra cosa.
 	- Solo si vienes tú conmigo. [#coqueto, #atrevido]
 		Rika: ...Vaya, vaya. Pues claro que voy, es la fiesta de mi amiga. Pero me lo apunto.
 => END
@@ -308,7 +308,7 @@ $> Story.set_mood("rika", "ansioso", 65)
 # cuando: movil
 %
 	Ren: Hola, Rika.
-	Rika: ¡Ren! Qué milagro. Pensaba que tu móvil solo servía para poner la alarma.
+	Rika: ¡Ren! ¿Qué pasa, cielo?
 %
 	Ren: ¿Qué tal?
 	Rika: Bien, probándome tres outfits para no ir a ningún sitio. Lo normal.
@@ -322,7 +322,7 @@ $> Story.set_mood("rika", "ansioso", 65)
 # cuando: movil, veces >= 2
 %
 	Ren: Ey, otra vez yo.
-	Rika: Jajaja, ¿hoy estás hablador o qué? Me gusta esta versión de ti.
+	Rika: Jajaja, ¿hoy estás hablador o qué? Me gusta.
 %
 	Ren: ¿Sigues por ahí?
 	Rika: Te he leído, eh. No me hagas spam, que me lo creo.
@@ -382,7 +382,7 @@ Rika: Ren, me duelen partes del cuerpo que no sabía que tenía. Las camas elás
 	Rika: Divertidísimo. Lo repetiría mañana. Pero hoy no me pidas que suba escaleras.
 - Yo estoy perfectamente. [#provocador]
 	Rika: Mentira. Te he visto bajar del autobús. Has bajado como mi abuelo.
-Rika: Por cierto, gracias por venir ayer. Kenji decía que no vendrías. Yo aposté que sí. Me debe un batido.
+Rika: Por cierto, Kenji dice que el que más alto saltó fue él. Mentira. Fuiste tú. Lo tengo grabado.
 => END
 
 ~ rika_hablar_miercoles
@@ -399,7 +399,8 @@ Rika: Oye, una cosa. ¿Tú duermes bien? Porque yo llevo dos noches soñando con
 => END
 
 ~ rika_hablar_plantado_voley
-# cuando: hablar, flag plan_invitado:voley_colinas, no flag plan_hecho:voley_colinas, no flag dia_2, no flag dia_3, una vez
+# cuando: hablar, flag reproche:voley_colinas, flag plan_plantado:voley_colinas, no flag plan_hecho:voley_colinas, una vez
+$> Story.set_flag("reproche:voley_colinas", false)
 Rika: El miércoles jugamos dos contra dos. Yuna arbitró. Kenji ganó. ¿Sabes lo que es perder contra Kenji, Ren? ¿Lo sabes?
 - Lo siento, de verdad. [#conciliador]
 	Rika: Vale, te perdono. Pero el próximo miércoles eres mío. Bueno, de mi equipo. Ya me entiendes.
@@ -468,7 +469,7 @@ if Story.partner("rika") == "ren"
 	Rika: ¿Una cita con tu novia? Cielo, eso no se pregunta, se reserva.
 	Rika: {{Story.date_place()}}. Ponte algo que no sea esa sudadera.
 else
-	Rika: ¿Me estás pidiendo una cita? ¿Tú? ¿Ren el ermitaño?
+	Rika: ¿Me estás pidiendo una cita? ¿Tú? ¿A mí? ¿Ahora?
 	Rika: (Sonríe con todos los dientes.) Sí. Obvio que sí. {{Story.date_place()}}. No llegues tarde, que me pongo de mal humor y estoy menos mona.
 => END
 
@@ -604,4 +605,150 @@ else
 	$> Story.change("rika", "resentimiento", -3)
 - ¿Y {{Story.snitch("rika")}} qué sabrá? [#provocador]
 	$> Story.change("rika", "confianza", -3)
+=> END
+
+# --- Planes: respuestas por el móvil y plantones (Invites) --------------------------
+
+~ rika_movil_plan
+if Story.plan_reply() == "si"
+	Ren: Cuenta conmigo.
+	Rika: ¡Sí! Eres un sol. Te quiero. Bueno, ya sabes cómo te quiero.
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}, Rika. Lo siento.
+	Rika: Jo. Vale. Pero que conste que me lo apunto. Con boli rojo.
+else
+	Ren: Hoy no puedo, Rika.
+	Rika: Ugh. Vale. Pero la próxima no te escapas, cielo.
+=> END
+
+~ rika_movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento muchísimo, Rika. De verdad.
+	Rika: Vale. Me alegro de que me lo digas tú y no me pongas excusas raras.
+	Rika: Pero me debes una. Una gorda.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Tenía que haberte avisado.
+	Rika: Pues sí, cielo. Un mensaje. Un emoji, aunque sea. Hasta el pulgar ese que odio.
+else
+	Ren: Se me olvidó, perdona.
+	Rika: ¿Que se te olvidó? Ren. Yo no me olvido de la gente. Que lo sepas.
+=> END
+
+~ rika_hablar_plantado_clase_martes
+# cuando: hablar, flag reproche:clase_martes, flag plan_plantado:clase_martes, no flag plan_hecho:clase_martes, una vez
+$> Story.set_flag("reproche:clase_martes", false)
+Rika: Me sacó a la pizarra. A mí. Por tu culpa.
+Rika: Me quedé ahí plantada con la tiza diez minutos. Shiori me soplaba con la mirada. Con la MIRADA, Ren.
+- Lo siento. Te debo unos deberes. [#conciliador, #bromista]
+	Rika: Me debes todos los deberes de aquí a junio. Pero vale.
+	$> Story.change("rika", "resentimiento", -2)
+- Pues seguro que lo hiciste genial. [#cariñoso]
+	Rika: Lo hice fatal. Pero gracias por decirlo. Sigo enfadada, ¿eh?
+=> END
+
+~ rika_hablar_plantado_clase_jueves
+# cuando: hablar, flag reproche:clase_jueves, flag plan_plantado:clase_jueves, no flag plan_hecho:clase_jueves, una vez
+$> Story.set_flag("reproche:clase_jueves", false)
+Rika: Me senté con Shiori. Por tu culpa. Me corrigió cómo cojo el boli, cómo subrayo y cómo respiro.
+Rika: ¿Tú sabes que se respira mal? Yo no lo sabía. Ahora lo sé. Gracias.
+- Lo siento, de verdad. [#franco, #conciliador]
+	Rika: Vale. Te perdono. Porque eres tú. Y porque Shiori me ha dicho que respiro mejor que tú.
+	$> Story.change("rika", "resentimiento", -2)
+- Igual te viene bien respirar mejor. [#bromista, #provocador]
+	Rika: ¡Ren!
+	$> Story.change("rika", "afecto", -1)
+=> END
+
+~ rika_hablar_plantado_tiendas
+# cuando: hablar, flag reproche:tiendas_rika, flag plan_plantado:tiendas_rika, no flag plan_hecho:tiendas_rika, una vez
+$> Story.set_flag("reproche:tiendas_rika", false)
+Rika: Hola. Llevo el vestido. El que me compré sola. Sin opinión sincera.
+Rika: Te esperé en la puerta veinte minutos. Me miraba el de seguridad.
+if Story.went_instead("tiendas_rika") != ""
+	Rika: Y luego me entero de que estabas en {{Story.went_instead("tiendas_rika")}}. Podías habérmelo dicho, cielo. Lo habría entendido.
+- Lo siento. Y te queda muy bien. [#franco, #cariñoso]
+	Rika: ...¿De verdad? ¿Sincero?
+	Ren: Sincero.
+	Rika: Vale. Medio perdonado.
+	$> Story.change("rika", "resentimiento", -2)
+- Se me complicó la tarde. [#evasivo]
+	Rika: Ya. A todos se nos complica la tarde. Algunos avisamos.
+	$> Story.change("rika", "confianza", -1)
+=> END
+
+~ rika_hablar_tras_tiendas
+# cuando: hablar, flag plan_hecho:tiendas_rika, una vez, no hoy >= 2
+Rika: ¿Sabes qué? Le conté a mi madre lo del salón de uñas. Lo de verdad, no en broma.
+Rika: No dijo nada durante un rato. Y luego me preguntó cuánto cuesta un local.
+Rika: No es un sí. Pero no es un «Rika, no digas tonterías». Es nuevo.
+- Eso es un sí disfrazado. [#idealista, #cariñoso]
+	Rika: ¿Tú crees? ...Ay. Vale. Me voy a ilusionar. Si sale mal, la culpa es tuya.
+	$> Story.change("rika", "afecto", 2)
+- Te haré de cliente. Uñas de dinosaurio. [#bromista]
+	Rika: Hecho. Serás mi primer cliente. Y el más raro.
+=> END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ rika_quedar
+Ren: Rika, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Rika: ¿Me estás proponiendo un plan TÚ? Ay. Sí. Obvio que sí.
+	if Story.other_guests("rika") != ""
+		Rika: ¿Viene {{Story.other_guests("rika")}}? Pues me arreglo un poco menos. O más. Ya veré.
+elif Story.plan_reply() == "ocupado"
+	Rika: Jo, no puedo, cielo. Ya he quedado para {{Story.other_plan_title()}}. Pero me lo vuelves a pedir, ¿eh?
+elif Story.plan_reply() == "ya"
+	Rika: Que sí, que ya me lo dijiste. Me lo he apuntado en la mano. Con boli.
+else
+	Rika: Uf, hoy no, cielo. No me apetece nada. No es por ti. Bueno, un poco por el plan.
+=> END
+
+~ rika_quedada
+if Story.activity() == "cine"
+	Rika: He traído chuches de casa. Las del cine valen un riñón. Y el otro riñón lo quiero para unas botas.
+	En la parte de miedo, Rika te aprieta el brazo tan fuerte que te deja marca.
+elif Story.activity() == "voley"
+	Rika: ¡Revancha! Esta vez gano yo. El perro está de mi parte, lo sé.
+	El perro se lleva la pelota a los dos minutos. Rika lo considera una victoria.
+elif Story.activity() == "biblioteca"
+	Rika: Vale, estudio. Pero si me duermo, me despiertas con cariño. Nada de tirarme el estuche.
+	A los veinte minutos te está enseñando vídeos de uñas por debajo de la mesa.
+else
+	Rika: ¿Sabes qué me gusta de quedar contigo? Que no tengo que estar hablando todo el rato. Bueno, hablo igual. Pero podría no hacerlo.
+- Me lo he pasado genial. [#cariñoso]
+	Rika: ¿Verdad? Yo también. Apúntatelo, que luego se te olvida.
+	$> Story.change("rika", "afecto", 2)
+- Eres la que más habla del mundo. [#bromista, #provocador]
+	Rika: ¡Y la que mejor! No me cambies el tema.
+	$> Story.change("rika", "confianza", 1)
+=> END
+
+~ rika_hablar_plantado
+if Story.plan_is_ren()
+	Rika: Cielo. Me invitaste tú a {{Story.plan_title()}}. Tú. Me arreglé y todo.
+else
+	Rika: Lo de {{Story.plan_title()}}. Dijiste que venías. Y yo me lo creí.
+if Story.other_plan_title() != ""
+	Rika: Y estabas en {{Story.other_plan_title()}}. Me lo han contado. Leganés es un pañuelo, Ren.
+- Lo siento muchísimo. [#franco, #conciliador]
+	Rika: Vale. Medio perdonado. La otra mitad, con un bubble tea.
+	$> Story.change("rika", "resentimiento", -2)
+- No es para tanto. [#provocador]
+	Rika: Para ti no. Para mí sí. Esa es la diferencia, cielo.
+	$> Story.change("rika", "afecto", -2)
+=> END
+
+~ rika_hablar_invita_fiesta
+# cuando: hablar, flag por_proponer:fiesta_rika, flag dia_6, una vez
+Rika: ¡Ren! Esta noche, fiesta en la terraza de Westlake. Una de mi grupo. Vienes.
+- Vale, voy. [#desenfadado]
+	$> Story.plan_answer("fiesta_rika", "si")
+	Rika: ¡Bien! Ponte la sudadera limpia, por lo menos.
+- Ya he quedado para {{Story.conflict_title("fiesta_rika")}}. [#franco] [if Story.has_conflict("fiesta_rika") /]
+	$> Story.plan_answer("fiesta_rika", "otro")
+	Rika: Jo. Pues pásate después, que acaban tardísimo.
+- Las fiestas no me van. [#reservado]
+	$> Story.plan_answer("fiesta_rika", "no")
+	Rika: Vale. Pero que sepas que te lo pierdes.
 => END

@@ -89,7 +89,7 @@ func value(who: String, dim: String) -> float:
 
 ## Cambio de guion en lo que `who` siente por Ren: $> Story.change("rika", "confianza", 3)
 func change(who: String, dim: String, amount: float) -> void:
-	Social.change(who, CharacterDB.PROTAGONIST, {dim: amount})
+	Social.change(who, CharacterDB.PROTAGONIST, {dim: amount}, 1.0, "guion")
 
 
 func set_mood(who: String, mood_id: String, intensity: float = 50.0) -> void:
@@ -179,11 +179,46 @@ func become_partner(who: String) -> void:
 ## Ren deja a su pareja.
 func break_up_with(who: String) -> void:
 	if Romance.ren_partner() == who:
-		Romance.break_up(CharacterDB.PROTAGONIST, who, "ren_deja")
+		Romance.break_up(CharacterDB.PROTAGONIST, who, "ren_deja", Social.present())
+
+
+
+# --- Sucesos de relación (RelationEvents) ---
+# En las reglas: `sabe ruptura_kenji_yuna`, `sabe pareja_ren_yuna`, `sabe enfado_yuna_ren`,
+# `flag enfadado_yuna` (enfado grave con Ren que sigue en pie).
+
+## ¿Sigue `who` enfadado de verdad con Ren (o con `to`)?
+func angry(who: String, to: String = CharacterDB.PROTAGONIST) -> bool:
+	return RelationEvents.angry(who, to)
+
+
+## Qué provocó el enfado que sigue en pie ("" si no hay): infiel, mentira_delatada...
+func grudge_cause(who: String, to: String = CharacterDB.PROTAGONIST) -> String:
+	return str(RelationEvents.grudge(who, to).get("data", {}).get("cause", ""))
+
+
+## Hacen las paces: $> Story.reconcile("yuna")
+func reconcile(who: String, to: String = CharacterDB.PROTAGONIST) -> void:
+	RelationEvents.reconcile(who, to)
+
+
+## ¿Sabe `who` que `a` y `b` lo han dejado (lo último entre ellos)?
+func knows_breakup(who: String, a: String, b: String) -> bool:
+	return RelationEvents.knows_last(who, "breakup", a, b)
+
+
+## ¿Sabe `who` que `a` y `b` salen juntos (lo último entre ellos)?
+func knows_couple(who: String, a: String, b: String) -> bool:
+	return RelationEvents.knows_last(who, "couple", a, b)
 
 
 func day() -> int:
 	return GameState.day_number()
+
+
+## Franja del día: "manana", "dia", "tarde" o "noche".
+func franja() -> String:
+	return GameState.slot_id()
 
 
 func enemy_name() -> String:
@@ -192,6 +227,89 @@ func enemy_name() -> String:
 
 func seen(cue: String) -> bool:
 	return bool(GameState.get_flag(SEEN_PREFIX + cue))
+
+
+# --- Planes e invitaciones (Invites) ------------------------------------------------------
+# En una invitación en persona:
+#   - Me apunto. [#cariñoso]
+#   	$> Story.plan_answer("lago_yuna", "si")
+#   - Ya he quedado para {{Story.conflict_title("lago_yuna")}}. [if Story.has_conflict("lago_yuna") /]
+#   	$> Story.plan_answer("lago_yuna", "otro")
+# En las respuestas del móvil (`<id>_movil_plan`, `_movil_plantado`):
+#   if Story.plan_reply() == "si"   /   {{Story.plan_title()}}   /   {{Story.other_plan_title()}}
+
+func plan_answer(plan_id: String, kind: String) -> void:
+	var conflicts := Invites.conflicts(plan_id)
+	Invites.answer(plan_id, kind, conflicts[0] if kind == "otro" and not conflicts.is_empty() else "")
+
+
+## ¿Ha aceptado Ren otro plan que coincide de hora con `plan_id`?
+func has_conflict(plan_id: String) -> bool:
+	return not Invites.conflicts(plan_id).is_empty()
+
+
+func conflict_title(plan_id: String) -> String:
+	var c := Invites.conflicts(plan_id)
+	return lower_first(ChapterDB.plan(c[0]).title) if not c.is_empty() else ""
+
+
+func said_yes(plan_id: String) -> bool:
+	return Invites.said_yes(plan_id)
+
+
+## Respuesta que se está contando en el móvil ("si", "no", "otro", "perdon", "olvido").
+func plan_reply() -> String:
+	return Invites.current_reply
+
+
+## Plan de la respuesta en curso (o `plan_id`), en minúscula para meterlo en una frase.
+func plan_title(plan_id: String = "") -> String:
+	var id := plan_id if plan_id != "" else Invites.current_plan
+	return lower_first(ChapterDB.plan(id).get("title", ""))
+
+
+func other_plan_title() -> String:
+	return lower_first(ChapterDB.plan(Invites.other_plan).get("title", ""))
+
+
+## ¿Hizo Ren otro plan a la misma hora que `plan_id`? (para el reproche en persona)
+func went_instead(plan_id: String) -> String:
+	var id := Invites.done_instead(plan_id)
+	return lower_first(ChapterDB.plan(id).get("title", "")) if id != "" else ""
+
+
+## «Comer en Westlake con Yuna» → «comer en Westlake con Yuna» (para meterlo en una frase).
+func lower_first(text: String) -> String:
+	return text.left(1).to_lower() + text.substr(1)
+
+
+## Planes que propone Ren (Invites.ren_invite), en `<id>_quedar` y `<id>_quedada`:
+##   if Story.plan_reply() == "si"  ("si" | "no" | "ocupado" | "ya")
+##   ¿Te vienes a {{Story.plan_title()}} {{Story.plan_when()}}?
+func plan_when() -> String:
+	var p := ChapterDB.plan(Invites.current_plan)
+	if p.is_empty() or p.slots.is_empty():
+		return ""
+	return Invites.when_phrase(int(p.day), p.slots[0])
+
+
+## Actividad del plan de Ren en curso ("cine", "westlake"...), o "".
+func activity() -> String:
+	return ChapterDB.plan(Invites.current_plan).get("activity", "")
+
+
+## Quién más ha dicho que sí al plan de Ren en curso («Kenji y Rika»), sin contar a `who`.
+func other_guests(who: String = "") -> String:
+	var names: Array = ChapterDB.plan(Invites.current_plan).get("cast", []).filter(func(w: String) -> bool: return w != who) \
+			.map(func(w: String) -> String: return CharacterDB.display_name(w))
+	if names.size() <= 1:
+		return "".join(names)
+	return ", ".join(names.slice(0, -1)) + " y " + names.back()
+
+
+## ¿El plan en curso lo propuso Ren? (para el reproche: «¡Me invitaste tú!»)
+func plan_is_ren() -> bool:
+	return Invites.is_ren(Invites.current_plan)
 
 
 # --- Selector ---------------------------------------------------------------------------
@@ -252,6 +370,10 @@ func phase_index() -> int:
 
 
 ## Recurso de un cue concreto (para escenas de guion que no pasan por el selector).
+func has_cue(cue_name: String) -> bool:
+	return _cue_files.has(cue_name)
+
+
 func cue(cue_name: String) -> Dictionary:
 	if not _cue_files.has(cue_name):
 		push_error("Story: cue desconocido '%s'" % cue_name)

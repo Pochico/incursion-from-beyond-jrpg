@@ -101,6 +101,9 @@ func is_active() -> bool:
 func play(entry: Dictionary, npc_id: String = "", with_protagonist: bool = true,
 		keep_open: bool = false, stop_after: int = -1) -> void:
 	_skipping = false
+	# Para las frases genéricas de general.dialogue («{{Story.speaker}}: ...»).
+	if npc_id != "":
+		Story.speaker = CharacterDB.display_name(npc_id)
 	_choices.visible = false
 	if _open:
 		await _swap_portraits(npc_id, with_protagonist)

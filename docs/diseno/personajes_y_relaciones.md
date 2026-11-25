@@ -83,7 +83,7 @@ Momentos:
 | `una vez` | No se ha visto este cue nunca. |
 | `visto CUE` | Ya se vio ese cue. |
 | `sabe EVENTO` | El personaje conoce ese acontecimiento. |
-| `flag NOMBRE` | El indicador está activo. `flag dia_N` es verdad si hoy es el día N de la partida (`dia_2` = martes); no se guarda. Planes (`ChapterDB.PLANS`): `flag plan_invitado:ID` (te lo propusieron) y `flag plan_hecho:ID` (fuiste). |
+| `flag NOMBRE` | El indicador está activo. `flag dia_N` es verdad si hoy es el día N de la partida (`dia_2` = martes); no se guarda. Planes (`ChapterDB.PLANS`, `Invites`): `flag plan_invitado:ID` (te lo propusieron), `flag por_proponer:ID` (te lo va a proponer en persona), `flag plan_si:ID` / `plan_no:ID` / `plan_otro:ID` (lo que contestaste), `flag plan_hecho:ID` (fuiste), `flag plan_plantado:ID` (dijiste que sí y no fuiste) y `flag reproche:ID` (reproche sin contestar). |
 | `presente ID` | Ese personaje está en la escena. |
 | `fase >= X` | Punto de la historia (`=`, `!=`, `<`, `>`, `<=`, `>=`): `rutina` → `incursion_1` (primera incursión) → `reunion` (reunión del grupo en las Cloacas). |
 | `tramo >= X` | Relación con Ren: `hostil`, `fria`, `neutral`, `cercana`, `intima`. |
@@ -179,6 +179,20 @@ Lista común para todos los personajes, enlazada con las expresiones de las ilus
 
 El ánimo multiplica las reacciones. Si alguien está triste, lo *sarcástico* duele más. Si está alegre y confía en Ren, puede tomarlo como broma. Ligar con alguien enfadado suele empeorarlo.
 
+## Invitaciones a planes
+
+**[DEFINIDO]** (petición del usuario): los planes te los ofrecen en persona o por mensaje. Puedes aceptar o rechazar, sin que sea excluyente, y decir que ya tienes otro plan. Si dices que sí y luego no vas, te escriben y baja la relación; si no contestas al mensaje, te lo dicen cuando te ven. El jueves (día 4) no todo es a la vez, pero hay que elegir: a mediodía, por la tarde y por la noche coinciden dos planes.
+
+**[PROPUESTA]** Cómo funciona (`src/systems/invites.gd`, valores provisionales):
+
+- En `ChapterDB.PLANS`, `invite.via` = `mensaje` (por defecto) o `persona`; `invite.at` = franja en que llega el mensaje (o hasta cuándo se espera a verte en persona); `text_late` = mensaje si iba a decírtelo en persona y no os visteis; `missed_text` = el reproche.
+- Propuesta en persona: una conversación con regla `hablar, flag por_proponer:ID, flag dia_N, una vez`, o dentro de otra escena. Las opciones llaman a `Story.plan_answer("ID", "si" | "no" | "otro")`. La de «ya he quedado» solo sale si hay otro plan aceptado a la misma hora: `- Ya he quedado para {{Story.conflict_title("ID")}}. [#franco] [if Story.has_conflict("ID") /]`.
+- Aceptar: +1 afecto. Plantón (se comprueba al pasar de franja y cada mañana): afecto −5, confianza −4, resentimiento +3 (causa `plan_plantado`). Contestar al reproche por el móvil: *perdona* (resentimiento −2, afecto +1), *estaba en…* (resentimiento −1, confianza +1), *se me olvidó* (resentimiento +1).
+- Reproche en persona: regla `hablar, flag reproche:ID, flag plan_plantado:ID, no flag plan_hecho:ID, una vez` (pesa más que las charlas normales), y la conversación quita el reproche con `$> Story.set_flag("reproche:ID", false)`. `Story.went_instead("ID")` dice a qué otro plan fuiste en su lugar.
+- **Planes que propone Ren** (`Invites.ren_invite`, `GameState.ren_plans`): menú *Quedar* o *Proponer plan* en el móvil → actividad (`ChapterDB.REN_ACTIVITIES`) → franja (lo que queda de hoy o mañana). Acepta si 0,5·afecto + 0,3·confianza − 0,5·resentimiento + gusto por el sitio (`citas.lugares`) + ánimo (como en las citas) ≥ 8; quien es `talk_only` (Mamá), siempre que esté libre. Si tiene otro plan a esa hora (está en el `cast` de un plan del guion o ya aceptó otro de Ren), contesta «ya he quedado». El plan solo se crea si alguien dice que sí; los siguientes se suman. Respuesta en `<id>_quedar` (`Story.plan_reply()` = si / no / ocupado / ya; `Story.plan_title()`, `plan_when()`, `other_guests()`), escena en `quedada_<actividad>` + `<id>_quedada` (`Story.activity()`). Plantón: cada invitado escribe (`ChapterDB.REN_MISSED_TEXT`) y, si no le contestas, te lo dice en persona (`<id>_hablar_plantado`, `Story.plan_is_ren()`).
+- El reproche en persona lo elige el código (`Invites.reproach_cue`) si el selector no ha elegido ya uno propio del plan (`<id>_hablar_plantado_<plan>` con su regla): así sale siempre la próxima vez que habléis.
+- Si Ren es pareja de quien invitó, `Romance.morning` le resta además afecto por los planes suyos a los que dijo que sí y no fue.
+
 ## Citas y parejas
 
 **[DEFINIDO]** (petición del usuario): a cualquier personaje se le puede pedir una cita. Acepta o no según sus gustos, lo que siente por Ren y su ánimo. Kenji y Yuna empiezan saliendo juntos: si uno de los dos siente bastante por Ren, puede dejar al otro. Si Ren tiene pareja y la descuida (no la ve, no va a sus planes, queda con otra persona), le pueden dejar.
@@ -247,3 +261,24 @@ El ánimo multiplica las reacciones. Si alguien está triste, lo *sarcástico* d
   - las conversaciones de «me dejaste plantado» de Kenji, Rika, Shiori y Akane: «me puse malo» con `#miente=dia_N`.
 
 **[PENDIENTE]**: más situaciones de mentira en la historia; que los testigos ausentes hablen solo a veces (ahora es determinista).
+
+## Sucesos de relación (registro)
+
+[DEFINIDO] la mecánica de registro; los diálogos que reaccionan están **[PENDIENTE]**. Lógica en `src/systems/relation_events.gd` (`RelationEvents`). Umbrales provisionales.
+
+- **Qué se registra** en el `EventLog`, con id fijo para usarlo en las reglas con `sabe`:
+  - `pareja_<a>_<b>`: empiezan a salir (nombres en orden alfabético). `pareja_kenji_yuna` existe desde el principio y lo saben todos.
+  - `ruptura_<a>_<b>`: lo dejan; `data.why` = por_ren, descuido, infiel, frio o ren_deja; `actor` es quien deja.
+  - `enfado_<quien>_<con>`: enfado grave. Es un solo cambio de relación que empeora la suma de dimensiones en 25 puntos o más (`GRUDGE_POINTS`): bajar afecto, confianza, respeto o atracción, o subir miedo, asco o resentimiento. `data.cause` dice qué lo provocó: infiel, liga_delante, ruptura, dejado_por_ren, le_deja, descuido, plan_plantado, cita_plantada, mentira_delatada, mentira_descubierta, secreto_descubierto, encubridor, guion o la opción elegida.
+  - Si se repite: `ruptura_kenji_yuna_2`, `enfado_yuna_ren_3`…
+- **Quién lo sabe**: los implicados y los presentes en ese momento.
+  - Cada mañana (`RelationEvents.morning`, antes que las mentiras y la pareja) la noticia avanza un salto: se entera quien tiene afinidad de 15 o más (`GOSSIP_AFFINITY`, `Lies.affinity`) con algún implicado y un amigo que ya lo sabe y le aprecia igual de bien.
+  - Ren no lo va contando solo.
+- **Enfado que sigue en pie**:
+  - mientras dura, `flag enfadado_<quien>` (solo con Ren);
+  - se pasa con `$> Story.reconcile("<quien>")` (registra `reconcile`) o a los 7 días (`GRUDGE_DAYS`).
+- **Para los diálogos**:
+  - reglas: `sabe ruptura_kenji_yuna`, `sabe enfado_yuna_ren`, `flag enfadado_yuna`;
+  - en el texto: `Story.angry(id)`, `Story.grudge_cause(id)`, `Story.knows_breakup(quien, a, b)`, `Story.knows_couple(quien, a, b)` (lo último que pasó entre `a` y `b`).
+
+**[PENDIENTE]**: los diálogos que reaccionan; quizá que las madres se enteren por sus hijos (ahora casi no tienen relaciones con el grupo, así que no les llega).

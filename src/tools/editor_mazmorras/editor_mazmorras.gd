@@ -34,10 +34,11 @@ const SIDEBAR_W := 560.0
 const PREVIEW_H := 380.0
 const UNDO_MAX := 100
 
-const TOOLS := ["cells", "walls", "doors", "paint", "start", "enemies", "stairs", "items", "switches", "extraction", "save"]
+const TOOLS := ["cells", "walls", "doors", "paint", "start", "enemies", "stairs", "items", "switches", "extraction", "save", "lights"]
 const TOOL_LABELS := {"cells": "Casillas  [1]", "walls": "Muros  [2]", "doors": "Puertas  [3]", "paint": "Texturas  [4]",
 		"start": "Inicio  [5]", "enemies": "Enemigos  [6]", "stairs": "Escaleras  [7]", "items": "Objetos  [8]",
-		"switches": "Interruptores  [9]", "extraction": "Extracción  [0]", "save": "Guardado"}
+		"switches": "Interruptores  [9]", "extraction": "Extracción  [0]", "save": "Guardado",
+		"lights": "Luces"}
 const TOOL_HELP := {
 	"cells": "Clic izquierdo: pintar casillas. Clic derecho: borrar. Se puede arrastrar. Las paredes del contorno salen solas.",
 	"walls": "Clic en el borde entre dos casillas pintadas: muro. Clic derecho: quitarlo. Se puede arrastrar.",
@@ -45,6 +46,7 @@ const TOOL_HELP := {
 	"paint": "Elige superficie y textura. Suelo y techo se pintan por casilla; una pared, por la cara que mira a la casilla donde haces clic. Clic derecho: la del tema. Con «Suelo», R gira el de la casilla bajo el ratón (p. ej. para que una flecha apunte a la escalera).",
 	"start": "Clic en una casilla: punto de inicio (en esta planta). Clic otra vez en la misma: gira la orientación.",
 	"enemies": "Elige el enemigo (y lo que suelta al morir, si algo) y haz clic en una casilla. Clic derecho: quitarlo. Al probar el mapa, chocar con él empieza el combate.",
+	"lights": "Clic en una casilla: punto de luz con los valores de abajo (o selecciona el que hay, para cambiarlo). Clic derecho: quitarlo. En el plano, el círculo es su alcance. En el juego se encienden las 6 más cercanas al grupo.",
 	"save": "Clic en una casilla: punto de guardado (terminal; se usa desde la casilla de al lado: guarda la partida y lo conseguido ya no se pierde). Ponle al lado una zona de extracción. Clic derecho: quitarlo.",
 	"stairs": "Clic en una casilla: escalera hacia donde apunta la flecha (se entra andando en esa dirección). Clic otra vez: girarla. Clic derecho: quitarla. Crea la planta y la escalera de vuelta.",
 	"items": "Elige el objeto y la cantidad, y haz clic en una casilla: queda en el suelo y en el juego se coge desde la casilla de al lado. Clic derecho: quitarlo.",
@@ -121,6 +123,11 @@ var _door_switch_only: CheckBox
 var _door_secret: CheckBox
 var _door_hidden: CheckBox
 var _sel_switch: Dictionary = {}     ## {cell}
+var _sel_light: Dictionary = {}      ## {cell}
+var _light_box: VBoxContainer
+var _light_values := DungeonMap.LIGHT_DEFAULT.duplicate()   ## valores de la próxima luz (o de la seleccionada)
+var _light_color: ColorPickerButton
+var _light_sliders := {}             ## clave -> HSlider
 
 
 func _ready() -> void:
@@ -337,6 +344,7 @@ func _build_sidebar(col: VBoxContainer) -> void:
 	_item_count.value = 1
 	irow.add_child(_item_count)
 	col.add_child(_field("Objeto a colocar · cantidad", irow))
+	_build_light_box(col)
 
 	# --- Selección ---
 	col.add_child(_section("Selección"))
@@ -713,6 +721,71 @@ func _refresh_selection() -> void:
 	_door_box.visible = true
 
 
+# --- Luces ---
+
+func _build_light_box(col: VBoxContainer) -> void:
+	_light_box = VBoxContainer.new()
+	_light_box.add_theme_constant_override("separation", 8)
+	col.add_child(_light_box)
+	_light_color = ColorPickerButton.new()
+	_light_color.custom_minimum_size = Vector2(0, 40)
+	_light_color.edit_alpha = false
+	_light_color.color = Color(String(_light_values.color))
+	_light_color.pressed.connect(func() -> void:
+		if not _sel_light.is_empty():
+			_push_undo())
+	_light_color.color_changed.connect(func(cc: Color) -> void: _set_light_value("color", cc.to_html(false)))
+	_light_box.add_child(_field("Color", _light_color))
+	for spec: Array in [["energy", "Potencia", 0.1, 8.0, 0.1], ["range", "Alcance (m)", 1.0, 16.0, 0.5],
+			["decay", "Caída (más = se apaga antes)", 0.2, 4.0, 0.1], ["height", "Altura (m)", 0.2, 2.4, 0.1]]:
+		var key: String = spec[0]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var sl := HSlider.new()
+		sl.min_value = spec[2]
+		sl.max_value = spec[3]
+		sl.step = spec[4]
+		sl.value = float(_light_values[key])
+		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var val := Label.new()
+		val.custom_minimum_size = Vector2(52, 0)
+		val.text = "%.1f" % sl.value
+		sl.drag_started.connect(func() -> void:
+			if not _sel_light.is_empty():
+				_push_undo())
+		sl.value_changed.connect(func(v: float) -> void:
+			val.text = "%.1f" % v
+			_set_light_value(key, v))
+		row.add_child(sl)
+		row.add_child(val)
+		_light_sliders[key] = sl
+		_light_box.add_child(_field(spec[1], row))
+	_light_box.add_child(_small("Los valores se usan para la próxima luz y cambian la seleccionada."))
+	_light_box.visible = false
+
+
+func _set_light_value(key: String, v: Variant) -> void:
+	_light_values[key] = v
+	if _sel_light.is_empty() or _map.light(_sel_light.cell).is_empty():
+		return
+	_map.lights[_sel_light.cell][key] = v
+	_changed()
+
+
+func _select_light(c: Vector2i) -> void:
+	_sel_light = {"cell": c}
+	var l := _map.light(c)
+	for key: String in _light_sliders:
+		_light_values[key] = l[key]
+		_light_sliders[key].set_value_no_signal(float(l[key]))
+		(_light_sliders[key].get_parent().get_child(1) as Label).text = "%.1f" % float(l[key])
+	_light_values.color = l.color
+	_light_color.color = Color(String(l.color))
+	_set_status("Luz en (%d, %d): cambia sus valores en el panel." % [c.x, c.y])
+	_plan.queue_redraw()
+
+
 func _set_tool(t: String) -> void:
 	if not t in TOOLS:
 		t = "cells"
@@ -723,6 +796,9 @@ func _set_tool(t: String) -> void:
 	_enemy_opt.get_parent().visible = t == "enemies"
 	_stairs_opt.get_parent().visible = t == "stairs"
 	_item_opt.get_parent().get_parent().visible = t == "items"
+	_light_box.visible = t == "lights"
+	if t != "lights":
+		_sel_light = {}
 	if t != "switches":
 		_sel_switch = {}
 	if _door_box:
@@ -1064,6 +1140,18 @@ func _apply_tool(h: Dictionary, primary: bool, first: bool) -> void:
 					_changed()
 			elif _map.thing(c).get("type", "") == DungeonMap.SAVE and _map.erase_thing(c):
 				_changed()
+		"lights":
+			if not first or not _map.has_cell(c):
+				return
+			if not primary:
+				if _map.erase_light(c):
+					_sel_light = {}
+					_changed()
+				return
+			if _map.light(c).is_empty():
+				_map.set_light(c, _light_values)
+				_changed()
+			_select_light(c)
 		"switches":
 			if not first:
 				return
@@ -1235,6 +1323,7 @@ func _draw_hover() -> void:
 
 
 func _draw_things() -> void:
+	_draw_lights()
 	for c: Vector2i in _map.things:
 		if not _map.has_cell(c):
 			continue
@@ -1259,6 +1348,15 @@ func _draw_things() -> void:
 				var dia := PackedVector2Array([dc + Vector2(0, -k), dc + Vector2(k, 0), dc + Vector2(0, k), dc + Vector2(-k, 0)])
 				_plan.draw_colored_polygon(dia, UIStyle.LIME)
 				UIStyle.draw_outline(_plan, dia, UIStyle.INK, 1.5)
+			# Grupo (`group`: cuántos son) y jefe (`boss`), abajo.
+			var group: Array = th.get("group", [])
+			var label := ("×%d" % (group.size() + 1) if not group.is_empty() else "") + (" JEFE" if th.get("boss", false) else "")
+			if label != "" and _cell_px >= 18.0:
+				var fs := maxi(int(_cell_px * 0.3), 10)
+				_plan.draw_string_outline(UIStyle.FONT_BOLD, r.position + Vector2(0, r.size.y - 2), label.strip_edges(),
+						HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, 4, UIStyle.INK)
+				_plan.draw_string(UIStyle.FONT_BOLD, r.position + Vector2(0, r.size.y - 2), label.strip_edges(),
+						HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, UIStyle.RED if th.get("boss", false) else UIStyle.WHITE)
 		elif th.type == DungeonMap.SAVE:
 			var center := r.get_center()
 			var k := _cell_px * 0.3
@@ -1301,6 +1399,21 @@ func _draw_things() -> void:
 				_plan.draw_line(a - side * _cell_px * 0.32, a + side * _cell_px * 0.32, w, maxf(2.0, _cell_px * 0.07))
 			_plan.draw_string(UIStyle.FONT_BOLD_ITALIC, r.position + Vector2(4, _cell_px * 0.3), "▲" if th.up else "▼",
 					HORIZONTAL_ALIGNMENT_LEFT, -1, int(maxf(10.0, _cell_px * 0.26)), col)
+
+
+## Puntos de luz: su alcance (círculo tenue) y la bombilla con su color.
+func _draw_lights() -> void:
+	for c: Vector2i in _map.lights:
+		var l: Dictionary = _map.lights[c]
+		var col := Color(String(l.color))
+		var center := _cell_rect(c).get_center() + Vector2(_cell_px * 0.3, -_cell_px * 0.3)
+		var reach := float(l.range) / DungeonBuilder.tile() * _cell_px
+		var selected: bool = not _sel_light.is_empty() and _sel_light.cell == c
+		if _tool == "lights" or selected:
+			_plan.draw_circle(center, reach, Color(col, 0.07))
+			_plan.draw_arc(center, reach, 0, TAU, 48, Color(col, 0.5 if selected else 0.25), 1.5, true)
+		_plan.draw_circle(center, _cell_px * 0.13, col)
+		_plan.draw_arc(center, _cell_px * 0.13, 0, TAU, 16, UIStyle.WHITE if selected else UIStyle.INK, 2.0, true)
 
 
 func _draw_start() -> void:

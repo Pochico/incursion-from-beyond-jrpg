@@ -1,11 +1,17 @@
 class_name Battle
 extends RefCounted
-## Lógica de un combate del grupo contra un rival. No sabe nada de la interfaz:
-## cada acción modifica el estado y devuelve una lista de eventos que la vista
-## (CombatView) anima en orden.
+## Lógica de un combate del grupo contra uno a tres rivales. No sabe nada de la
+## interfaz: cada acción modifica el estado y devuelve una lista de eventos que la
+## vista (CombatView) anima en orden.
 ##
 ## El grupo es el protagonista ("player") y, opcionalmente, un compañero ("ally").
-## Cada ronda actúan los miembros del grupo en pie, en orden, y después el rival.
+## Los rivales son "enemy", "enemy2" y "enemy3" (FOES). Cada ronda actúan los
+## miembros del grupo en pie, en orden, y después cada rival en pie (`enemy_turn`
+## de cada uno y `end_round`). Se gana cuando caen todos los rivales.
+##
+## Tiers de las criaturas (CharacterDB.ENEMY_TIERS): multiplican los PV y suman a
+## los atributos; las habilidades de su ficha son de su tier o menos. Un jefe
+## (`boss`) lleva además BOSS_PV_MULT.
 ## Antes de que actúe alguien, la vista llama a `start_turn` (puede perder el
 ## turno o tener que hacer una acción al azar).
 ##
@@ -36,11 +42,14 @@ extends RefCounted
 ##   {type: "defend", target}
 ##   {type: "analyze"}
 ##   {type: "surrender", target}
-## `source` y `target` son "player", "ally" o "enemy". `skill` vacío = ataque básico.
+## `source` y `target` son "player", "ally" o uno de FOES. `skill` vacío = ataque básico.
 
 const PLAYER := "player"
 const ALLY := "ally"
 const ENEMY := "enemy"
+## Puestos de los rivales, en orden de turno (el primero es el líder).
+const FOES: Array[String] = ["enemy", "enemy2", "enemy3"]
+const MAX_FOES := 3
 const LOW_HP_RATIO := 0.35   ## Por debajo de esto, el rival intenta curarse.
 ## Probabilidad de que el rival use una habilidad disponible en vez del ataque básico.
 const ENEMY_SKILL_CHANCE := 0.45
@@ -50,8 +59,9 @@ const REWARD_PER_LEVEL := 120
 const REWARD_LEVEL_STEP := 0.15
 const REWARD_MIN_FACTOR := 0.1
 
-var fighters := {}           ## "player"/"ally"/"enemy" -> Dictionary con el estado del luchador
+var fighters := {}           ## "player"/"ally"/"enemy"... -> Dictionary con el estado del luchador
 var party: Array[String] = [PLAYER]
+var foes: Array[String] = []  ## rivales de este combate (puestos de FOES)
 var analyzed := false        ## El jugador ha analizado al rival (se muestran sus PV)
 var tension := 0.0           ## 0..1, solo visual por ahora
 var surrendered := false
@@ -59,14 +69,29 @@ var rng := RandomNumberGenerator.new()
 var _acting := ""            ## quien está actuando (sus estados nuevos no cuentan este turno)
 
 
-## `ally_id` vacío = combate en solitario. `ally_skills` sustituye las habilidades
-## del compañero (si está vacío, usa las suyas de CharacterDB). `enemy_level` > 0
-## fija el nivel de la criatura (según dónde aparece; ver ProgressionDB).
-func _init(player_id: String, enemy_id: String, ally_id: String = "", ally_skills: Array = [],
-		enemy_level: int = 0) -> void:
+## `enemy_ids`: un id o una lista de hasta tres (el primero, el líder). `ally_id`
+## vacío = combate en solitario. `ally_skills` sustituye las habilidades del
+## compañero (si está vacío, usa las suyas de CharacterDB). `enemy_level` > 0 fija
+## el nivel de las criaturas (según dónde aparecen; ver ProgressionDB). `boss`:
+## el líder es el jefe de la zona.
+func _init(player_id: String, enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [],
+		enemy_level: int = 0, boss: bool = false) -> void:
 	rng.randomize()
 	fighters[PLAYER] = _make_fighter(player_id)
-	fighters[ENEMY] = _make_fighter(enemy_id, enemy_level)
+	var ids: Array = enemy_ids if enemy_ids is Array else [enemy_ids]
+	for i in mini(ids.size(), MAX_FOES):
+		fighters[FOES[i]] = _make_fighter(ids[i], enemy_level, boss and i == 0)
+		foes.append(FOES[i])
+	# Daño según el tier; en grupo, cada criatura (menos el jefe) tiene menos PV y pega menos.
+	var scale: Dictionary = CharacterDB.GROUP_SCALE.get(foes.size(), {})
+	for who in foes:
+		var f: Dictionary = fighters[who]
+		f.dmg_scale = float(CharacterDB.ENEMY_TIERS.get(f.tier, {}).get("dmg", 1.0))
+		if f.boss or scale.is_empty():
+			continue
+		f.pv_max = maxi(roundi(f.pv_max * float(scale.pv)), 1)
+		f.pv = f.pv_max
+		f.dmg_scale *= float(scale.dmg)
 	if ally_id != "":
 		fighters[ALLY] = _make_fighter(ally_id)
 		if not ally_skills.is_empty():
@@ -78,14 +103,22 @@ func _init(player_id: String, enemy_id: String, ally_id: String = "", ally_skill
 ## `pv_mult` (luchan solos contra un grupo). Nivel: el que se pida (`level`), o
 ## el de la partida (GameState.level_of; las criaturas, el de su ficha). Los
 ## atributos de la ficha son los de nivel 1 y crecen con ProgressionDB.stats_at.
-func _make_fighter(id: String, level: int = 0) -> Dictionary:
+func _make_fighter(id: String, level: int = 0, boss: bool = false) -> Dictionary:
 	var data := CharacterDB.get_character(id)
 	var c: Dictionary = data.get("combat", {})
 	if level <= 0:
 		level = maxi(c.get("level", 1), 1) if data.get("enemy", false) else GameState.level_of(id)
 	level = clampi(level, 1, ProgressionDB.MAX_LEVEL)
 	var stats := ProgressionDB.stats_at(c.get("stats", {}), level)
-	var pv := roundi(SkillDB.pv_max(level, stats.get("RES", 10)) * float(c.get("pv_mult", 1.0)))
+	var pv_mult := float(c.get("pv_mult", 1.0))
+	var tier := 0
+	if data.get("enemy", false):
+		tier = CharacterDB.enemy_tier(id)
+		var t: Dictionary = CharacterDB.ENEMY_TIERS.get(tier, {})
+		pv_mult *= float(t.get("pv_mult", 1.0)) * (CharacterDB.BOSS_PV_MULT if boss else 1.0)
+		for attr: String in stats:
+			stats[attr] += int(t.get("stat_bonus", 0)) + (CharacterDB.BOSS_STAT_BONUS if boss else 0)
+	var pv := roundi(SkillDB.pv_max(level, stats.get("RES", 10)) * pv_mult)
 	var pm := SkillDB.pm_max(level, stats.get("INT", 10), stats.get("VOL", 10))
 	var nature: String = data.get("nature", "")
 	return {
@@ -103,6 +136,8 @@ func _make_fighter(id: String, level: int = 0) -> Dictionary:
 		"statuses": {},      ## status_id -> {turns, fresh, source, ...valores}
 		"items": (c.get("items", {}) as Dictionary).duplicate(),
 		"defending": false,
+		"tier": tier,
+		"boss": boss,
 	}
 
 
@@ -110,8 +145,23 @@ func player() -> Dictionary:
 	return fighters[PLAYER]
 
 
+## El primer rival en pie (o el líder, si ya no queda ninguno).
 func enemy() -> Dictionary:
-	return fighters[ENEMY]
+	var alive := alive_foes()
+	return fighters[alive[0] if not alive.is_empty() else ENEMY]
+
+
+static func is_enemy(who: String) -> bool:
+	return who.begins_with(ENEMY)
+
+
+## Rivales que siguen en pie, en orden de turno.
+func alive_foes() -> Array[String]:
+	var out: Array[String] = []
+	for who in foes:
+		if is_alive(who):
+			out.append(who)
+	return out
 
 
 func fighter(who: String) -> Dictionary:
@@ -132,11 +182,11 @@ func alive_party() -> Array[String]:
 
 
 func is_over() -> bool:
-	return surrendered or enemy().pv <= 0 or alive_party().is_empty()
+	return surrendered or alive_foes().is_empty() or alive_party().is_empty()
 
 
 func player_won() -> bool:
-	return not surrendered and enemy().pv <= 0 and not alive_party().is_empty()
+	return not surrendered and alive_foes().is_empty() and not alive_party().is_empty()
 
 
 ## Dinero que se gana al vencer: proporcional al nivel de la criatura (cuanto más
@@ -150,10 +200,13 @@ func xp_reward() -> int:
 	for who in party:
 		total += fighters[who].level
 	var party_level := roundi(float(total) / party.size())
-	var e := enemy()
-	var data := CharacterDB.get_character(e.id)
-	return ProgressionDB.battle_xp(e.level, party_level, data.get("combat", {}).get("boss", false),
-			not data.get("enemy", false))
+	var xp := 0
+	for who in foes:
+		var e: Dictionary = fighters[who]
+		var data := CharacterDB.get_character(e.id)
+		xp += ProgressionDB.battle_xp(e.level, party_level, e.boss or data.get("combat", {}).get("boss", false),
+				not data.get("enemy", false))
+	return xp
 
 
 ## Ids de personaje del grupo (para repartir la EXP).
@@ -164,10 +217,13 @@ func party_ids() -> Array:
 func reward() -> int:
 	if not player_won():
 		return 0
-	var enemy_level: int = absi(enemy().level)
-	var diff: int = enemy().level - player().level
-	var factor := maxf(1.0 + diff * REWARD_LEVEL_STEP, REWARD_MIN_FACTOR)
-	return maxi(int(round(enemy_level * REWARD_PER_LEVEL * factor)), 1)
+	var total := 0
+	for who in foes:
+		var e: Dictionary = fighters[who]
+		var diff: int = e.level - player().level
+		var factor := maxf(1.0 + diff * REWARD_LEVEL_STEP, REWARD_MIN_FACTOR)
+		total += maxi(int(round(absi(e.level) * REWARD_PER_LEVEL * factor * (1.0 + (e.tier - 1) * 0.5))), 1)
+	return total
 
 
 # --- Consultas para la interfaz ----------------------------------------------------------
@@ -260,8 +316,8 @@ func skill_summary(who: String, skill_id: String) -> String:
 
 
 func _preview_target(who: String) -> String:
-	if who != ENEMY:
-		return ENEMY
+	if not is_enemy(who):
+		return enemy_target()
 	var alive := alive_party()
 	return alive[0] if not alive.is_empty() else PLAYER
 
@@ -296,7 +352,7 @@ func _valid_actions(who: String) -> Array[String]:
 	var out: Array[String] = []
 	if can_attack(who):
 		out.append("attack")
-	if who != ENEMY:
+	if not is_enemy(who):
 		out.append("defend")
 	for id: String in fighters[who].skills:
 		if can_use_skill(who, id):
@@ -341,15 +397,15 @@ func use_skill(who: String, skill_id: String, target: String = "") -> Array:
 func use_item(who: String, item_id: String, target: String = "") -> Array:
 	_acting = who
 	if ItemDB.is_attack(item_id):
-		target = ENEMY
+		target = target if is_enemy(target) and is_alive(target) else enemy_target()
 	elif target == "":
 		target = who
 	if not can_use_items(who) or not is_alive(target) or not GameState.use_item(item_id):
 		return []
 	var events: Array = []
-	if target == ENEMY:
-		var dmg := roundi(ItemDB.get_item(item_id).damage * _in_mult(ENEMY))
-		events = _apply_damage(who, ENEMY, dmg, ItemDB.display_name(item_id), "")
+	if is_enemy(target):
+		var dmg := roundi(ItemDB.get_item(item_id).damage * _in_mult(target))
+		events = _apply_damage(who, target, dmg, ItemDB.display_name(item_id), "")
 	else:
 		var ev := _heal(target, item_id)
 		ev.source = who
@@ -426,45 +482,60 @@ func surrender() -> Array:
 	return [{"type": "surrender", "target": PLAYER}]
 
 
-# --- Turno del rival --------------------------------------------------------------------
+## Primer rival en pie (objetivo por defecto del grupo).
+func enemy_target() -> String:
+	var alive := alive_foes()
+	return alive[0] if not alive.is_empty() else ENEMY
 
-func enemy_turn() -> Array:
-	var pre := start_turn(ENEMY)
+
+# --- Turno de los rivales ------------------------------------------------------------------
+
+## Turno del rival `who` (si sigue en pie). Al acabar los de todos, `end_round`.
+func enemy_turn(who: String = ENEMY) -> Array:
+	if not is_alive(who) or is_over():
+		return []
+	var pre := start_turn(who)
 	var events: Array = pre.events
 	if not pre.skip:
 		if pre.forced != "":
-			events += do_action(ENEMY, pre.forced)
+			events += do_action(who, pre.forced)
 		else:
-			events += _enemy_choice()
-	for who in party:
-		fighters[who].defending = false
+			events += _enemy_choice(who)
+	if foes.size() == 1:
+		end_round()
 	return events
 
 
-func _enemy_choice() -> Array:
-	var e := enemy()
+## Fin de la ronda: la guardia del grupo dura hasta que han actuado todos los rivales.
+func end_round() -> void:
+	for who in party:
+		fighters[who].defending = false
+
+
+func _enemy_choice(who: String) -> Array:
+	var e: Dictionary = fighters[who]
 	var low: bool = float(e.pv) / e.pv_max < LOW_HP_RATIO
-	var heal := _first_skill(ENEMY, "heal")
+	var heal := _first_skill(who, "heal")
 	if low and heal != "":
-		return use_skill(ENEMY, heal)
+		return use_skill(who, heal)
 	if low and e.items.get("pochicola", 0) > 0:
-		_acting = ENEMY
+		_acting = who
 		e.items["pochicola"] -= 1
-		var events: Array = [_heal(ENEMY, "pochicola")]
-		return events + _end_turn(ENEMY)
+		var events: Array = [_heal(who, "pochicola")]
+		return events + _end_turn(who)
 	var target := _pick_target()
-	var skill := _pick_enemy_skill(target)
+	var skill := _pick_enemy_skill(who, target)
 	if skill != "":
-		return use_skill(ENEMY, skill, target)
-	if can_attack(ENEMY):
-		return attack(ENEMY, target)
+		return use_skill(who, skill, target)
+	if can_attack(who):
+		return attack(who, target)
 	# Sin golpes físicos ni habilidades útiles: cualquier habilidad que pueda usar.
 	for id: String in e.skills:
-		if can_use_skill(ENEMY, id):
-			return use_skill(ENEMY, id, target)
-	_acting = ENEMY
-	var wait: Array = [{"type": "wait", "target": ENEMY}]
-	return wait + _end_turn(ENEMY)
+		if can_use_skill(who, id):
+			return use_skill(who, id, target)
+	_acting = who
+	var wait: Array = [{"type": "wait", "target": who}]
+	return wait + _end_turn(who)
 
 
 func _pick_target() -> String:
@@ -474,22 +545,23 @@ func _pick_target() -> String:
 
 ## Habilidad que usará el rival ("" = ataque básico). No repite potenciadores
 ## que ya tiene ni estados que el objetivo ya sufre, y prefiere aplicar estados nuevos.
-func _pick_enemy_skill(target: String) -> String:
+func _pick_enemy_skill(who: String, target: String) -> String:
 	var options: Array[String] = []
 	var fresh_status: Array[String] = []
-	for id: String in enemy().skills:
+	var me: Dictionary = fighters[who]
+	for id: String in me.skills:
 		var skill := SkillDB.get_skill(id)
-		if skill.role == "heal" or not can_use_skill(ENEMY, id):
+		if skill.role == "heal" or not can_use_skill(who, id):
 			continue
 		var st := _main_status(id)
-		if skill.role == "buff" and st != "" and enemy().statuses.has(st):
+		if skill.role == "buff" and st != "" and me.statuses.has(st):
 			continue
 		if skill.role == "debuff" and st != "" and fighters[target].statuses.has(st):
 			continue
 		options.append(id)
 		if skill.role in ["attack", "debuff"] and st != "" and not fighters[target].statuses.has(st):
 			fresh_status.append(id)
-	var forced := not can_attack(ENEMY)
+	var forced := not can_attack(who)
 	if options.is_empty() or (not forced and rng.randf() >= ENEMY_SKILL_CHANCE):
 		return ""
 	if not fresh_status.is_empty():
@@ -514,11 +586,11 @@ func _main_status(skill_id: String) -> String:
 # --- Internos: objetivos y atributos ----------------------------------------------------------
 
 func _opponent_of(who: String) -> String:
-	return _pick_target() if who == ENEMY else ENEMY
+	return _pick_target() if is_enemy(who) else enemy_target()
 
 
 func _same_side(a: String, b: String) -> bool:
-	return (a == ENEMY) == (b == ENEMY)
+	return is_enemy(a) == is_enemy(b)
 
 
 ## Objetivos de una habilidad (vacío = no hay ninguno válido). `preferred` es el
@@ -526,17 +598,17 @@ func _same_side(a: String, b: String) -> bool:
 func _targets(who: String, skill_id: String, preferred: String = "") -> Array[String]:
 	var skill := SkillDB.get_skill(skill_id)
 	var party_side := alive_party()
-	var enemy_side: Array[String] = [ENEMY]
-	var foes := enemy_side if who != ENEMY else party_side
-	var friends := party_side if who != ENEMY else enemy_side
+	var enemy_side := alive_foes()
+	var others := enemy_side if not is_enemy(who) else party_side
+	var friends := party_side if not is_enemy(who) else enemy_side
 	var candidates: Array[String] = []
 	match skill.target:
 		"self":
 			candidates.append(who)
 		"enemy":
-			candidates.assign([preferred] if preferred in foes else foes)
+			candidates.assign([preferred] if preferred in others else others)
 		"enemies":
-			candidates.assign(foes)
+			candidates.assign(others)
 		"ally":
 			candidates.append(who)
 			for other in friends:
@@ -637,7 +709,7 @@ func _use_skill(who: String, skill_id: String, target: String = "") -> Array:
 				for t in targets:
 					events += _cleanse(t, SkillDB.by_level(op.count, op.get("count_from", {}), f.level), op.get("origin", ""))
 			"reveal":
-				if who != ENEMY:
+				if not is_enemy(who):
 					analyzed = true
 					events.append({"type": "analyze"})
 	return events
@@ -672,7 +744,7 @@ func _hit(src: String, dst: String, mult: float, attr: String, defense: String, 
 	if chance < 100.0 and rng.randf() * 100.0 >= chance:
 		return [{"type": "miss", "source": src, "target": dst, "move": move, "skill": skill_id}]
 	var raw := mult * SkillDB.base_damage(a.level, _stat(a, attr), _stat(d, defense))
-	raw *= _out_mult(src, skill_id, bonus)
+	raw *= _out_mult(src, skill_id, bonus) * float(a.get("dmg_scale", 1.0))
 	return _apply_damage(src, dst, SkillDB.round_half_up(raw * _in_mult(dst)), move, skill_id)
 
 

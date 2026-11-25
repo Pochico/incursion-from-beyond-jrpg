@@ -12,6 +12,8 @@ extends RefCounted
 ##     Estructura   suelos y paredes
 ##     Techos       aparte, para poder ocultarlos en la vista del editor
 ##     Puertas      un Node3D por puerta (nombre = clave del borde) con su «Hoja»
+##                  (en las de seguridad, «Izq» y «Der»), su «Hueco» (el vano, invisible,
+##                  para el recuadro del objetivo) y sus consolas «ConsolaA»/«ConsolaB»
 ##     Escaleras    peldaños (la de subir deja el techo abierto; la de bajar, un hueco)
 ##     Enemigos     un Node3D por enemigo (nombre = "x,y")
 ##     Objetos      un Node3D por objeto del suelo (nombre = "x,y")
@@ -26,7 +28,18 @@ const WALL_THICK := 0.3
 const DOOR_W := 1.2
 const DOOR_H := 2.1
 const DOOR_THICK := 0.12
-const DOOR_COLOR := Color("3b344d")
+const DOOR_COLOR := Color("2c3530")
+## Puerta de seguridad: dos hojas con la imagen (assets/mazmorra/puerta_hoja_*)
+## que se abren del centro hacia los lados, y a la derecha (vista de frente, por
+## cada cara) una consola con pantalla: roja si no se puede pasar, verde si sí.
+const DOOR_LEAF_TEX := ["res://assets/mazmorra/puerta_hoja_izq.png", "res://assets/mazmorra/puerta_hoja_der.png"]
+const DOOR_PAD_TEX := "res://assets/mazmorra/puerta_teclado.png"
+const PAD_SIZE := Vector2(0.2, 0.29)       ## consola (m), proporción de su imagen (160×232)
+const PAD_X := 0.73                        ## centro de la consola desde el centro de la puerta
+const PAD_Y := 1.3
+const SCREEN_RECT := Rect2(22, 33, 114, 33)   ## pantalla dentro de la imagen de la consola (px)
+const LOCK_RED := Color("ff2f24")
+const LOCK_GREEN := Color("37ff6a")
 const STEPS := 7
 const ENEMY_H := 1.9
 
@@ -99,7 +112,16 @@ static func build(map: DungeonMap) -> Node3D:
 		if map.is_secret(k):
 			doors.add_child(_secret_door(map, k, map.edges[k].door.get("open", false)))
 		else:
-			doors.add_child(_door(k, map.edges[k].door.get("open", false)))
+			var info: Dictionary = map.edges[k].door
+			var door := _door(k, info.get("open", false))
+			set_door_lock(door, info.get("open", false) or (info.get("requires", "") == "" and not info.get("switch_only", false)))
+			doors.add_child(door)
+
+	var lights := Node3D.new()
+	lights.name = "Luces"
+	root.add_child(lights)
+	for c: Vector2i in map.lights:
+		lights.add_child(light_point(c, map.lights[c]))
 
 	var stairs_node := Node3D.new()
 	stairs_node.name = "Escaleras"
@@ -603,13 +625,18 @@ static func _meshes(groups: Dictionary) -> Node3D:
 	return node
 
 
+## Filtrado de las texturas de suelo, techo y paredes (lo cambia el estilo
+## visual de la mazmorra, DungeonLook).
+static var texture_filter := BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+
+
 ## Material de una textura; si tiene relieve (DungeonTextures.relief_for), con
 ## parallax y normal map.
 static func material(tex: Texture2D) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
 	m.roughness = 0.95
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	m.texture_filter = texture_filter
 	var relief := DungeonTextures.relief_for(tex)
 	if not relief.is_empty():
 		apply_relief(m, relief)
@@ -639,30 +666,166 @@ static func _door(key: String, open: bool) -> Node3D:
 	# Las puertas de bordes norte van a lo largo de X; las de bordes oeste, de Z.
 	if key.ends_with("W"):
 		node.rotation.y = PI * 0.5
-	var leaf := MeshInstance3D.new()
-	leaf.name = "Hoja"
-	var box := BoxMesh.new()
-	box.size = Vector3(DOOR_W, DOOR_H, DOOR_THICK)
-	leaf.mesh = box
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = DOOR_COLOR
-	mat.roughness = 0.6
-	leaf.material_override = mat
-	leaf.position.y = DOOR_H * 0.5 + (DOOR_H if open else 0.0)
-	node.add_child(leaf)
-	# Franja lima a la altura de los ojos, para distinguir la puerta de la pared.
-	var stripe := MeshInstance3D.new()
-	var sbox := BoxMesh.new()
-	sbox.size = Vector3(DOOR_W * 0.9, 0.06, DOOR_THICK + 0.02)
-	stripe.mesh = sbox
-	var smat := StandardMaterial3D.new()
-	smat.albedo_color = UIStyle.LIME
-	smat.emission_enabled = true
-	smat.emission = UIStyle.LIME
-	smat.emission_energy_multiplier = 0.6
-	stripe.material_override = smat
-	stripe.position.y = 0.45
-	leaf.add_child(stripe)
+	var hw := DOOR_W * 0.5
+	var leaves := Node3D.new()
+	leaves.name = "Hoja"
+	node.add_child(leaves)
+	var core_mat := StandardMaterial3D.new()
+	core_mat.albedo_color = DOOR_COLOR
+	core_mat.roughness = 0.6
+	for i in 2:
+		var leaf := Node3D.new()
+		leaf.name = "Izq" if i == 0 else "Der"
+		leaf.position = Vector3(_leaf_x(i, open), DOOR_H * 0.5, 0.0)
+		var core := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(hw, DOOR_H, DOOR_THICK)
+		core.mesh = box
+		core.material_override = core_mat
+		leaf.add_child(core)
+		# Cara de delante (+Z) y de detrás: por detrás esta hoja queda al otro
+		# lado, así que lleva la imagen de la otra.
+		for face in 2:
+			var q := MeshInstance3D.new()
+			var qm := QuadMesh.new()
+			qm.size = Vector2(hw, DOOR_H)
+			q.mesh = qm
+			q.material_override = _door_mat(DOOR_LEAF_TEX[i if face == 0 else 1 - i])
+			q.position.z = (DOOR_THICK * 0.5 + 0.002) * (1.0 if face == 0 else -1.0)
+			q.rotation.y = 0.0 if face == 0 else PI
+			leaf.add_child(q)
+		leaves.add_child(leaf)
+	# El vano, invisible: da el recuadro del objetivo abierta o cerrada.
+	var gap := MeshInstance3D.new()
+	gap.name = "Hueco"
+	var gm := QuadMesh.new()
+	gm.size = Vector2(DOOR_W, DOOR_H)
+	gap.mesh = gm
+	var clear := StandardMaterial3D.new()
+	clear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	clear.albedo_color = Color(0, 0, 0, 0)
+	clear.cull_mode = BaseMaterial3D.CULL_DISABLED
+	gap.material_override = clear
+	gap.position.y = DOOR_H * 0.5
+	node.add_child(gap)
+	# Consolas, una por cara, a la derecha de quien mira, y luz sobre el dintel.
+	for face in 2:
+		var sgn := 1.0 if face == 0 else -1.0
+		var pad := Node3D.new()
+		pad.name = "Consola" + ("A" if face == 0 else "B")
+		pad.position = Vector3(sgn * PAD_X, PAD_Y, sgn * (WALL_THICK * 0.5 + 0.015))
+		pad.rotation.y = 0.0 if face == 0 else PI
+		var plate := MeshInstance3D.new()
+		var pb := BoxMesh.new()
+		pb.size = Vector3(PAD_SIZE.x, PAD_SIZE.y, 0.03)
+		plate.mesh = pb
+		plate.material_override = core_mat
+		pad.add_child(plate)
+		var front := MeshInstance3D.new()
+		var fm := QuadMesh.new()
+		fm.size = PAD_SIZE
+		front.mesh = fm
+		front.material_override = _door_mat(DOOR_PAD_TEX)
+		front.position.z = 0.016
+		pad.add_child(front)
+		# Pantalla: encima de la de la imagen, con su color y su texto.
+		var px := PAD_SIZE.x / 160.0
+		var screen := MeshInstance3D.new()
+		screen.name = "Pantalla"
+		var sm := QuadMesh.new()
+		sm.size = SCREEN_RECT.size * px
+		screen.mesh = sm
+		screen.position = Vector3((SCREEN_RECT.get_center().x - 80.0) * px, (116.0 - SCREEN_RECT.get_center().y) * px, 0.018)
+		pad.add_child(screen)
+		var text := Label3D.new()
+		text.name = "Texto"
+		text.font = UIStyle.FONT_SEMIBOLD
+		text.font_size = 48
+		text.pixel_size = 0.00038
+		text.outline_size = 0
+		text.position = screen.position + Vector3(0, 0, 0.002)
+		pad.add_child(text)
+		node.add_child(pad)
+		var lamp := MeshInstance3D.new()
+		lamp.name = "Luz" + ("A" if face == 0 else "B")
+		var lb := BoxMesh.new()
+		lb.size = Vector3(0.26, 0.05, 0.03)
+		lamp.mesh = lb
+		lamp.position = Vector3(0.0, DOOR_H + 0.14, sgn * (WALL_THICK * 0.5 + 0.015))
+		node.add_child(lamp)
+	return node
+
+
+## Posición X de la hoja `i` (0 izquierda, 1 derecha): juntas en el centro o
+## metidas en el muro.
+static func _leaf_x(i: int, open: bool) -> float:
+	var sgn := -1.0 if i == 0 else 1.0
+	return sgn * DOOR_W * (0.75 if open else 0.25)
+
+
+static var _door_mats := {}
+
+static func _door_mat(path: String) -> StandardMaterial3D:
+	if not _door_mats.has(path):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = load(path)
+		m.roughness = 0.75
+		m.metallic = 0.3
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		_door_mats[path] = m
+	return _door_mats[path]
+
+
+## Pantallas y luz de una puerta de seguridad: verde si se puede pasar, roja si no.
+static func set_door_lock(door_node: Node3D, can_pass: bool) -> void:
+	var col := LOCK_GREEN if can_pass else LOCK_RED
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col.darkened(0.72)
+	var lamp_m := StandardMaterial3D.new()
+	lamp_m.albedo_color = col
+	lamp_m.emission_enabled = true
+	lamp_m.emission = col
+	lamp_m.emission_energy_multiplier = 1.6
+	for face in ["A", "B"]:
+		var pad := door_node.get_node_or_null("Consola" + face)
+		if pad == null:
+			return
+		(pad.get_node("Pantalla") as MeshInstance3D).material_override = m
+		var text: Label3D = pad.get_node("Texto")
+		text.text = "> ACCESO" if can_pass else "> BLOQUEADA"
+		text.modulate = col
+		(door_node.get_node("Luz" + face) as MeshInstance3D).material_override = lamp_m
+
+
+## Punto de luz de una casilla (DungeonMap.lights): una OmniLight3D sin sombras
+## y una bombilla pequeña que brilla con su color.
+static func light_point(c: Vector2i, data: Dictionary) -> Node3D:
+	var node := Node3D.new()
+	node.name = "%d,%d" % [c.x, c.y]
+	node.position = cell_center(c) + Vector3.UP * float(data.get("height", 2.2))
+	var col := Color(String(data.get("color", "ffc98a")))
+	var omni := OmniLight3D.new()
+	omni.name = "Luz"
+	omni.light_color = col
+	omni.light_energy = float(data.get("energy", 1.5))
+	omni.omni_range = float(data.get("range", 5.0))
+	omni.omni_attenuation = float(data.get("decay", 1.0))
+	omni.shadow_enabled = false
+	node.add_child(omni)
+	var bulb := MeshInstance3D.new()
+	bulb.name = "Bombilla"
+	var sm := SphereMesh.new()
+	sm.radius = 0.06
+	sm.height = 0.12
+	sm.radial_segments = 12
+	sm.rings = 6
+	bulb.mesh = sm
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col.lerp(Color.WHITE, 0.4)
+	bulb.material_override = m
+	node.add_child(bulb)
 	return node
 
 
@@ -686,15 +849,24 @@ static func _secret_door(map: DungeonMap, key: String, open: bool) -> Node3D:
 	return node
 
 
-## Mueve la hoja de una puerta (sube al abrirse; la pared falsa se hunde).
+## Mueve la hoja de una puerta (las de seguridad se separan desde el centro; la
+## pared falsa se hunde).
 static func set_door_open(door_node: Node3D, open: bool, animate: bool = true) -> Tween:
 	var leaf: Node3D = door_node.get_node("Hoja")
-	var y := DOOR_H * 0.5 + (DOOR_H if open else 0.0)
-	if door_node.has_meta("secret"):
-		y = -wall_h() if open else 0.0
+	if not door_node.has_meta("secret"):
+		# Puerta de seguridad: las dos hojas se separan desde el centro.
+		if not animate:
+			for i in 2:
+				(leaf.get_child(i) as Node3D).position.x = _leaf_x(i, open)
+			return null
+		var dt := door_node.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		for i in 2:
+			dt.tween_property(leaf.get_child(i), "position:x", _leaf_x(i, open), 0.6)
+		return dt
+	var y := -wall_h() if open else 0.0
 	if not animate:
 		leaf.position.y = y
 		return null
 	var tw := door_node.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(leaf, "position:y", y, 1.1 if door_node.has_meta("secret") else 0.45)
+	tw.tween_property(leaf, "position:y", y, 1.1)
 	return tw

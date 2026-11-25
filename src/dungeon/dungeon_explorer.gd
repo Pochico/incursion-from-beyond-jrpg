@@ -34,6 +34,8 @@ signal moved(cell: Vector2i, dir: int)
 signal encounter(enemy_id: String, cell: Vector2i)
 signal level_changed(level: int)
 signal item_taken(item_id: String, count: int)
+## Se ha cogido una caja (ya está en el inventario): la pantalla ofrece abrirla o guardarla.
+signal box_found(item_id: String, count: int)
 ## Algo que el grupo puede comentar: "secret_found", "locked", "switch", "bump".
 signal noticed(kind: String)
 ## Fin del pulso del resonador: cuántas paredes ha hecho brillar.
@@ -58,6 +60,9 @@ var state: Dictionary = {}
 var open_doors: Dictionary = {}
 
 var _camera: Camera3D
+var _lights_cell := Vector2i(1 << 30, 0)   ## casilla con la que se eligieron las luces encendidas
+## Entorno de la vista (niebla, brillo): lo ajusta el estilo visual (DungeonLook).
+var environment: Environment
 var _model: Node3D
 var _yaw := 0.0
 var _busy := false
@@ -94,6 +99,7 @@ func setup(dungeon: DungeonMap, game_state: Dictionary = {}, at: Dictionary = {}
 	e.fog_light_color = UIStyle.INK
 	e.fog_density = 0.09
 	env.environment = e
+	environment = e
 	add_child(env)
 
 	_camera = Camera3D.new()
@@ -133,6 +139,8 @@ func _build_level() -> void:
 		var k: String = door.get_meta("key")
 		if open_doors.has(k):
 			DungeonBuilder.set_door_open(door, open_doors[k], false)
+	update_door_locks()
+	_lights_cell = Vector2i(1 << 30, 0)
 	for enemy: Node3D in _model.get_node("Enemigos").get_children():
 		enemy.visible = not state.defeated.has("%s|%s" % [_lk(), enemy.name])
 	for item: Node3D in _model.get_node("Objetos").get_children():
@@ -155,7 +163,7 @@ func _setup_pulse_layer() -> void:
 	_secret_mats.clear()
 	_pulse_t = -1.0
 	for child in _model.get_children():
-		if child.name in ["Enemigos", "Objetos", "Extraccion", "Puertas"]:
+		if child.name in ["Enemigos", "Objetos", "Extraccion", "Puertas", "Luces"]:
 			continue
 		for mi: MeshInstance3D in child.find_children("*", "MeshInstance3D", true, false) + ([child] if child is MeshInstance3D else []):
 			mi.material_overlay = _pulse_mat
@@ -174,7 +182,8 @@ func _setup_pulse_layer() -> void:
 			mat.set_shader_parameter("box_half", box.size * 0.5)
 			mat.set_shader_parameter("box_axes", Vector3(0, 1, 1) if k.ends_with("W") else Vector3(1, 1, 0))
 		for mi: MeshInstance3D in door.find_children("*", "MeshInstance3D", true, false):
-			mi.material_overlay = mat
+			if mi.name != "Hueco":
+				mi.material_overlay = mat
 
 
 ## Caja de las mallas de `node` en el espacio de su padre (sin animación de apertura).
@@ -227,7 +236,35 @@ func pulse() -> void:
 		m.set_shader_parameter("origin", origin)
 
 
+## Luces del mapa encendidas a la vez (las más cercanas): en GL Compatibility cada
+## malla recibe como mucho 8 luces (project.godot, max_lights_per_object), y la
+## planta va en pocas mallas grandes; la linterna del grupo es una más.
+const MAX_MAP_LIGHTS := 6
+
+
+## Enciende solo las MAX_MAP_LIGHTS luces del mapa más cercanas que lleguen a la casilla.
+func _update_lights() -> void:
+	_lights_cell = cell
+	var holder := _model.get_node_or_null("Luces")
+	if holder == null:
+		return
+	var here := DungeonBuilder.cell_center(cell)
+	var near: Array = []
+	for n: Node3D in holder.get_children():
+		var omni: OmniLight3D = n.get_node("Luz")
+		var dist := Vector2(n.position.x - here.x, n.position.z - here.z).length()
+		omni.visible = false
+		# Alcance más un margen: se ve el resplandor de las que hay al fondo del pasillo.
+		if dist <= omni.omni_range + DungeonBuilder.tile() * 3.0:
+			near.append([dist, omni])
+	near.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	for i in mini(near.size(), MAX_MAP_LIGHTS):
+		near[i][1].visible = true
+
+
 func _process(delta: float) -> void:
+	if _model and cell != _lights_cell:
+		_update_lights()
 	if _pulse_t < 0.0:
 		return
 	_pulse_t += delta
@@ -351,8 +388,17 @@ func front() -> Dictionary:
 	if map.edge_type(cell, dir) == DungeonMap.DOOR and not map.is_secret(DungeonMap.edge_key(cell, dir)):
 		var k := DungeonMap.edge_key(cell, dir)
 		var open := door_open(k)
-		return {"kind": "door", "cell": ahead, "key": k, "name": "Puerta %s" % ("abierta" if open else "cerrada"),
-				"verb": "Cerrar" if open else "Abrir", "node": _model.get_node("Puertas").get_node_or_null(k)}
+		var door: Node3D = _model.get_node("Puertas").get_node_or_null(k)
+		var t := {"kind": "door", "cell": ahead, "key": k, "name": "Puerta %s" % ("abierta" if open else "cerrada"),
+				"verb": "Cerrar" if open else "Abrir", "node": door.get_node("Hueco") if door else null}
+		# La consola de este lado (la más cercana): se puede señalar aparte.
+		if door:
+			var here := DungeonBuilder.cell_center(cell)
+			var pads: Array = [door.get_node("ConsolaA"), door.get_node("ConsolaB")]
+			pads.sort_custom(func(p: Node3D, q: Node3D) -> bool:
+				return p.global_position.distance_to(here) < q.global_position.distance_to(here))
+			t.console = pads[0]
+		return t
 	if not map.can_cross(cell, dir, open_doors):
 		return {}
 	var nk := "%d,%d" % [ahead.x, ahead.y]
@@ -382,7 +428,7 @@ func front_rect(target: Dictionary) -> Rect2:
 		return Rect2()
 	var out := Rect2()
 	var first := true
-	for vi in node.find_children("*", "VisualInstance3D", true, false):
+	for vi in node.find_children("*", "VisualInstance3D", true, false) + ([node] if node is VisualInstance3D else []):
 		var v := vi as VisualInstance3D
 		if not v.is_visible_in_tree():
 			continue
@@ -520,25 +566,16 @@ func _interact() -> void:
 			var th := map.thing(t.cell)
 			var n: int = th.get("count", 1)
 			state.taken[_ck(t.cell)] = true
-			if ItemDB.get_item(th.item).has("loot"):
-				# Caja: se abre y da una cosa al azar por cada una.
-				var got: Array[String] = []
-				for i in n:
-					var loot := ItemDB.roll_loot(th.item)
-					if loot.is_empty():
-						continue
-					if loot.item == "money":
-						GameState.add_money(loot.count)
-						got.append("¥ %d" % loot.count)
-					else:
-						GameState.add_item(loot.item, loot.count)
-						item_taken.emit(loot.item, loot.count)
-						got.append(ItemDB.display_name(loot.item) + (" ×%d" % loot.count if loot.count > 1 else ""))
-				message.emit("Abres: %s. Dentro hay: %s." % [t.name, ", ".join(got) if not got.is_empty() else "nada"])
+			if ItemDB.is_box(th.item):
+				# Caja: va al inventario; la pantalla pregunta si se abre ya o se guarda.
+				GameState.add_item(th.item, n)
+				item_taken.emit(th.item, n)
+				box_found.emit(th.item, n)
 			else:
 				GameState.add_item(th.item, n)
 				item_taken.emit(th.item, n)
 				message.emit("Coges: %s" % t.name)
+				update_door_locks()   # una tarjeta pone en verde sus puertas
 			var node: Node3D = t.node
 			if node:
 				var tw := create_tween().set_parallel(true)
@@ -588,8 +625,24 @@ func _use_door(k: String) -> void:
 	await _set_door(k, not is_open)
 
 
+## Pone en verde o rojo las consolas de las puertas de seguridad de la planta:
+## verde si está abierta o se puede abrir ya (sin tarjeta que falte ni mecanismo).
+func update_door_locks() -> void:
+	if _model == null:
+		return
+	for door: Node3D in _model.get_node("Puertas").get_children():
+		if door.has_meta("secret"):
+			continue
+		var k: String = door.get_meta("key")
+		var info: Dictionary = map.edges.get(k, {}).get("door", {})
+		var req: String = info.get("requires", "")
+		DungeonBuilder.set_door_lock(door, door_open(k) or (not info.get("switch_only", false)
+				and (req == "" or GameState.item_count(req) > 0)))
+
+
 func _set_door(k: String, open: bool) -> void:
 	open_doors[k] = open
+	update_door_locks()
 	var node: Node3D = _model.get_node("Puertas").get_node_or_null(k)
 	if node:
 		await DungeonBuilder.set_door_open(node, open).finished

@@ -12,7 +12,11 @@ const ACTIONS := [
 	{"id": "fight", "label": "Luchar", "icon": "swords", "desc": "Proponer un combate."},
 	{"id": "flirt", "label": "Ligar", "icon": "heart", "desc": "Probar suerte."},
 	{"id": "date", "label": "Cita", "icon": "sparkle", "desc": "Pedirle una cita (elige el sitio)."},
+	{"id": "plan", "label": "Quedar", "icon": "calendar", "desc": "Proponerle un plan para luego o mañana."},
 ]
+## Prefijos del menú «Quedar»: actividad («quedar:cine») y cuándo («quedar_en:cine|6|tarde»).
+const PLAN_PREFIX := "quedar:"
+const PLAN_WHEN_PREFIX := "quedar_en:"
 ## Prefijo de las opciones del menú de sitios de una cita: «cita:galeria».
 const DATE_PREFIX := "cita:"
 const OBJECT_ACTIONS := [
