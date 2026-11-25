@@ -331,6 +331,7 @@ func _play_plan(plan_id: String) -> void:
 	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
 	_show_hud(false)
 	GameState.scene_cast = plan.get("cast", [])
+	Invites.current_plan = plan_id   # para Story.activity() / other_guests() en las quedadas
 	for scene: Dictionary in plan.scenes:
 		if scene.get("black", false):
 			await _black_scene(Story.cue(scene.cue))
@@ -676,7 +677,7 @@ func _on_character_activated(id: String) -> void:
 	var img := sprite.image_rect()
 	var actions: Array = InteractionMenu.ACTIONS
 	if CharacterDB.get_character(id).get("talk_only", false):
-		actions = actions.filter(func(a: Dictionary) -> bool: return a.id == "talk")
+		actions = actions.filter(func(a: Dictionary) -> bool: return a.id in ["talk", "plan"])
 	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "", Color(0, 0, 0, 0), actions)
 
 
@@ -693,6 +694,16 @@ func _on_action_chosen(id: String, action: String) -> void:
 		return
 	if action == "date":
 		_open_date_places(id)
+		return
+	if action == "plan":
+		_open_plan_activities(id)
+		return
+	if action.begins_with(InteractionMenu.PLAN_PREFIX):
+		_open_plan_slots(id, action.trim_prefix(InteractionMenu.PLAN_PREFIX))
+		return
+	if action.begins_with(InteractionMenu.PLAN_WHEN_PREFIX):
+		var parts := action.trim_prefix(InteractionMenu.PLAN_WHEN_PREFIX).split("|")
+		await _run_ren_invite(id, parts[0], int(parts[1]), parts[2])
 		return
 	if action.begins_with(InteractionMenu.DATE_PREFIX):
 		await _run_date(id, action.trim_prefix(InteractionMenu.DATE_PREFIX))
@@ -713,7 +724,13 @@ func _on_action_chosen(id: String, action: String) -> void:
 			# Se ha hartado o no tiene el día: corta antes de empezar.
 			await _conversation.play(Story.pick(id, Story.moment_for(action, result)), id)
 		else:
-			await _conversation.play(Story.pick(id, Story.moment_for(action)), id)
+			var entry := Story.pick(id, Story.moment_for(action))
+			if action == "talk":
+				# Si le dejaste plantado y no contestaste a su mensaje, te lo dice ahora.
+				var reproach := Invites.reproach_cue(id, entry.get("cue", ""))
+				if not reproach.is_empty():
+					entry = reproach
+			await _conversation.play(entry, id)
 			if action == "flirt":
 				Romance.on_flirt(id)
 		if action == "fight" and result == Social.OK:
@@ -728,6 +745,55 @@ func _on_action_chosen(id: String, action: String) -> void:
 
 
 # --- Citas (Romance) -------------------------------------------------------------------
+
+## «Quedar»: el menú pasa a las actividades que Ren puede proponer (ChapterDB.REN_ACTIVITIES).
+func _open_plan_activities(id: String) -> void:
+	if GameState.story_step != "":
+		Toast.show_in(self, "Ahora no. Objetivo: %s" % ChapterDB.step(GameState.story_step).get("objective", ""), UIStyle.LIME, 3.0, 170.0)
+		mode = Mode.EXPLORE
+		_set_cast_interactive(true)
+		_focus_character(id)
+		return
+	var actions: Array = []
+	for act: String in ChapterDB.REN_ACTIVITIES:
+		var a: Dictionary = ChapterDB.REN_ACTIVITIES[act]
+		if Invites.proposal_slots(act).is_empty():
+			continue
+		actions.append({"id": InteractionMenu.PLAN_PREFIX + act, "label": a.title,
+				"icon": "calendar", "desc": LocationDB.display_name(a.target)})
+	_reopen_menu(id, "¿Qué plan?", actions)
+
+
+## «Quedar» → actividad: ahora, cuándo (lo que queda de hoy o mañana).
+func _open_plan_slots(id: String, activity: String) -> void:
+	var actions: Array = []
+	for s: Dictionary in Invites.proposal_slots(activity):
+		actions.append({"id": "%s%s|%d|%s" % [InteractionMenu.PLAN_WHEN_PREFIX, activity, s.day, s.slot],
+				"label": s.label, "icon": "clock", "desc": ChapterDB.REN_ACTIVITIES[activity].title})
+	_reopen_menu(id, "¿Cuándo?", actions)
+
+
+func _reopen_menu(id: String, title: String, actions: Array) -> void:
+	var sprite: CharacterSprite = _sprites[id]
+	var img := sprite.image_rect()
+	_interaction.open(id, Rect2(sprite.position + img.position, img.size), title, CharacterDB.color(id), actions)
+
+
+## Ren propone el plan en persona: contesta (su `<id>_quedar`) y queda apuntado.
+func _run_ren_invite(id: String, activity: String, day: int, slot: String) -> void:
+	mode = Mode.TALK
+	get_viewport().gui_release_focus()
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	GameState.record("talk", CharacterDB.PROTAGONIST, id)
+	await _conversation.play(Invites.ren_invite(id, activity, day, slot), id)
+	GameState.save_game()
+	_fade_cast(true, 0.3)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	_focus_character(id)
+
 
 ## «Cita»: el menú pasa a los sitios donde se le puede invitar.
 func _open_date_places(id: String) -> void:

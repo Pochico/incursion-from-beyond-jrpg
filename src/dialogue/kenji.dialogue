@@ -702,3 +702,58 @@ Kenji: ...Pero las ha escuchado. Pone «visto».
 - Un pulgar es más de lo que dice Akane. [#bromista]
 	Kenji: Jajaja. Verdad. Viniendo de Akane, un pulgar es una boda.
 => END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ kenji_quedar
+Ren: Socio, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Kenji: ¿Me lo preguntas en serio? Obvio, loco. Ahí estaré.
+	if Story.other_guests("kenji") != ""
+		Kenji: ¿Viene {{Story.other_guests("kenji")}}? Mejor todavía. Llevo el altavoz.
+elif Story.plan_reply() == "ocupado"
+	Kenji: Uf, no puedo. Ya he quedado para {{Story.other_plan_title()}}. Otra vez, ¿eh? No te me rajes.
+elif Story.plan_reply() == "ya"
+	Kenji: Que sí, pesado, que ya me lo dijiste. Lo tengo apuntado en el corazón.
+else
+	Kenji: Buah, paso, tío. Hoy no tengo cuerpo.
+=> END
+
+~ kenji_quedada
+if Story.activity() == "cine"
+	Kenji: Si la de miedo da miedo de verdad, te cojo de la mano. Te aviso ya.
+	Kenji se pasa la película entera comentando la banda sonora. Bajito. Más o menos.
+elif Story.activity() == "recreativas"
+	Kenji: Tekken. Tú y yo. Ahora. Como en los viejos tiempos.
+	Te gana dos de tres. La tercera se la dejas ganar tú. O eso dices.
+elif Story.activity() == "bowls"
+	Kenji intenta un truco nuevo. No le sale. Lo intenta otra vez. Tampoco.
+	Kenji: El fracaso es parte del proceso artístico, Ren.
+elif Story.activity() == "biblioteca"
+	Kenji: ¿Estudiar? ¿Un sábado? Bueno, vale. Yo traigo los cascos por si el silencio me ataca.
+else
+	Kenji: Esto teníamos que hacerlo más, socio. Sin excusas. Sin móviles. Bueno, con móviles. Pero menos.
+if Story.present("yuna")
+	Yuna: (A ti, bajito.) Gracias por llamarle. Estaba deseando que alguien le sacara de su cuarto de grabar.
+- Esto lo repetimos. [#cariñoso, #decidido]
+	Kenji: Eso. Que no se diga.
+	$> Story.change("kenji", "afecto", 2)
+- La próxima eliges tú. [#franco]
+	Kenji: ¿Yo? Peligro. Acabamos en un concierto de jazz en un sótano.
+	$> Story.change("kenji", "confianza", 1)
+=> END
+
+~ kenji_hablar_plantado
+if Story.plan_is_ren()
+	Kenji: Oye. Me invitaste TÚ a {{Story.plan_title()}}. Y allí estaba yo, como un pasmarote.
+else
+	Kenji: Lo de {{Story.plan_title()}}. Dijiste que venías, socio.
+if Story.other_plan_title() != ""
+	Kenji: Y luego me entero de que estabas en {{Story.other_plan_title()}}. Muy bien.
+- Tienes razón. Lo siento, de verdad. [#franco, #conciliador]
+	Kenji: ...Vale. Ya está. Pero avisa, que no cuesta nada.
+	$> Story.change("kenji", "resentimiento", -2)
+- Se me cruzó otra cosa. [#evasivo]
+	Kenji: Ya. Siempre se te cruza algo.
+	$> Story.change("kenji", "confianza", -1)
+=> END

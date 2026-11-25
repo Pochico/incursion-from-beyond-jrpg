@@ -150,3 +150,53 @@ else
 	Ren: Se me olvidó, mamá.
 	Mamá: Ya. Bueno. A tu padre también se le olvidaban las cosas. Pero las cenas nunca.
 => END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ madre_ren_quedar
+Ren: Mamá, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Mamá: ¿Conmigo? ¿Mi hijo me invita a algo? ¡Ay, que me da algo! Sí, sí, sí.
+	if Story.other_guests("madre_ren") != ""
+		Mamá: ¿Y viene {{Story.other_guests("madre_ren")}}? ¡Qué bien! Prometo no avergonzarte. Mucho.
+elif Story.plan_reply() == "ocupado"
+	Mamá: Ay, cariño, a esa hora ya tengo {{Story.other_plan_title()}}. ¿Otro día?
+elif Story.plan_reply() == "ya"
+	Mamá: Que sí, que ya me lo has dicho. Lo tengo en el calendario de la nevera.
+else
+	Mamá: Hoy estoy molida, cariño. Pero gracias por pensar en mí.
+=> END
+
+~ madre_ren_quedada
+if Story.activity() == "recreativas"
+	Mamá: ¡Yo era la reina del Tetris! En el ochenta y... bueno, hace mucho.
+	Mamá gana a todo el mundo en el de baile. Todo el mundo la aplaude. Tú quieres que te trague la tierra y a la vez estás orgulloso.
+elif Story.activity() == "cine"
+	Mamá llora en una película que no es triste. Luego te lo niega.
+elif Story.activity() == "voley"
+	Mamá: Yo jugaba de líbero en el instituto. ¡Pásamela!
+	Se tira al suelo a por una pelota imposible. La saca. Se queda tumbada en la hierba riéndose.
+else
+	Mamá: Esto hay que hacerlo más, cariño. Tú y yo. Como cuando eras pequeño.
+if Story.present("kenji")
+	Kenji: Tu madre es una leyenda, Ren. Una leyenda.
+- Gracias por venir, mamá. [#cariñoso]
+	Mamá: ¿Gracias? Gracias a ti, tonto. Me has alegrado la semana.
+	$> Story.change("madre_ren", "afecto", 2)
+- La próxima no me avergüences tanto. [#bromista]
+	Mamá: Ni lo sueñes. Es mi derecho de madre.
+=> END
+
+~ madre_ren_hablar_plantado
+if Story.plan_is_ren()
+	Mamá: Cariño, ayer me propusiste {{Story.plan_title()}}. Me arreglé y todo. Te estuve esperando.
+else
+	Mamá: Lo de {{Story.plan_title()}}... Te estuve esperando.
+Mamá: No pasa nada, ¿eh? Pero la próxima me escribes. Me preocupo.
+- Lo siento, mamá. [#franco, #cariñoso]
+	Mamá: Ya está. Ven aquí. (Te da un abrazo que te aplasta.)
+	$> Story.change("madre_ren", "resentimiento", -3)
+- Se me pasó. [#evasivo]
+	Mamá: Ya. A tu padre también se le pasaban cosas. Pero me avisaba.
+	$> Story.change("madre_ren", "confianza", -1)
+=> END

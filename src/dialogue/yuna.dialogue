@@ -498,3 +498,52 @@ Yuna: Dice que tienes cara de saber hacer volcanes con bicarbonato. Es lo mejor 
 if Story.flag("ren_cuida_hugo")
 	Yuna: Te espera el sábado. Con el dinosaurio. Avisado estás.
 => END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ yuna_quedar
+Ren: Yuna, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Yuna: Vale. ¿Se lo digo a Kenji o es un plan tuyo y mío?
+	if Story.other_guests("yuna") != ""
+		Yuna: Ah, que viene {{Story.other_guests("yuna")}}. Perfecto.
+elif Story.plan_reply() == "ocupado"
+	Yuna: No puedo, tengo {{Story.other_plan_title()}}. Lo siento. De verdad.
+elif Story.plan_reply() == "ya"
+	Yuna: Ya me lo dijiste, Ren. Ahí estaré.
+else
+	Yuna: Hoy no. Tengo a Hugo y estoy muerta. Otro día, ¿vale?
+=> END
+
+~ yuna_quedada
+if Story.activity() == "westlake"
+	Yuna: Aquí se está bien. Hugo diría que hay patos y que eso lo arregla todo.
+	Yuna mira el agua un rato largo, sin decir nada. Parece que descansa.
+elif Story.activity() == "cine"
+	Yuna: Hace siglos que no vengo al cine sin Hugo. Puedo ver una película sin dibujos. Qué lujo.
+else
+	Yuna: Me ha venido bien salir. En casa siempre hay ruido.
+if Story.present("kenji")
+	Kenji: ¿Estáis hablando de mí?
+	Yuna: Siempre, osito.
+- Gracias por venir. [#cariñoso]
+	Yuna: Gracias por llamarme. No me llama casi nadie para nada que no sea un favor.
+	$> Story.change("yuna", "afecto", 2)
+- Hay que hacer esto más. [#decidido]
+	Yuna: Sí. Hay que hacerlo más.
+	$> Story.change("yuna", "confianza", 1)
+=> END
+
+~ yuna_hablar_plantado
+if Story.plan_is_ren()
+	Yuna: Me invitaste a {{Story.plan_title()}}. Dejé a Hugo con mi madre para ir. No estabas.
+else
+	Yuna: Dijiste que vendrías a {{Story.plan_title()}}.
+Yuna: No grito, ya lo sabes. Pero me sentó mal.
+- Lo siento, Yuna. No volverá a pasar. [#franco, #conciliador]
+	Yuna: Vale. Te creo.
+	$> Story.change("yuna", "resentimiento", -2)
+- Se me olvidó. [#evasivo]
+	Yuna: Ah. Vale.
+	$> Story.change("yuna", "afecto", -1)
+=> END

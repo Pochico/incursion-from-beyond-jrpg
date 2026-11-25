@@ -250,7 +250,7 @@ func has_conflict(plan_id: String) -> bool:
 
 func conflict_title(plan_id: String) -> String:
 	var c := Invites.conflicts(plan_id)
-	return _lower_first(ChapterDB.plan(c[0]).title) if not c.is_empty() else ""
+	return lower_first(ChapterDB.plan(c[0]).title) if not c.is_empty() else ""
 
 
 func said_yes(plan_id: String) -> bool:
@@ -265,22 +265,51 @@ func plan_reply() -> String:
 ## Plan de la respuesta en curso (o `plan_id`), en minúscula para meterlo en una frase.
 func plan_title(plan_id: String = "") -> String:
 	var id := plan_id if plan_id != "" else Invites.current_plan
-	return _lower_first(ChapterDB.plan(id).get("title", ""))
+	return lower_first(ChapterDB.plan(id).get("title", ""))
 
 
 func other_plan_title() -> String:
-	return _lower_first(ChapterDB.plan(Invites.other_plan).get("title", ""))
+	return lower_first(ChapterDB.plan(Invites.other_plan).get("title", ""))
 
 
 ## ¿Hizo Ren otro plan a la misma hora que `plan_id`? (para el reproche en persona)
 func went_instead(plan_id: String) -> String:
 	var id := Invites.done_instead(plan_id)
-	return _lower_first(ChapterDB.plan(id).get("title", "")) if id != "" else ""
+	return lower_first(ChapterDB.plan(id).get("title", "")) if id != "" else ""
 
 
 ## «Comer en Westlake con Yuna» → «comer en Westlake con Yuna» (para meterlo en una frase).
-func _lower_first(text: String) -> String:
+func lower_first(text: String) -> String:
 	return text.left(1).to_lower() + text.substr(1)
+
+
+## Planes que propone Ren (Invites.ren_invite), en `<id>_quedar` y `<id>_quedada`:
+##   if Story.plan_reply() == "si"  ("si" | "no" | "ocupado" | "ya")
+##   ¿Te vienes a {{Story.plan_title()}} {{Story.plan_when()}}?
+func plan_when() -> String:
+	var p := ChapterDB.plan(Invites.current_plan)
+	if p.is_empty() or p.slots.is_empty():
+		return ""
+	return Invites.when_phrase(int(p.day), p.slots[0])
+
+
+## Actividad del plan de Ren en curso ("cine", "westlake"...), o "".
+func activity() -> String:
+	return ChapterDB.plan(Invites.current_plan).get("activity", "")
+
+
+## Quién más ha dicho que sí al plan de Ren en curso («Kenji y Rika»), sin contar a `who`.
+func other_guests(who: String = "") -> String:
+	var names: Array = ChapterDB.plan(Invites.current_plan).get("cast", []).filter(func(w: String) -> bool: return w != who) \
+			.map(func(w: String) -> String: return CharacterDB.display_name(w))
+	if names.size() <= 1:
+		return "".join(names)
+	return ", ".join(names.slice(0, -1)) + " y " + names.back()
+
+
+## ¿El plan en curso lo propuso Ren? (para el reproche: «¡Me invitaste tú!»)
+func plan_is_ren() -> bool:
+	return Invites.is_ren(Invites.current_plan)
 
 
 # --- Selector ---------------------------------------------------------------------------

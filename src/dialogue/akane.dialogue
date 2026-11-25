@@ -651,3 +651,52 @@ Akane: Así que ahora quiere ver al que aguanto. El domingo hace cocido. No es u
 	$> Story.set_flag("akane_cocido_abuela")
 	$> Story.change("akane", "confianza", 2)
 => END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ akane_quedar
+Ren: Akane, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Akane: ...Vale.
+	Akane: No pongas esa cara. He dicho vale, no te he pedido matrimonio.
+elif Story.plan_reply() == "ocupado"
+	Akane: No puedo. Tengo {{Story.other_plan_title()}}. Otro día. Si eso.
+elif Story.plan_reply() == "ya"
+	Akane: Ya me lo has dicho. No soy tonta.
+else
+	Akane: Paso. No es lo mío.
+=> END
+
+~ akane_quedada
+if Story.activity() == "recreativas"
+	Akane: En mi día libre, en mi curro. Qué triste soy. Venga, a la de lucha.
+	Te gana cuatro seguidas. La quinta la gana el chico de siempre, que se ha metido sin pedir permiso.
+elif Story.activity() == "bowls"
+	Akane baja la rampa grande sin frenar. Luego la tuya, por si acaso. Luego otra vez la grande.
+	Akane: Venga, ahora tú. Te enseño a caerte otra vez, que se te ha olvidado.
+elif Story.activity() == "cine"
+	Akane: Si alguien habla durante la peli, le tiro las palomitas. Te lo digo para que no seas tú.
+else
+	Akane: Esto no está mal. Lo digo una vez. No me hagas repetirlo.
+- Me ha encantado verte así de tranquila. [#cariñoso]
+	Akane: ¿Tranquila? Yo no estoy tranquila nunca. ...Bueno. Hoy un poco.
+	$> Story.change("akane", "afecto", 2)
+- Eres una bestia. [#bromista]
+	Akane: Gracias. Es lo más bonito que me han dicho esta semana.
+	$> Story.change("akane", "confianza", 1)
+=> END
+
+~ akane_hablar_plantado
+if Story.plan_is_ren()
+	Akane: Me invitaste tú a {{Story.plan_title()}}. Y me dejaste tirada.
+else
+	Akane: Lo de {{Story.plan_title()}}. Dijiste que sí.
+if Story.other_plan_title() != ""
+	Akane: Ya sé que estabas en {{Story.other_plan_title()}}. Me la suda dónde estuvieras. Me jode que dijeras que sí.
+- Tienes razón. Lo siento. [#franco, #conciliador]
+	Akane: Vale. Una. Te dejo pasar una.
+	$> Story.change("akane", "resentimiento", -2)
+- Relájate un poco. [#provocador]
+	Akane: Relájate tú. Lejos de mí.
+	$> Story.change("akane", "confianza", -2)
+=> END

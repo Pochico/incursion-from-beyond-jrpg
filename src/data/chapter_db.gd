@@ -201,6 +201,96 @@ const PLANS := {
 			"text_late": "Cariño, esta noche cenamos juntos, ¿te parece? Hago la tortilla de papá. La de cebolla."},
 		"missed_text": "Te he dejado la tortilla tapada en la nevera. Ya la cenamos otro día, cariño. No pasa nada.",
 	},
+	# --- Día 5 (viernes) ---
+	"clase_viernes": {
+		"title": "Clase del viernes", "day": 5, "slots": ["manana"], "target": "instituto",
+		"cast": ["kenji", "yuna", "rika", "shiori"],
+		"scenes": [{"cue": "dia5_clase", "npc": "kenji"}],
+		"invite": {"from": "kenji", "text": "Viernes, socio. Último esfuerzo. Ven a clase, que tengo planes para el finde y te los quiero contar en persona."},
+		"missed_text": "Te iba a contar los planes del finde en persona. Pues nada, te los cuento por aquí. Mañana partido del Lega en el bar de los padres de Yuna. Tú verás.",
+		"advance_time": true,
+	},
+	"pizza_cloacas": {
+		"title": "Pizza en las Cloacas", "day": 5, "slots": ["tarde"], "target": "cloacas",
+		"phase": "reunion",
+		"cast": ["kenji", "yuna", "rika", "shiori", "akane"],
+		"scenes": [{"cue": "dia5_pizza", "npc": "rika"}],
+		"invite": {"from": "rika", "at": "dia", "text": "Regla número cinco: los viernes hay pizza. Esta tarde, Cloacas. He pedido una con piña para molestar a Kenji."},
+		"missed_text": "Te hemos guardado un trozo. Con piña. Para que aprendas.",
+		"advance_time": true,
+	},
+	"pizza_lago": {
+		"title": "Pizza en Westlake", "day": 5, "slots": ["tarde"], "target": "lago",
+		"before_phase": "reunion",
+		"cast": ["kenji", "yuna", "rika"],
+		"scenes": [{"cue": "dia5_pizza", "npc": "rika"}],
+		"invite": {"from": "rika", "at": "dia", "text": "Viernes = pizza. Esta tarde en Westlake. Viene Kenji, viene Yuna. Vienes tú. No era una pregunta, cielo."},
+		"missed_text": "Te hemos guardado un trozo. Kenji se lo ha comido. Bueno, te hemos guardado la intención.",
+		"advance_time": true,
+	},
+	# --- Día 6 (sábado): sin clase ---
+	"tortilla_mama": {
+		"title": "Hacer la tortilla con mamá", "day": 6, "slots": ["dia"], "target": "casa",
+		"cast": ["madre_ren"],
+		"scenes": [{"cue": "dia6_tortilla", "npc": "madre_ren"}],
+		"invite": {"from": "madre_ren", "via": "persona", "at": "manana",
+			"text": "A mediodía, tortilla. Tú pelas, yo mando.",
+			"text_late": "Cariño, a mediodía hacemos la tortilla juntos, ¿vale? Tú pelas, yo mando. Ven con hambre."},
+		"missed_text": "He hecho la tortilla yo sola. Me ha salido bien, que conste. Pero no era el plan.",
+		"advance_time": true,
+	},
+	"hugo_yuna": {
+		"title": "Cuidar de Hugo con Yuna", "day": 6, "slots": ["dia"], "target": "plaza",
+		"cast": ["yuna"],
+		"scenes": [{"cue": "dia6_hugo", "npc": "yuna"}],
+		"invite": {"from": "yuna", "text": "¿Sigue en pie lo de Hugo? Estaremos a mediodía en los columpios de Colinas. Trae paciencia. Mucha."},
+		"missed_text": "Hugo ha preguntado por ti once veces. He contado. Le he dicho que te había comido un dinosaurio.",
+		"advance_time": true,
+	},
+	"partido_lega": {
+		"title": "Partido del Lega en el bar", "day": 6, "slots": ["tarde"], "target": "estacion",
+		"cast": ["kenji", "yuna"],
+		"scenes": [{"cue": "dia6_partido", "npc": "kenji"}],
+		"invite": {"from": "kenji", "via": "persona", "at": "manana",
+			"text": "Mañana juega el Lega. Lo vemos en el bar de los padres de Yuna, en Zarza.",
+			"text_late": "Hoy juega el Lega, socio. Lo vemos en el bar de los padres de Yuna, en Zarza, a las cinco. Tráete la gorra."},
+		"missed_text": "Hemos ganado. Uno a cero. Y tú sin verlo. El padre de Yuna te había guardado sitio en la barra.",
+		"advance_time": true,
+	},
+	"fiesta_rika": {
+		"title": "Fiesta en Westlake", "day": 6, "slots": ["noche"], "target": "lago",
+		"cast": ["rika", "akane"],
+		"scenes": [{"cue": "dia6_fiesta", "npc": "rika"}],
+		"invite": {"from": "rika", "via": "persona", "at": "tarde",
+			"text": "Mañana por la noche, fiesta de una de mi grupo en la terraza de Westlake. Vienes.",
+			"text_late": "Esta noche fiesta en la terraza de Westlake. Te lo iba a decir en persona, pero me has hecho ghosting. Vienes igual."},
+		"missed_text": "La fiesta ha estado bien. He bailado con Akane. AKANE, Ren. Te lo has perdido."},
+	# --- Día 7 (domingo) ---
+	"abuelo_shiori": {
+		"title": "Visitar al abuelo de Shiori", "day": 7, "slots": ["manana"], "target": "parque",
+		"cast": ["shiori", "rika"],
+		"scenes": [{"cue": "dia7_abuelo", "npc": "shiori"}],
+		"invite": {"from": "shiori", "text": "Los domingos mi abuelo está más lúcido. Voy a la residencia de la Ribera a las once. Si vienes, le sacamos al jardín."},
+		"missed_text": "Mi abuelo ha preguntado quién era «el chico de la foto». No he sabido qué decirle.",
+		"advance_time": true,
+	},
+	"cocido_akane": {
+		"title": "Cocido en casa de la abuela de Akane", "day": 7, "slots": ["dia"], "target": "estacion",
+		"cast": ["akane"],
+		"scenes": [{"cue": "dia7_cocido", "npc": "akane"}],
+		"invite": {"from": "akane", "text": "Mi abuela hace cocido. Encima de la estación, el tercero. A la una. No traigas postre, que se ofende."},
+		"missed_text": "Mi abuela ha puesto un plato de más. Lo ha quitado a las dos y media sin decir nada. Eso es peor que si gritara.",
+		"advance_time": true,
+	},
+	"serie_mama": {
+		"title": "Serie y manta con mamá", "day": 7, "slots": ["noche"], "target": "casa",
+		"cast": ["madre_ren"],
+		"scenes": [{"cue": "dia7_serie", "npc": "madre_ren"}],
+		"invite": {"from": "madre_ren", "via": "persona", "at": "tarde",
+			"text": "Esta noche, serie de médicos y manta. Tú pones las palomitas.",
+			"text_late": "Esta noche serie de médicos y manta, ¿te apuntas? Tú pones las palomitas."},
+		"missed_text": "He visto el capítulo sola. Se ha muerto uno. No te digo cuál.",
+	},
 	# --- Tras la primera incursión (cualquier día) ---
 	"reunion_cloacas": {
 		"title": "Reunión en las Cloacas", "target": "cloacas",
@@ -219,6 +309,32 @@ const PLANS := {
 ## Escena extra de la mañana de algunos días, después del despertar (`intro`).
 const MORNINGS := {
 	4: {"cue": "dia4_desayuno", "npc": "madre_ren"},
+	6: {"cue": "dia6_desayuno", "npc": "madre_ren"},
+	7: {"cue": "dia7_desayuno", "npc": "madre_ren"},
+}
+
+## Planes que propone Ren (Invites.ren_invite): a quién quiera, desde su menú
+## («Quedar») o desde el móvil («Proponer plan»). `slots`: cuándo se puede.
+## La escena: `quedada_<id>` (general.dialogue) y luego `<invitado>_quedada`
+## de cada uno que haya dicho que sí.
+const REN_ACTIVITIES := {
+	"cine": {"title": "Ir al cine", "target": "galeria", "slots": ["tarde", "noche"]},
+	"recreativas": {"title": "Echar unas partidas en las recres", "target": "galeria", "slots": ["dia", "tarde"]},
+	"westlake": {"title": "Tomar algo en Westlake", "target": "lago", "slots": ["dia", "tarde", "noche"]},
+	"bowls": {"title": "Patinar en Bowls", "target": "parque", "slots": ["dia", "tarde"]},
+	"voley": {"title": "Jugar al vóley en Colinas", "target": "plaza", "slots": ["manana", "dia", "tarde"]},
+	"biblioteca": {"title": "Estudiar en la biblioteca", "target": "campus", "slots": ["manana", "dia", "tarde"]},
+}
+
+## Lo que escribe cada uno si Ren le propone un plan, dice que sí y Ren no
+## aparece (%s = el plan, en minúscula).
+const REN_MISSED_TEXT := {
+	"kenji": "Loco, ¿dónde estás? Que me has invitado TÚ a %s. Estoy aquí como un pasmarote.",
+	"rika": "Cielo. Me invitas a %s y no vienes. Me he arreglado y todo. Para nada.",
+	"shiori": "Me propusiste %s. He venido. Tú no. Lo apunto.",
+	"akane": "Me has invitado a %s y me has dejado tirada. No me vuelvas a invitar a nada.",
+	"yuna": "He ido a %s, como dijiste. No estabas. ¿Va todo bien?",
+	"madre_ren": "Cariño, ¿no íbamos a %s? Estoy aquí esperándote. Escríbeme, que me preocupo.",
 }
 
 ## Mensajes sueltos que llegan un día a una franja (una vez). `if` / `unless`:
@@ -230,6 +346,14 @@ const MESSAGES := [
 		"text": "Si llegas antes que yo, pela tres patatas. Tres, Ren. No una y media."},
 	{"day": 4, "slot": "tarde", "from": "madre_ren", "unless": "plan_si:cena_mama",
 		"text": "Pásalo bien esta noche, cariño. Yo me pongo la serie de los médicos y me quedo frita en el sofá. Lo normal."},
+	{"day": 5, "slot": "manana", "from": "madre_ren",
+		"text": "Turno de mañana. Te he dejado dinero en la entrada para el finde. Para el finde, Ren, no para hoy."},
+	{"day": 5, "slot": "noche", "from": "akane",
+		"text": "El batería ha vuelto con su novia. Otra vez. Mañana me toca ir a Fuenlabrada. Odio Fuenlabrada. Solo quería decírselo a alguien."},
+	{"day": 6, "slot": "noche", "from": "kenji",
+		"text": "Tío. Mi padre me ha escrito. Ha escuchado las canciones. Dice que la tercera le ha gustado. LA TERCERA, REN."},
+	{"day": 7, "slot": "tarde", "from": "rika",
+		"text": "Domingo de bajón. ¿Por qué los domingos por la tarde son tan tristes? Mándame un meme o algo, cielo."},
 ]
 
 const PLAN_DONE := "plan_hecho:"
@@ -237,7 +361,18 @@ const PLAN_INVITED := "plan_invitado:"
 
 
 static func plan(id: String) -> Dictionary:
+	if id.begins_with(Invites.REN_PREFIX):
+		return Invites.ren_plan(id)
 	return PLANS.get(id, {})
+
+
+## Todos los planes: los del guion y los que ha propuesto Ren.
+static func all_ids() -> Array[String]:
+	var out: Array[String] = []
+	out.assign(PLANS.keys())
+	for id: String in GameState.ren_plans:
+		out.append(id)
+	return out
 
 
 ## ¿Se puede hacer hoy el plan `id`? (día, fase y que no esté hecho; la franja aparte)
@@ -251,6 +386,8 @@ static func plan_available(id: String) -> bool:
 		return false
 	if p.has("before_phase") and GameState.phase_at_least(p.before_phase):
 		return false
+	if p.get("ren", false) and p.cast.is_empty():
+		return false   # plan de Ren al que nadie ha dicho que sí
 	return true
 
 
@@ -262,7 +399,7 @@ static func plan_in_slot(id: String, slot: String) -> bool:
 ## Planes que quedan hoy (aún se puede llegar a su franja).
 static func plans_today() -> Array[String]:
 	var out: Array[String] = []
-	for id: String in PLANS:
+	for id: String in all_ids():
 		if not plan_available(id):
 			continue
 		var slots: Array = plan(id).get("slots", [])
@@ -277,7 +414,7 @@ static func plans_today() -> Array[String]:
 
 ## Plan que empieza al llegar ahora a `location_id` ("" si no hay).
 static func plan_at(location_id: String) -> String:
-	for id: String in PLANS:
+	for id: String in all_ids():
 		if plan(id).target == location_id and plan_available(id) and plan_in_slot(id, GameState.slot_id()):
 			return id
 	return ""

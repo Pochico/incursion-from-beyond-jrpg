@@ -38,6 +38,8 @@ var dungeons: Dictionary = {}
 ## Nivel y experiencia de Ren y los compañeros: id -> {level, xp} (xp = la que
 ## lleva dentro del nivel actual). Sin entrada = nivel de su ficha, 0 EXP.
 var levels: Dictionary = {}
+## Planes que propone Ren (Invites): "ren:N" -> {activity, day, slot, guests: {id: "si"}}.
+var ren_plans: Dictionary = {}
 
 const START_INVENTORY := {"pochicola": 3, "resonador": 1}
 ## Lo que Ren siempre lleva (se añade también a las partidas anteriores).
@@ -113,6 +115,7 @@ func new_game() -> void:
 	messages = {}
 	dungeons = {}
 	levels = {}
+	ren_plans = {}
 	phase = PHASES[0]
 	flags = {}
 	partners = Romance.START_PARTNERS.duplicate()
@@ -337,7 +340,7 @@ func save_game() -> void:
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
 		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
-		"levels": levels,
+		"levels": levels, "ren_plans": ren_plans,
 		"relations": relations, "moods": moods,
 		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
@@ -378,6 +381,11 @@ func load_game() -> bool:
 	for id: String in data.get("levels", {}):
 		var v: Dictionary = data.levels[id]
 		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0))}
+	ren_plans = {}
+	var rp: Dictionary = data.get("ren_plans", {})
+	for id: String in rp:
+		var p: Dictionary = rp[id]
+		ren_plans[id] = {"activity": p.activity, "day": int(p.day), "slot": p.slot, "guests": p.get("guests", {})}
 	phase = data.get("phase", PHASES[0])
 	flags = data.get("flags", {})
 	partners = data.get("partners", partners)

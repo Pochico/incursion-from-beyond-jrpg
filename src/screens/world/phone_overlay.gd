@@ -12,7 +12,8 @@ extends Control
 ##  - Chat: burbujas de la conversación y botón «Saludar». La respuesta sale del
 ##    selector de Story (momento «movil» en el .dialogue de cada personaje).
 ##    Si el contacto espera respuesta (una invitación o un reproche por un plantón,
-##    ver Invites), en vez de «Saludar» salen las respuestas posibles.
+##    ver Invites), en vez de «Saludar» salen las respuestas posibles. Si no,
+##    «Saludar» y «Proponer plan» (actividad y cuándo; ver Invites.ren_invite).
 ##  - Inventario: objetos de GameState.inventory. Tocar una caja la abre (`notice`
 ##    cuenta lo que traía).
 ##  - Equipo: arma, accesorio y módulo de Ren y sus compañeros.
@@ -82,6 +83,7 @@ var _chat_scroll := 0.0      ## px desplazados hacia arriba desde el final del c
 var _busy := false           ## el contacto está respondiendo
 var _typing := false
 var _reply_sel := 0          ## respuesta seleccionada con el teclado
+var _propose := ""           ## «Proponer plan»: "" | "actividad" | id de la actividad elegida
 var _phone: Control
 var _chat: Control           ## área recortada de las burbujas
 var _debug: DebugRelations
@@ -170,6 +172,8 @@ func _open_app(i: int) -> void:
 
 
 func _open_chat(who: String, from_screen: String) -> void:
+	_propose = ""
+	_reply_sel = 0
 	_chat_with = who
 	_chat_back = from_screen
 	_go("chat")
@@ -231,11 +235,29 @@ func _greet() -> void:
 	await _play_chat(who, Story.pick(who, "movil"))
 
 
-## Respuestas que espera el contacto del chat (invitación o reproche), si las hay.
+## Botones del chat: lo que espera el contacto (invitación o reproche) o, si no
+## espera nada, «Saludar» / «Proponer plan» y sus pasos.
 func _replies() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	if _screen != "chat" or _busy or _chat_with == "":
-		return []
-	return Invites.replies(_chat_with)
+		return out
+	out = Invites.replies(_chat_with)
+	if not out.is_empty():
+		return out
+	match _propose:
+		"":
+			out.append({"label": "Saludar", "reply": "saludar"})
+			out.append({"label": "Proponer plan", "reply": "proponer"})
+		"actividad":
+			for act: String in ChapterDB.REN_ACTIVITIES:
+				if not Invites.proposal_slots(act).is_empty():
+					out.append({"label": ChapterDB.REN_ACTIVITIES[act].title, "reply": "actividad", "activity": act})
+			out.append({"label": "Cancelar", "reply": "cancelar"})
+		_:
+			for s: Dictionary in Invites.proposal_slots(_propose):
+				out.append({"label": s.label, "reply": "cuando", "day": s.day, "slot": s.slot})
+			out.append({"label": "Cancelar", "reply": "cancelar"})
+	return out
 
 
 func _reply_rect(i: int, n: int) -> Rect2:
@@ -249,10 +271,32 @@ func _reply(i: int) -> void:
 	if i < 0 or i >= replies.size():
 		return
 	var who := _chat_with
-	GameState.record("message", CharacterDB.PROTAGONIST, who)
-	var entry := Invites.choose_reply(who, replies[i])
+	var option: Dictionary = replies[i]
 	_reply_sel = 0
-	await _play_chat(who, entry)
+	match option.reply:
+		"saludar":
+			await _greet()
+			return
+		"proponer":
+			_propose = "actividad"
+			_redraw()
+			return
+		"actividad":
+			_propose = option.activity
+			_redraw()
+			return
+		"cancelar":
+			_propose = ""
+			_redraw()
+			return
+		"cuando":
+			var activity := _propose
+			_propose = ""
+			GameState.record("message", CharacterDB.PROTAGONIST, who)
+			await _play_chat(who, Invites.ren_invite(who, activity, option.day, option.slot))
+			return
+	GameState.record("message", CharacterDB.PROTAGONIST, who)
+	await _play_chat(who, Invites.choose_reply(who, option))
 
 
 ## Reproduce una conversación de móvil como burbujas («escribiendo...» incluido).
@@ -489,7 +533,7 @@ func _draw_phone() -> void:
 		"chat":
 			_draw_header(c, w, CharacterDB.display_name(_chat_with), true)
 			if _replies().is_empty():
-				_draw_send(c)
+				_draw_send(c)   # mientras el contacto escribe
 			else:
 				_draw_replies(c)
 		_:

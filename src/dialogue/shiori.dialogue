@@ -664,3 +664,54 @@ Shiori: La miró mucho rato. Luego dijo: «Ahí arriba vive alguien que cuenta»
 	Shiori: Contento. Me llamó por mi nombre. Dos veces. Lo he apuntado también.
 	$> Story.change("shiori", "afecto", 2)
 => END
+
+# --- Planes que propone Ren (Invites.ren_invite) -----------------------------------
+
+~ shiori_quedar
+Ren: Shiori, ¿te apetece {{Story.plan_title()}} {{Story.plan_when()}}?
+if Story.plan_reply() == "si"
+	Shiori: Sí.
+	Shiori: Quiero decir que me parece bien. Lo apunto.
+elif Story.plan_reply() == "ocupado"
+	Shiori: No puedo. Ya he quedado para {{Story.other_plan_title()}}. Pero gracias por preguntar. No me lo preguntan mucho.
+elif Story.plan_reply() == "ya"
+	Shiori: Ya me lo propusiste. Lo tengo apuntado. Dos veces, ahora.
+else
+	Shiori: No, gracias. No es mi tipo de plan. Pero me gusta que me lo propongas.
+=> END
+
+~ shiori_quedada
+if Story.activity() == "biblioteca"
+	Shiori: Aquí sí. Aquí me entiendo con el mundo.
+	Estudiáis dos horas. Shiori te subraya los apuntes con tres colores sin que se lo pidas.
+elif Story.activity() == "cine"
+	Shiori: He leído el final en internet. No te preocupes, no te lo voy a contar. ...Muere el perro.
+	Ren: ¡Shiori!
+	Shiori: Es broma. No hay perro. Era para ver tu cara.
+elif Story.activity() == "recreativas"
+	Shiori: No he jugado nunca. ¿Cómo se gana?
+	A la tercera partida, Shiori ha entendido el patrón del juego de baile. A la quinta, tiene el récord. Al chico de siempre le tiembla el labio.
+else
+	Shiori: No suelo hacer planes. Me cuesta saber qué decir. Contigo no tanto.
+- Me gusta pasar tiempo contigo. [#cariñoso, #franco]
+	Shiori: ...Lo apunto. Con el boli bueno.
+	$> Story.change("shiori", "afecto", 2)
+- La próxima eliges tú el plan. [#curioso]
+	Shiori: Hemeroteca. Ya lo sabes.
+	$> Story.change("shiori", "confianza", 1)
+=> END
+
+~ shiori_hablar_plantado
+if Story.plan_is_ren()
+	Shiori: Me propusiste {{Story.plan_title()}}. Fui. Tú no.
+else
+	Shiori: Dijiste que vendrías a {{Story.plan_title()}}. No viniste.
+if Story.other_plan_title() != ""
+	Shiori: Sé que estabas en {{Story.other_plan_title()}}. No me molesta eso. Me molesta no saberlo.
+- Tienes razón. Perdona. [#franco, #conciliador]
+	Shiori: Perdonado. Apuntado también.
+	$> Story.change("shiori", "resentimiento", -2)
+- Se me pasó. [#evasivo]
+	Shiori: Lo apunto.
+	$> Story.change("shiori", "confianza", -1)
+=> END
