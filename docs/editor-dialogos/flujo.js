@@ -79,16 +79,21 @@
 	}
 
 	/** «- texto [#tags] => cue». {body, tags, jump} */
+	/** «- texto [#tags] [if condición /] => salto». La condición (Dialogue Manager)
+	 *  hace que la opción solo salga si se cumple. */
 	function parseOption(text) {
 		let t = text.slice(2);
-		let jump = "";
+		let jump = "", cond = "";
 		const jm = t.match(/\s=>\s*(\S+)/);
 		if (jm) { jump = jm[1]; t = t.replace(jm[0], ""); }
-		return { body: unescape(stripTags(t)), tags: tagsOf(t), jump };
+		const cm = t.match(/\s*\[if (.+?) \/\]/);
+		if (cm) { cond = cm[1]; t = t.replace(cm[0], ""); }
+		return { body: unescape(stripTags(t)), tags: tagsOf(t), jump, cond };
 	}
 
 	function buildOption(p) {
-		return "- " + p.body.trim() + (p.tags ? " " + p.tags.trim() : "") + (p.jump ? " => " + p.jump : "");
+		return "- " + p.body.trim() + (p.tags ? " " + p.tags.trim() : "") + (p.cond ? " [if " + p.cond.trim() + " /]" : "")
+			+ (p.jump ? " => " + p.jump : "");
 	}
 
 	/** Etiquetas sueltas de un texto «[#a, #b=c]» → ["a", "b=c"]. */

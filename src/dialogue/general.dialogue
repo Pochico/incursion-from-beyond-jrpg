@@ -220,3 +220,29 @@ Pasáis un buen rato en {{Story.date_place()}}. Habláis de todo y de nada.
 # cuando: deja_a_ren
 {{Story.speaker}}: Lo siento, Ren. Lo dejamos.
 => END
+
+# --- Planes (respaldo para quien no tenga sus propias respuestas; ver Invites) -------
+
+~ movil_plan
+if Story.plan_reply() == "si"
+	Ren: Me apunto.
+	{{Story.speaker}}: ¡Genial!
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}.
+	{{Story.speaker}}: Vale, otro día.
+else
+	Ren: Hoy no puedo.
+	{{Story.speaker}}: Vale.
+=> END
+
+~ movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento mucho.
+	{{Story.speaker}}: Vale. Gracias por decirlo.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Tenía que haberte avisado.
+	{{Story.speaker}}: Pues sí.
+else
+	Ren: Se me olvidó.
+	{{Story.speaker}}: Ya.
+=> END

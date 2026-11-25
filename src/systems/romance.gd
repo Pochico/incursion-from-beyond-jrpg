@@ -242,10 +242,10 @@ static func morning() -> String:
 	else:
 		neglect += 1
 		Social.change(p, PROTAGONIST, NEGLECT_COST, 1.0, "descuido")
-	# Planes que propuso y a los que Ren no fue.
+	# Planes suyos a los que Ren dijo que sí y no fue (encima del plantón de Invites).
 	for id: String in ChapterDB.PLANS:
 		if ChapterDB.plan(id).get("invite", {}).get("from", "") == p and int(ChapterDB.plan(id).get("day", 0)) == GameState.day_number() - 1 \
-				and GameState.get_flag(ChapterDB.PLAN_INVITED + id) and not GameState.get_flag(ChapterDB.PLAN_DONE + id):
+				and Invites.said_yes(id) and not GameState.get_flag(ChapterDB.PLAN_DONE + id):
 			Social.change(p, PROTAGONIST, MISSED_PLAN_COST, 1.0, "plan_plantado")
 	# La cita que pidió ayer.
 	if GameState.get_flag(PROPOSAL_FLAG + str(GameState.day_number() - 1)):

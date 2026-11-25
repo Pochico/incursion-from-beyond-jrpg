@@ -352,22 +352,25 @@ func _play_plan(plan_id: String) -> void:
 	_announce_plans()
 
 
-## Planes que alguien propone para hoy: el mensaje al móvil (una vez por plan) y
-## un aviso con los que quedan.
+## Invitaciones y mensajes que tocan a esta hora (Invites), plantones de planes
+## aceptados y un aviso con los planes de hoy que siguen en pie.
 func _announce_plans() -> void:
-	var ids := ChapterDB.plans_today()
-	if ids.is_empty():
-		return
-	for id in ids:
-		var invite: Dictionary = ChapterDB.plan(id).get("invite", {})
-		if not invite.is_empty() and not GameState.get_flag(ChapterDB.PLAN_INVITED + id):
-			GameState.set_flag(ChapterDB.PLAN_INVITED + id)
-			GameState.add_message(invite.from, invite.from, invite.text)
+	var senders := Invites.check_missed()
+	for who in Invites.deliver_due():
+		if not senders.has(who):
+			senders.append(who)
 	var y := 250.0
-	Toast.show_in(self, "Planes de hoy (opcionales; mira el móvil)", UIStyle.VIOLET, 7.0, y)
-	for id in ids.slice(0, 4):
+	if not senders.is_empty():
+		var names := senders.map(func(w: String) -> String: return CharacterDB.display_name(w))
+		Toast.show_in(self, "Mensajes nuevos: %s (T)" % ", ".join(names), UIStyle.LIME, 6.0, y)
 		y += 62.0
-		Toast.show_in(self, ChapterDB.plan_label(id), UIStyle.VIOLET, 7.0, y)
+	var agenda := Invites.agenda()
+	if agenda.is_empty():
+		return
+	Toast.show_in(self, "Planes de hoy (contesta desde el móvil)", UIStyle.VIOLET, 7.0, y)
+	for label in agenda.slice(0, 5):
+		y += 62.0
+		Toast.show_in(self, label, UIStyle.VIOLET, 7.0, y)
 
 
 ## Fundido a negro, narración sobre negro y vuelta a la escena.
@@ -412,7 +415,16 @@ func _pass_time() -> void:
 	if GameState.advance_slot():
 		return
 	_backdrop.set_location(GameState.location_id)   # fondo de la nueva franja, si lo hay
+	_spawn_cast()   # quién está aquí depende de la franja (p. ej. Mamá en casa)
 	Toast.show_in(self, "Ahora: %s" % GameState.slot_name(), UIStyle.VIOLET, 3.0, 250.0)
+	# Mensajes de la nueva franja y plantones de la que acaba de pasar.
+	var senders := Invites.check_missed()
+	for who in Invites.deliver_due():
+		if not senders.has(who):
+			senders.append(who)
+	if not senders.is_empty():
+		var names := senders.map(func(w: String) -> String: return CharacterDB.display_name(w))
+		Toast.show_in(self, "Mensajes nuevos: %s (T)" % ", ".join(names), UIStyle.LIME, 5.0, 312.0)
 
 
 ## Ren duerme hasta la mañana siguiente (desde cualquier franja): fundido,
@@ -439,6 +451,14 @@ func _go_to_next_morning(narration: String = "") -> void:
 	await SceneRouter.fade_in(0.2)
 	await get_tree().create_timer(0.6).timeout
 	await _conversation.play(Story.cue("intro"), "", false)
+	var morning: Dictionary = ChapterDB.MORNINGS.get(GameState.day_number(), {})
+	if not morning.is_empty() and Story.has_cue(morning.cue):
+		await SceneRouter.fade_out(0.3)
+		_fade_room(true)
+		await SceneRouter.fade_in(0.4)
+		GameState.scene_cast = [morning.npc]
+		await _conversation.play(Story.cue(morning.cue), morning.npc)
+		GameState.scene_cast = []
 	GameState.save_game()
 	_enter_explore()
 	await _check_partner()
@@ -453,6 +473,10 @@ func _nap() -> void:
 		return
 	await _black_scene(Story.cue("siesta"))
 	_pass_time()
+	# Si con la siesta empieza un plan aquí (la cena en casa), se juega ya.
+	var plan_id := ChapterDB.plan_at(GameState.location_id)
+	if plan_id != "":
+		await _play_plan(plan_id)
 
 
 func _date_info() -> Dictionary:
@@ -650,7 +674,10 @@ func _on_character_activated(id: String) -> void:
 	_set_cast_interactive(false)
 	var sprite: CharacterSprite = _sprites[id]
 	var img := sprite.image_rect()
-	_interaction.open(id, Rect2(sprite.position + img.position, img.size))
+	var actions: Array = InteractionMenu.ACTIONS
+	if CharacterDB.get_character(id).get("talk_only", false):
+		actions = actions.filter(func(a: Dictionary) -> bool: return a.id == "talk")
+	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "", Color(0, 0, 0, 0), actions)
 
 
 func _on_interaction_closed() -> void:

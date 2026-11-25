@@ -548,3 +548,312 @@ Pero no lo es. Ahora sabéis que algo se está abriendo. Y que no vais a mirar h
 En el móvil, el grupo cambia de nombre. «Cloacas FC». Shiori pide que conste en acta que ella no lo ha votado.
 => END
 
+
+# =====================================================================================
+# DÍA 4 (jueves). Ver ChapterDB.PLANS: a mediodía, por la tarde y por la noche
+# coinciden dos planes. Unos se proponen en persona (opciones con
+# Story.plan_answer) y otros por mensaje (se contestan desde el móvil).
+# =====================================================================================
+
+# --- Desayuno con Mamá (ChapterDB.MORNINGS) ------------------------------------------
+
+~ dia4_desayuno
+Huele a café y a pan tostado. Mamá está en la cocina con el pijama de los gatos y la radio puesta.
+Mamá: ¡Buenos días, dormilón! Hoy libro por la mañana. Siéntate, que te he hecho tostadas.
+Ren: ¿Tostadas? ¿Qué ha pasado? ¿Nos ha tocado la lotería?
+Mamá: Ja. Ja. Qué gracioso es mi niño. Cómetelas antes de que me arrepienta.
+Mamá: Oye, que me ha dicho la madre de Kenji que el lunes estuvisteis en las camas elásticas. Que Kenji se dio un golpe tremendo.
+- Fue precioso. Lo tengo en vídeo. [#bromista]
+	Mamá: ¡Pásamelo! Que esa mujer me lo ha contado tres veces y nunca me lo enseña.
+- Sobrevivió. Más o menos. [#desenfadado]
+	Mamá: Ese niño es de goma. Desde los seis años.
+Mamá: Por cierto... esta noche cenamos juntos, ¿vale? Hace mucho que no nos sentamos los dos.
+Mamá: Hago la tortilla de papá. La de cebolla. La que te gustaba robarle a trozos de la sartén.
+- Hecho. Esta noche, tortilla. [#cariñoso, #decidido]
+	$> Story.plan_answer("cena_mama", "si")
+	Mamá: ¡Bien! Pues a las nueve y media en casa. Y si te sale algo, me avisas, que no soy adivina.
+- Ya he quedado para {{Story.conflict_title("cena_mama")}}, mamá. [#franco] [if Story.has_conflict("cena_mama") /]
+	$> Story.plan_answer("cena_mama", "otro")
+	Mamá: Ah, mira. Pues nada, otro día. Me alegro de que tengas planes, cariño.
+- No sé si podré, mamá. Igual salgo. [#evasivo]
+	$> Story.plan_answer("cena_mama", "no")
+	Mamá: Vale, vale. Tú tranquilo. La tortilla aguanta.
+	Mamá: (Se le escapa un suspiro pequeñito, de esos que cree que no se oyen.)
+Mamá: Bueno, que llego tarde. ¡Y abrígate!
+Ren: Mamá, que llevas el pijama.
+Mamá: ...Que llego tarde a cambiarme.
+=> END
+
+# --- Instituto ----------------------------------------------------------------------
+
+~ dia4_clase
+Aula de 2.º B. Historia a primera hora. El profesor de Historia está de baja y viene un sustituto que no sabe el nombre de nadie.
+Rika: ¡Ren! Siéntate aquí, rápido, antes de que me pille Shiori.
+Shiori: Ya te he pillado. Estás cogiendo el boli mal.
+Rika: ¿Lo ves? ¿Lo ves lo que tengo que aguantar?
+Shiori: (A ti, en voz baja.) Ren. A mediodía voy a la hemeroteca del campus. He encontrado algo. Quiero que lo veas tú.
+Shiori: No te lo pido a ti por nada especial. Bueno, sí. Tú no te ríes de estas cosas.
+- Allí estaré. [#curioso, #decidido]
+	$> Story.plan_answer("hemeroteca_shiori", "si")
+	Shiori: Bien. A la una y media. Si llegas tarde, empiezo sin ti.
+- Ya he quedado para {{Story.conflict_title("hemeroteca_shiori")}}. [#franco] [if Story.has_conflict("hemeroteca_shiori") /]
+	$> Story.plan_answer("hemeroteca_shiori", "otro")
+	Shiori: Vale. Otro día, entonces. Los periódicos no se van a ir a ningún sitio. Bueno, se van amarilleando.
+- Hoy no puedo, Shiori. [#reservado]
+	$> Story.plan_answer("hemeroteca_shiori", "no")
+	Shiori: Entendido. Lo apunto como «hoy no». No como «no».
+Kenji asoma la cabeza por la puerta. No es su clase. Le da igual.
+Kenji: Psst. Socio. Esta tarde, parque de la Ribera. Sin móviles. Como cuando éramos críos.
+Rika: ¿Sin móviles? ¿Qué sois, monjes?
+Kenji: Somos clásicos, Rika. Ren, ¿vienes o qué?
+- Me apunto. Y te gano en los columpios. [#bromista, #decidido]
+	$> Story.plan_answer("parque_kenji", "si")
+	Kenji: Eso ya lo veremos, loco. A las cinco.
+- Ya he quedado para {{Story.conflict_title("parque_kenji")}}. [#franco] [if Story.has_conflict("parque_kenji") /]
+	$> Story.plan_answer("parque_kenji", "otro")
+	Kenji: Uy, el señor tiene agenda. Vale, vale. Otro día.
+- Hoy paso, tío. [#reservado]
+	$> Story.plan_answer("parque_kenji", "no")
+	Kenji: Vale... Pues me columpio yo solo. Como un loco. Tú verás.
+El sustituto le mira por encima de las gafas. «¿Y usted quién es?»
+Kenji: Nadie. Un holograma. Ya me voy.
+Yuna: (Desde el pasillo, bajito.) Osito, que es tu hora de Física.
+Rika: (A ti.) Qué envidia me dais. Yo esta tarde tengo una emergencia de vestido. Ya te escribiré.
+=> END
+
+~ dia4_clase_fundido
+Cincuenta minutos sobre la Revolución Industrial. El sustituto llama «Raquel» a Rika cuatro veces. Rika contesta las cuatro.
+Shiori dibuja un plano de algo en el margen. No es la Revolución Industrial.
+Suena el timbre.
+=> END
+
+# --- Hemeroteca con Shiori (mediodía) ---------------------------------------------
+
+~ dia4_hemeroteca
+Hemeroteca del campus. Silencio, calefacción y olor a papel viejo. Shiori está en la última mesa con tres periódicos abiertos.
+Shiori: Has venido. Siéntate. No toques nada todavía.
+Shiori: Mira esto. «El Comarcal», marzo de 1987. Página doce.
+En la foto, La Torre recién terminada. Shiori pone el dedo encima y cuenta en voz baja. Catorce plantas.
+Ren: Catorce. Hoy tiene trece.
+Shiori: Eso no es lo importante. Mira quién firma la foto.
+Debajo, en letra pequeña\: «Foto: T. Kurosawa».
+Ren: ¿Kurosawa? ¿Como tú?
+Shiori: Mi abuelo. Tomás. Trabajó cuarenta años en la estación de Zarzaquemada. Todas las leyendas que sé me las contó él.
+Shiori: Ahora vive en una residencia. Tiene alzhéimer. Hay días que me llama por el nombre de mi madre.
+Shiori: Por eso lo apunto todo. Si yo no me acuerdo de sus historias, no se acuerda nadie. Y entonces es como si no hubieran pasado.
+- Lo siento mucho, Shiori. [#empático]
+	Shiori: Gracias. No hace falta que pongas esa cara. Él está tranquilo. Se ríe mucho. Más que antes, incluso.
+	$> Story.change("shiori", "confianza", 2)
+- Yo también me apunto cosas de mi padre. Para no perderlas. [#franco, #cariñoso]
+	Shiori: ...¿Sí?
+	Ren: Cómo se reía. Que cantaba fatal en el coche. Que me decía «campeón» aunque perdiera.
+	Shiori: Eso es exactamente lo que hago yo. No sabía que alguien más lo hacía.
+	$> Story.change("shiori", "confianza", 4)
+	$> Story.change("shiori", "afecto", 2)
+- ¿Y si le preguntamos a él por la foto? [#curioso, #decidido]
+	Shiori: Lo he pensado. Los domingos está más lúcido. ...¿Vendrías conmigo?
+	Ren: Claro.
+	Shiori: Vale. Pero no le hables de dinosaurios. Se emociona y no hay quien le pare.
+	$> Story.set_flag("shiori_visita_abuelo")
+	$> Story.change("shiori", "respeto", 3)
+Shiori: Mi abuelo siempre decía que La Torre «respira». Yo pensaba que era una forma de hablar.
+if Story.phase("incursion_1")
+	Shiori: Después de lo de {{Story.incursion_place()}}, ya no lo pienso.
+else
+	Shiori: Ya no estoy tan segura.
+Shiori: Gracias por venir, Ren. De verdad. Es la primera vez que le enseño esto a alguien.
+=> END
+
+# --- Comer en Westlake con Yuna (mediodía) -----------------------------------------
+
+~ dia4_lago
+Westlake. La tarima de madera, el agua quieta y los patos de siempre pidiendo pan con descaro.
+Yuna ha traído una tartera con tortilla y dos tenedores. Uno es de Hello Kitty.
+Yuna: El de Hello Kitty es el tuyo. No es negociable.
+Ren: Me parece justo.
+Yuna: Quería hablar contigo de Kenji. No es nada malo. Bueno, no lo sé.
+Yuna: Duerme fatal. Se pasa las noches grabando y luego en clase parece un zombi. Y se ríe muchísimo. Cuando Kenji se ríe tanto es que algo le preocupa.
+- ¿Te ha contado qué le pasa? [#curioso]
+	Yuna: Lo de la voz de los cascos. A mí me lo cuenta en broma. A ti te lo cuenta en serio, ¿verdad?
+- Le echaré un ojo. Te lo prometo. [#protector]
+	Yuna: Gracias. Sabía que dirías eso.
+	$> Story.change("yuna", "confianza", 2)
+Yuna: Bueno. Ya está. Ya he soltado lo de Kenji. Ahora come, que se enfría. Bueno, la tortilla está fría ya. Es de anoche.
+- Oye, ¿y tú qué? Siempre estás pendiente de todos. [#empático, #curioso]
+	Yuna: ¿Yo?
+	Yuna: ...Mis padres tienen un bar en Zarza. Trabajan todo el día. Por las tardes cuido de mi hermano, Hugo. Tiene siete años y la energía de un dinosaurio.
+	Yuna: Le hago los deberes con él, la cena, el baño. Luego estudio yo. Luego Kenji me manda audios de nueve minutos.
+	Yuna: No me quejo, ¿eh? Pero a veces estoy muy cansada. Y como no grito, nadie se da cuenta.
+	- Yo me he dado cuenta. [#cariñoso]
+		Yuna: (Se queda callada un rato. Luego te roba un trozo de tortilla de tu lado.) Gracias, Ren.
+		$> Story.change("yuna", "confianza", 4)
+		$> Story.change("yuna", "afecto", 2)
+	- Pues un día te cuido yo a Hugo y descansas. [#protector, #decidido]
+		Yuna: ¿Tú? ¿Sabes lo que es un niño de siete años con un dinosaurio de plástico?
+		Ren: He sido amigo de Kenji toda la vida. Estoy entrenado.
+		Yuna: (Se ríe de verdad.) Vale. Te tomo la palabra.
+		$> Story.set_flag("ren_cuida_hugo")
+		$> Story.change("yuna", "afecto", 3)
+- Esta tortilla está buenísima. [#desenfadado]
+	Yuna: Es de mi abuela. La receta, digo. Ella siempre lleva una mandarina de sobra en el bolso. Por si acaso. Me lo pegó.
+	$> Story.change("yuna", "afecto", 1)
+Yuna: Quiero ser enfermera. No lo sabe casi nadie. Kenji sí. Y ahora tú.
+Yuna: Kenji me contó lo de tu padre. Hace tiempo. Lo pasó muy mal por ti, ¿sabes? Pero te veo bien. Te veo... tú.
+- Estoy bien. Ya lo llevo mejor. [#franco]
+	Yuna: Se nota. Me alegro mucho.
+- Kenji es un exagerado. [#bromista]
+	Yuna: Lo es. Pero en esto no exageraba.
+Un pato se acerca demasiado a la tartera. Yuna le mira fijamente. El pato se va.
+Yuna: Tengo un don.
+=> END
+
+# --- Parque sin móvil con Kenji (tarde) --------------------------------------------
+
+~ dia4_parque
+Parque de la Ribera. Los columpios de siempre, la fuente que no funciona y el tobogán donde Kenji se partió el brazo en tercero.
+Kenji: Móvil. Dámelo.
+Kenji mete los dos móviles en una bolsa de pan y la deja en el banco.
+Kenji: Ya está. Ahora somos libres. Y un poco vulnerables, no te voy a mentir.
+- ¡Al columpio! El último paga los helados. [#bromista, #impulsivo]
+	Sales corriendo. Kenji tropieza con su propia rasta. Llegas primero.
+	Kenji: ¡Trampa! ¡Eso ha sido trampa!
+	Ren: Pagas tú, loco.
+	$> Story.change("kenji", "afecto", 2)
+- (Sentarte en el banco con él.) [#reservado]
+	Kenji: Vale, modo abuelos. También me vale.
+Os columpiáis un rato sin decir nada. Como antes.
+Kenji: Oye, Ren. ¿Te puedo contar una cosa? Una de verdad, no de las mías.
+Kenji: El vinilo ese que tengo, el de la voz de mujer. Era de mi padre. Se lo dejó cuando se fue a Alemania. Yo tenía diez años.
+Kenji: Iba a ser un año. Luego dos. Ahora llama por mi cumpleaños y en Navidad. Y siempre me pregunta si sigo «con lo de la música».
+Kenji: Hago canciones para que algún día las oiga y piense «hostia, mi hijo». Qué tontería, ¿eh?
+- No es ninguna tontería. [#cariñoso, #franco]
+	Kenji: ...Gracias, tío.
+	$> Story.change("kenji", "confianza", 3)
+- Pues que se entere. Súbelas a todas partes. [#decidido, #idealista]
+	Kenji: ¿Tú crees? ...Igual sí. Igual que se entere hasta en Stuttgart.
+	$> Story.change("kenji", "respeto", 2)
+- Si no le gustan, es que no tiene oído. [#bromista, #protector]
+	Kenji: Jajaja. Eso es verdad. Mi padre no distingue un bajo de una lavadora.
+	$> Story.change("kenji", "afecto", 2)
+Kenji: Tú perdiste al tuyo y yo tengo al mío y no lo tengo. No es lo mismo, ya lo sé. Pero a veces pienso que por eso nos entendemos.
+- Mi padre te quería mucho, ¿sabes? Decía que eras un liante. [#franco, #cariñoso]
+	Kenji: ¿Un liante? ...Viniendo de él es un piropo. Me llevaba al fútbol con vosotros. Me compraba pipas sin sal porque sabía que las con sal me hacían llagas.
+	Kenji: Le echo de menos yo también, tío.
+	$> Story.change("kenji", "confianza", 2)
+	$> Story.change("kenji", "afecto", 2)
+- Nos entendemos porque eres el único que aguanta mis chistes. [#bromista]
+	Kenji: Eso también. Es un trabajo duro. Nadie me lo agradece.
+Kenji: Bueno. Ya está. Suficiente profundidad por hoy. ¿Echamos una carrera hasta la fuente?
+Kenji: El que pierda... sujeta la bolsa de los móviles.
+=> END
+
+# --- Tarde de tiendas con Rika (tarde) -----------------------------------------------
+
+~ dia4_tiendas
+Westfield Parquesur. Rika te espera en la puerta de la tienda con una bolsa en cada mano y cara de crisis.
+Rika: ¡Por fin! Vale. Tengo dos vestidos. Uno es precioso. El otro también. Pero solo me llega para uno.
+Rika: Tú me vas a decir la verdad. Sin cumplidos. Odio los cumplidos de mentira.
+Rika sale del probador con el primero. Es verde. Muy verde.
+- Te queda genial. [#cariñoso]
+	Rika: ¿Seguro? ¿O me lo dices para que salga ya?
+	- Seguro. [#franco]
+		Rika: Vale. Te creo. Porque tú no me mentirías. ¿Verdad que no?
+	- Bueno... un poco para que salgas ya. [#franco, #bromista]
+		Rika: ¡Ren! ...Vale. Me gusta que lo digas.
+		$> Story.change("rika", "confianza", 2)
+- Pareces un semáforo, Rika. [#franco, #provocador]
+	Rika: ...
+	Rika: Tienes razón. Parezco un semáforo. Gracias. En serio. Mi hermana me habría dicho que estoy guapísima para que me lo compre y quede ridícula.
+	$> Story.change("rika", "confianza", 3)
+	$> Story.change("rika", "respeto", 2)
+Rika sale con el segundo. Negro, sencillo. Le queda bien. Lo sabe, y por una vez no lo dice.
+Rika: Este, ¿no? Este.
+Ren: Este.
+Mientras paga, Rika no para de mirar el móvil. Le ha llegado un audio. Lo escucha y pone una cara que no le habías visto nunca.
+Rika: Es mi madre. Que mi hermana ha sacado un diez en no sé qué de Medicina. Otra vez.
+Rika: Mei es la lista. Yo soy... la mona. La que se hace las uñas. En casa lo dicen en broma, ¿eh? Pero lo dicen mucho.
+- Tú no eres solo la mona. [#cariñoso, #protector]
+	Rika: ¿Ah, no? ¿Y qué soy?
+	Ren: La que se da cuenta de todo y hace como que no. La que hace reír a la gente cuando no puede.
+	Rika: ...Vale. Para. Que se me corre el rímel y es nuevo.
+	$> Story.change("rika", "afecto", 4)
+- ¿Y a ti qué te gustaría hacer? [#curioso]
+	Rika: Montar un salón de uñas. Uno bonito, con luces y música. Los domingos voy a la residencia y les hago las uñas a mi abuela y a sus amigas. Me esperan en fila.
+	Rika: Una señora de noventa años me dijo el otro día que le había alegrado la semana. Con unas uñas, Ren.
+	Ren: Pues eso no lo hace cualquiera.
+	Rika: No. No lo hace cualquiera.
+	$> Story.change("rika", "confianza", 3)
+- Ser la lista está sobrevalorado. [#bromista]
+	Rika: ¿Verdad? Mírate a ti. Sacas buenas notas y vas con la sudadera del revés.
+	Te miras. Es verdad.
+Rika: Bueno. Gracias por venir, cielo. Te debo una. Una de verdad, no un bubble tea.
+=> END
+
+# --- Concierto de Akane (noche) ---------------------------------------------------
+
+~ dia4_concierto
+Debajo de la estación de Zarzaquemada hay un garito que no tiene nombre en la puerta. Dentro, cuarenta personas, un techo bajo y un calor de horno.
+Al fondo, en un escenario de palés, Akane afina la guitarra sin mirar a nadie.
+Akane: (Al micro.) Somos Las Ratas de Zarza. Esta va de un sitio donde no se puede dormir.
+Tocan cuatro canciones. Suenan fatal y suenan increíble a la vez. En la tercera, Akane te ve entre la gente. Falla una nota. Sigue como si nada.
+Al terminar sale fuera, a la acera, con una lata de refresco y el pelo empapado.
+Akane: Has venido.
+- Me ha encantado. En serio. [#cariñoso, #franco]
+	Akane: ...No digas eso tan alto. Pero vale. Me lo quedo.
+	$> Story.change("akane", "afecto", 3)
+- Has fallado una nota en la tercera. [#provocador, #bromista]
+	Akane: Porque te he visto, idiota. No esperaba que vinieras.
+	$> Story.change("akane", "atraccion", 2)
+- Suena mejor en directo que en tu móvil. [#franco]
+	Akane: Todo suena mejor en directo. Menos el batería.
+Akane: ¿Sabes por qué trabajo de noche en las recres? Para pagar el local de ensayo. Y para ayudar en casa.
+Akane: Vivo con mi abuela. La que nunca se equivoca. Mi madre se fue cuando yo tenía doce. Manda una postal cada año. Con un gato distinto.
+Akane: No lo cuento por dar pena, ¿eh? Mi abuela es la mejor persona del mundo. Pero tocar es lo único que hago en el que no pienso en nada.
+Akane: Oye. ¿Es verdad lo de tu padre? Kenji lo dijo una vez sin querer.
+- Sí. Hace ya tiempo. Ahora estoy bien. [#franco]
+	Akane: Ya. Se te ve. Tienes cara de alguien que ha salido de algo. No sé explicarlo.
+	$> Story.change("akane", "confianza", 3)
+- Sí. Le habrías caído bien. Odiaba a los baterías. [#bromista, #franco]
+	Akane: Ja. Un hombre sabio.
+	Akane: (Te mira un momento más de la cuenta.) Me caes bien, Ren. No se lo digas a nadie.
+	$> Story.change("akane", "confianza", 3)
+	$> Story.change("akane", "afecto", 2)
+Akane: Venga. Te acompaño a la parada. No porque me preocupe. Porque me pilla de camino.
+=> END
+
+# --- Cena con Mamá (noche) ----------------------------------------------------------
+
+~ dia4_cena
+Casa. Huele a cebolla pochada. Mamá ha puesto el mantel de los domingos y la radio bajita.
+Mamá: ¡Justo a tiempo! Siéntate. La tortilla está reposando. Una tortilla sin reposar es una tortilla triste.
+Ren: Eso lo decía papá.
+Mamá: Lo decía todo el rato. Era insoportable con la tortilla. Le salía buenísima, el muy...
+Mamá: ¿Te he contado cómo nos conocimos?
+- Mil veces. Cuéntamelo otra vez. [#cariñoso]
+	Mamá: ¡Pues te lo cuento!
+- ¿En el fútbol, no? [#curioso]
+	Mamá: ¡En el fútbol! Pues te lo cuento otra vez.
+Mamá: Butarque, 1999. El Lega jugaba contra no sé quién. Tu padre se levantó a celebrar un gol y me tiró la cerveza encima. Toda.
+Mamá: Me dio su gorra para que me secara el pelo. Esa gorra la tienes tú en la estantería.
+Mamá: Le dije que era un patoso. Me dijo que sí, pero que con muy buena puntería. Qué tonto era.
+Mamá se ríe. Tú también. Hace un año, esta conversación no habría sido así.
+- Me la voy a poner para el próximo partido. [#decidido, #cariñoso]
+	Mamá: Te va a quedar grande.
+	Ren: Algún día me valdrá.
+	Mamá: (Se le ponen los ojos brillantes. Disimula mirando la tortilla.) Ya te vale. Ya te vale.
+	$> Story.change("madre_ren", "afecto", 3)
+- Enséñame a hacer la tortilla. Para que no se pierda. [#curioso, #cariñoso]
+	Mamá: ¿En serio? ¡Por fin! El sábado. Te voy a hacer llorar con la cebolla. Es parte del aprendizaje.
+	$> Story.set_flag("ren_aprende_tortilla")
+	$> Story.change("madre_ren", "afecto", 3)
+- ¿Y tú cómo estás, mamá? [#empático, #franco]
+	Mamá: ¿Yo? Pues mira... bien. Me he apuntado a salsa con las del trabajo. Los martes.
+	Mamá: Bailo fatal. Me río muchísimo. Creo que a papá le habría hecho gracia verme.
+	Ren: Le habría dado algo.
+	Mamá: Le habría dado algo, sí.
+	$> Story.change("madre_ren", "confianza", 3)
+Mamá: Te veo bien, cariño. Contento. Con tus amigos. No te lo digo para que te pongas rojo, te lo digo porque es verdad.
+Ren: Mamá...
+Mamá: Ya está, ya está. Come, que se enfría. Una tortilla fría es...
+Ren: ...una tortilla triste. Ya lo sé.
+=> END

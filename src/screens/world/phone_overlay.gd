@@ -11,6 +11,8 @@ extends Control
 ##  - Mensajes: conversaciones que ya existen (de la más reciente a la más antigua).
 ##  - Chat: burbujas de la conversación y botón «Saludar». La respuesta sale del
 ##    selector de Story (momento «movil» en el .dialogue de cada personaje).
+##    Si el contacto espera respuesta (una invitación o un reproche por un plantón,
+##    ver Invites), en vez de «Saludar» salen las respuestas posibles.
 ##  - Inventario: objetos de GameState.inventory. Tocar una caja la abre (`notice`
 ##    cuenta lo que traía).
 ##  - Equipo: arma, accesorio y módulo de Ren y sus compañeros.
@@ -60,6 +62,7 @@ const LIST_BOTTOM := 950.0
 const BACK := Rect2(30, 118, 54, 44)
 const CHAT_AREA := Rect2(SCREEN_INSET + 6, 240, 468 - SCREEN_INSET * 2 - 12, 620)
 const SEND := Rect2(34, 890, 400, 58)
+const REPLY_STEP := 64.0   ## alto de cada botón de respuesta más la separación
 const BUBBLE_W := 290.0
 const BUBBLE_FONT := 19
 const SKY := Color("1d1530")
@@ -78,6 +81,7 @@ var _chat_back := "contacts" ## pantalla a la que vuelve el chat
 var _chat_scroll := 0.0      ## px desplazados hacia arriba desde el final del chat
 var _busy := false           ## el contacto está respondiendo
 var _typing := false
+var _reply_sel := 0          ## respuesta seleccionada con el teclado
 var _phone: Control
 var _chat: Control           ## área recortada de las burbujas
 var _debug: DebugRelations
@@ -209,6 +213,8 @@ func _activate_row(i: int) -> void:
 
 
 func _redraw() -> void:
+	# El chat se encoge para dejar sitio a los botones de respuesta.
+	_chat.size.y = CHAT_AREA.size.y - maxi(_replies().size() - 1, 0) * REPLY_STEP
 	_phone.queue_redraw()
 	_chat.queue_redraw()
 
@@ -222,9 +228,39 @@ func _greet() -> void:
 	var who := _chat_with
 	# Se registra antes de elegir para que el criterio «veces» cuente este mensaje.
 	GameState.record("message", CharacterDB.PROTAGONIST, who)
-	var entry := Story.pick(who, "movil")
-	if entry.is_empty():
+	await _play_chat(who, Story.pick(who, "movil"))
+
+
+## Respuestas que espera el contacto del chat (invitación o reproche), si las hay.
+func _replies() -> Array[Dictionary]:
+	if _screen != "chat" or _busy or _chat_with == "":
+		return []
+	return Invites.replies(_chat_with)
+
+
+func _reply_rect(i: int, n: int) -> Rect2:
+	return Rect2(SEND.position.x, SEND.position.y + SEND.size.y - 54 - (n - 1 - i) * REPLY_STEP, SEND.size.x, 54)
+
+
+## Ren contesta a una invitación o a un reproche; lo que se dicen sale del .dialogue
+## (`<contacto>_movil_plan` / `_movil_plantado`, ver Invites.choose_reply).
+func _reply(i: int) -> void:
+	var replies := _replies()
+	if i < 0 or i >= replies.size():
 		return
+	var who := _chat_with
+	GameState.record("message", CharacterDB.PROTAGONIST, who)
+	var entry := Invites.choose_reply(who, replies[i])
+	_reply_sel = 0
+	await _play_chat(who, entry)
+
+
+## Reproduce una conversación de móvil como burbujas («escribiendo...» incluido).
+func _play_chat(who: String, entry: Dictionary) -> void:
+	if entry.is_empty():
+		_redraw()
+		return
+	Story.speaker = CharacterDB.display_name(who)
 	_busy = true
 	_redraw()
 	var line: DialogueLine = await DialogueManager.get_next_dialogue_line(entry.resource, entry.cue)
@@ -266,6 +302,14 @@ func _input(event: InputEvent) -> void:
 		_back()
 	elif _screen == "home":
 		_input_home(event)
+	elif _screen == "chat" and not _replies().is_empty():
+		var n := _replies().size()
+		if event.is_action_pressed("ui_accept"):
+			_reply(_reply_sel)
+		elif event.is_action_pressed("ui_up"):
+			_reply_sel = posmod(_reply_sel - 1, n)
+		elif event.is_action_pressed("ui_down"):
+			_reply_sel = posmod(_reply_sel + 1, n)
 	elif _screen == "chat":
 		if event.is_action_pressed("ui_accept"):
 			_greet()
@@ -311,6 +355,8 @@ func _gui_input(event: InputEvent) -> void:
 			_hover = zone
 			if zone.begins_with("app") or zone.begins_with("row"):
 				_selected = int(zone.substr(3))
+			elif zone.begins_with("reply"):
+				_reply_sel = int(zone.substr(5))
 			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if zone != "" else Control.CURSOR_ARROW
 			_redraw()
 	elif event is InputEventMouseButton and event.pressed:
@@ -325,6 +371,8 @@ func _gui_input(event: InputEvent) -> void:
 					_back()
 				elif zone == "send":
 					_greet()
+				elif zone.begins_with("reply"):
+					_reply(int(zone.substr(5)))
 				elif zone.begins_with("app"):
 					_open_app(int(zone.substr(3)))
 				elif zone.begins_with("row"):
@@ -343,7 +391,7 @@ func _wheel(dir: int) -> void:
 
 
 func _scroll_chat(amount: float) -> void:
-	_chat_scroll = clampf(_chat_scroll + amount, 0.0, maxf(_chat_height() - CHAT_AREA.size.y, 0.0))
+	_chat_scroll = clampf(_chat_scroll + amount, 0.0, maxf(_chat_height() - _chat.size.y, 0.0))
 	_redraw()
 
 
@@ -356,7 +404,11 @@ func _zone_at(p: Vector2) -> String:
 				if _app_rect(i).has_point(p):
 					return "app%d" % i
 		"chat":
-			if SEND.has_point(p) and not _busy:
+			var replies := _replies()
+			for i in replies.size():
+				if _reply_rect(i, replies.size()).has_point(p):
+					return "reply%d" % i
+			if replies.is_empty() and SEND.has_point(p) and not _busy:
 				return "send"
 		_:
 			for i in _rows().size():
@@ -436,7 +488,10 @@ func _draw_phone() -> void:
 				_draw_app(c, i)
 		"chat":
 			_draw_header(c, w, CharacterDB.display_name(_chat_with), true)
-			_draw_send(c)
+			if _replies().is_empty():
+				_draw_send(c)
+			else:
+				_draw_replies(c)
 		_:
 			_draw_header(c, w, TITLES[_screen], true)
 			_draw_list(c)
@@ -735,7 +790,7 @@ func _draw_chat() -> void:
 		c.draw_multiline_string(UIStyle.FONT_REGULAR_ITALIC, Vector2(0, 80),
 				"Todavía no habéis hablado por aquí.", HORIZONTAL_ALIGNMENT_CENTER, CHAT_AREA.size.x, 20, -1, Color(UIStyle.WHITE, 0.7))
 		return
-	var y := CHAT_AREA.size.y - 10 + _chat_scroll
+	var y := c.size.y - 10 + _chat_scroll
 	if _typing:
 		y -= 50
 		_draw_typing(c, Vector2(48, y))
@@ -777,6 +832,26 @@ func _draw_typing(c: Control, pos: Vector2) -> void:
 	_mini_face(c, Vector2(4, r.end.y - 36), _chat_with)
 	# Animación de los puntos mientras escribe.
 	get_tree().create_timer(0.25).timeout.connect(_chat.queue_redraw, CONNECT_ONE_SHOT)
+
+
+## Botones de respuesta (en lugar de «Saludar»), de abajo arriba.
+func _draw_replies(c: Control) -> void:
+	var replies := _replies()
+	var n := replies.size()
+	var top := _reply_rect(0, n).position.y
+	c.draw_line(Vector2(SCREEN_INSET, top - 18), Vector2(BODY.size.x - SCREEN_INSET, top - 18), Color(UIStyle.WHITE, 0.3), 1.5)
+	_reply_sel = clampi(_reply_sel, 0, n - 1)
+	for i in n:
+		var r := _reply_rect(i, n)
+		var on := i == _reply_sel
+		var shape := UIStyle.chamfer_rect(r, [12.0, 12.0, 12.0, 12.0])
+		c.draw_colored_polygon(shape, UIStyle.LIME if on else Color(ROW_FILL, 0.95))
+		UIStyle.draw_outline(c, shape, UIStyle.LIME if on else Color(UIStyle.WHITE, 0.5), 1.5)
+		var col := UIStyle.INK if on else UIStyle.WHITE
+		# Si no cabe, primero letra algo más pequeña y, solo si aún no cabe, «…».
+		var fs := 20 if UIStyle.FONT_SEMIBOLD.get_string_size(replies[i].label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x <= r.size.x - 44 else 16
+		c.draw_string(UIStyle.FONT_SEMIBOLD, r.position + Vector2(22, 34), _fit(replies[i].label, UIStyle.FONT_SEMIBOLD, fs, r.size.x - 44),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
 func _draw_send(c: Control) -> void:

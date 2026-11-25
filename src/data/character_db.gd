@@ -83,6 +83,7 @@ const ALL := {
 		"portrait": "res://assets/characters/madre_ren.png",
 		"face": Rect2(330, 110, 440, 440),
 		"scene": {"height": 780.0},
+		"talk_only": true,   # en el menú solo «Hablar»
 	},
 	"madre_kenji": {
 		"name": "Madre de Kenji", "color": Color("f2b45c"),

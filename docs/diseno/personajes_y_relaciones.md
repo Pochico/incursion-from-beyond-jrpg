@@ -83,7 +83,7 @@ Momentos:
 | `una vez` | No se ha visto este cue nunca. |
 | `visto CUE` | Ya se vio ese cue. |
 | `sabe EVENTO` | El personaje conoce ese acontecimiento. |
-| `flag NOMBRE` | El indicador está activo. `flag dia_N` es verdad si hoy es el día N de la partida (`dia_2` = martes); no se guarda. Planes (`ChapterDB.PLANS`): `flag plan_invitado:ID` (te lo propusieron) y `flag plan_hecho:ID` (fuiste). |
+| `flag NOMBRE` | El indicador está activo. `flag dia_N` es verdad si hoy es el día N de la partida (`dia_2` = martes); no se guarda. Planes (`ChapterDB.PLANS`, `Invites`): `flag plan_invitado:ID` (te lo propusieron), `flag por_proponer:ID` (te lo va a proponer en persona), `flag plan_si:ID` / `plan_no:ID` / `plan_otro:ID` (lo que contestaste), `flag plan_hecho:ID` (fuiste), `flag plan_plantado:ID` (dijiste que sí y no fuiste) y `flag reproche:ID` (reproche sin contestar). |
 | `presente ID` | Ese personaje está en la escena. |
 | `fase >= X` | Punto de la historia (`=`, `!=`, `<`, `>`, `<=`, `>=`): `rutina` → `incursion_1` (primera incursión) → `reunion` (reunión del grupo en las Cloacas). |
 | `tramo >= X` | Relación con Ren: `hostil`, `fria`, `neutral`, `cercana`, `intima`. |
@@ -178,6 +178,18 @@ Las relaciones no pueden subirse repitiendo la misma acción. El registro ya per
 Lista común para todos los personajes, enlazada con las expresiones de las ilustraciones: alegre, tranquilo, curioso, irritado, ansioso, triste. Tiene una intensidad de 0 a 100. Cada día se sortea según los pesos de la ficha, y los acontecimientos importantes tienen prioridad sobre el sorteo.
 
 El ánimo multiplica las reacciones. Si alguien está triste, lo *sarcástico* duele más. Si está alegre y confía en Ren, puede tomarlo como broma. Ligar con alguien enfadado suele empeorarlo.
+
+## Invitaciones a planes
+
+**[DEFINIDO]** (petición del usuario): los planes te los ofrecen en persona o por mensaje. Puedes aceptar o rechazar, sin que sea excluyente, y decir que ya tienes otro plan. Si dices que sí y luego no vas, te escriben y baja la relación; si no contestas al mensaje, te lo dicen cuando te ven. El jueves (día 4) no todo es a la vez, pero hay que elegir: a mediodía, por la tarde y por la noche coinciden dos planes.
+
+**[PROPUESTA]** Cómo funciona (`src/systems/invites.gd`, valores provisionales):
+
+- En `ChapterDB.PLANS`, `invite.via` = `mensaje` (por defecto) o `persona`; `invite.at` = franja en que llega el mensaje (o hasta cuándo se espera a verte en persona); `text_late` = mensaje si iba a decírtelo en persona y no os visteis; `missed_text` = el reproche.
+- Propuesta en persona: una conversación con regla `hablar, flag por_proponer:ID, flag dia_N, una vez`, o dentro de otra escena. Las opciones llaman a `Story.plan_answer("ID", "si" | "no" | "otro")`. La de «ya he quedado» solo sale si hay otro plan aceptado a la misma hora: `- Ya he quedado para {{Story.conflict_title("ID")}}. [#franco] [if Story.has_conflict("ID") /]`.
+- Aceptar: +1 afecto. Plantón (se comprueba al pasar de franja y cada mañana): afecto −5, confianza −4, resentimiento +3 (causa `plan_plantado`). Contestar al reproche por el móvil: *perdona* (resentimiento −2, afecto +1), *estaba en…* (resentimiento −1, confianza +1), *se me olvidó* (resentimiento +1).
+- Reproche en persona: regla `hablar, flag reproche:ID, flag plan_plantado:ID, no flag plan_hecho:ID, una vez` (pesa más que las charlas normales), y la conversación quita el reproche con `$> Story.set_flag("reproche:ID", false)`. `Story.went_instead("ID")` dice a qué otro plan fuiste en su lugar.
+- Si Ren es pareja de quien invitó, `Romance.morning` le resta además afecto por los planes suyos a los que dijo que sí y no fue.
 
 ## Citas y parejas
 

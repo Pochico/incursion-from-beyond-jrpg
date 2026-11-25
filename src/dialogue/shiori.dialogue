@@ -378,7 +378,8 @@ Shiori: En la foto salen trece.
 => END
 
 ~ shiori_hablar_plantada_charla
-# cuando: hablar, flag plan_invitado:charla_shiori, no flag plan_hecho:charla_shiori, no flag dia_2, una vez
+# cuando: hablar, flag reproche:charla_shiori, flag plan_plantado:charla_shiori, no flag plan_hecho:charla_shiori, una vez
+$> Story.set_flag("reproche:charla_shiori", false)
 Shiori: La charla de Egaleo estuvo bien. Había doce sillas. Once ocupadas.
 Shiori: No lo digo por nada. Es un dato.
 - La próxima voy. [#conciliador]
@@ -580,4 +581,86 @@ else
 	$> Story.change("shiori", "resentimiento", -3)
 - ¿Y {{Story.snitch("shiori")}} qué sabrá? [#provocador]
 	$> Story.change("shiori", "confianza", -3)
+=> END
+
+# --- Planes: invitaciones, respuestas por el móvil y plantones (Invites) -----------
+
+~ shiori_hablar_invita_hemeroteca
+# cuando: hablar, flag por_proponer:hemeroteca_shiori, flag dia_4, una vez
+Shiori: Ren. A mediodía estoy en la hemeroteca del campus. He encontrado algo y quiero que lo veas tú.
+- Allí estaré. [#curioso, #decidido]
+	$> Story.plan_answer("hemeroteca_shiori", "si")
+	Shiori: Bien. A la una y media. Si llegas tarde, empiezo sin ti.
+- Ya he quedado para {{Story.conflict_title("hemeroteca_shiori")}}. [#franco] [if Story.has_conflict("hemeroteca_shiori") /]
+	$> Story.plan_answer("hemeroteca_shiori", "otro")
+	Shiori: Vale. Los periódicos no se van a ningún sitio. Bueno, amarillean.
+- Hoy no puedo. [#reservado]
+	$> Story.plan_answer("hemeroteca_shiori", "no")
+	Shiori: Entendido. Lo apunto como «hoy no». No como «no».
+=> END
+
+~ shiori_movil_plan
+if Story.plan_reply() == "si"
+	Ren: Allí estaré.
+	Shiori: Bien. Lo apunto.
+elif Story.plan_reply() == "otro"
+	Ren: Ya he quedado para {{Story.other_plan_title()}}. Lo siento.
+	Shiori: No lo sientas. Es un dato. Otro día.
+else
+	Ren: Hoy no puedo, Shiori.
+	Shiori: Entendido.
+	Shiori: Era información, de todas formas. No una invitación.
+=> END
+
+~ shiori_movil_plantado
+if Story.plan_reply() == "perdon"
+	Ren: Lo siento, Shiori. Tenía que haber ido.
+	Shiori: Gracias por decirlo. Lo apunto también.
+elif Story.plan_reply() == "otro"
+	Ren: Estaba en {{Story.other_plan_title()}}. Debí avisarte.
+	Shiori: Sí. Debiste. Avisar cuesta once segundos. Los he contado.
+else
+	Ren: Se me olvidó. Perdona.
+	Shiori: Entiendo. Me pasa con la gente que no me importa demasiado.
+	Shiori: Era una frase general. No va por nadie.
+=> END
+
+~ shiori_hablar_plantado_examen
+# cuando: hablar, flag reproche:clase_miercoles, flag plan_plantado:clase_miercoles, no flag plan_hecho:clase_miercoles, una vez
+$> Story.set_flag("reproche:clase_miercoles", false)
+Shiori: El examen no contaba. Pero te avisé. Dijiste que venías.
+Shiori: No pasa nada. Solo me gusta que la gente haga lo que dice. Es más fácil de apuntar.
+- Tienes razón. Perdona. [#franco, #conciliador]
+	Shiori: Perdonado. Apuntado también.
+	$> Story.change("shiori", "resentimiento", -2)
+- Era un examen que no contaba. [#provocador]
+	Shiori: Lo que no contaba era el examen. Tu palabra sí.
+	$> Story.change("shiori", "respeto", -2)
+=> END
+
+~ shiori_hablar_plantado_hemeroteca
+# cuando: hablar, flag reproche:hemeroteca_shiori, flag plan_plantado:hemeroteca_shiori, no flag plan_hecho:hemeroteca_shiori, una vez
+$> Story.set_flag("reproche:hemeroteca_shiori", false)
+Shiori: Te guardé sitio hasta las dos y cuarto.
+Shiori: Era algo de mi abuelo. No se lo enseño a cualquiera. Por eso me ha molestado. Prefiero decírtelo que hacer como que no.
+if Story.went_instead("hemeroteca_shiori") != ""
+	Shiori: Sé que estabas en {{Story.went_instead("hemeroteca_shiori")}}. Me parece bien. Lo que no me parece bien es no saberlo.
+- Lo siento. ¿Me lo enseñas otro día? [#franco, #curioso]
+	Shiori: ...Sí. Otro día. Si vienes.
+	$> Story.change("shiori", "resentimiento", -2)
+- Se me pasó. [#evasivo]
+	Shiori: Ya. Lo apunto.
+	$> Story.change("shiori", "confianza", -1)
+=> END
+
+~ shiori_hablar_tras_hemeroteca
+# cuando: hablar, flag plan_hecho:hemeroteca_shiori, una vez, no hoy >= 2
+Shiori: Ayer fui a ver a mi abuelo. Le enseñé la foto de La Torre.
+Shiori: La miró mucho rato. Luego dijo: «Ahí arriba vive alguien que cuenta». Y se puso a hablar de su perro de cuando era niño.
+- ¿Alguien que cuenta? ¿Qué cuenta? [#curioso]
+	Shiori: No lo sé. Pisos. Personas. Historias. Lo he apuntado tal cual.
+	$> Story.set_flag("shiori_abuelo_cuenta")
+- ¿Y cómo estaba él? [#empático]
+	Shiori: Contento. Me llamó por mi nombre. Dos veces. Lo he apuntado también.
+	$> Story.change("shiori", "afecto", 2)
 => END

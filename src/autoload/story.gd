@@ -216,12 +216,71 @@ func day() -> int:
 	return GameState.day_number()
 
 
+## Franja del día: "manana", "dia", "tarde" o "noche".
+func franja() -> String:
+	return GameState.slot_id()
+
+
 func enemy_name() -> String:
 	return CharacterDB.display_name(GameState.incursion_enemy)
 
 
 func seen(cue: String) -> bool:
 	return bool(GameState.get_flag(SEEN_PREFIX + cue))
+
+
+# --- Planes e invitaciones (Invites) ------------------------------------------------------
+# En una invitación en persona:
+#   - Me apunto. [#cariñoso]
+#   	$> Story.plan_answer("lago_yuna", "si")
+#   - Ya he quedado para {{Story.conflict_title("lago_yuna")}}. [if Story.has_conflict("lago_yuna") /]
+#   	$> Story.plan_answer("lago_yuna", "otro")
+# En las respuestas del móvil (`<id>_movil_plan`, `_movil_plantado`):
+#   if Story.plan_reply() == "si"   /   {{Story.plan_title()}}   /   {{Story.other_plan_title()}}
+
+func plan_answer(plan_id: String, kind: String) -> void:
+	var conflicts := Invites.conflicts(plan_id)
+	Invites.answer(plan_id, kind, conflicts[0] if kind == "otro" and not conflicts.is_empty() else "")
+
+
+## ¿Ha aceptado Ren otro plan que coincide de hora con `plan_id`?
+func has_conflict(plan_id: String) -> bool:
+	return not Invites.conflicts(plan_id).is_empty()
+
+
+func conflict_title(plan_id: String) -> String:
+	var c := Invites.conflicts(plan_id)
+	return _lower_first(ChapterDB.plan(c[0]).title) if not c.is_empty() else ""
+
+
+func said_yes(plan_id: String) -> bool:
+	return Invites.said_yes(plan_id)
+
+
+## Respuesta que se está contando en el móvil ("si", "no", "otro", "perdon", "olvido").
+func plan_reply() -> String:
+	return Invites.current_reply
+
+
+## Plan de la respuesta en curso (o `plan_id`), en minúscula para meterlo en una frase.
+func plan_title(plan_id: String = "") -> String:
+	var id := plan_id if plan_id != "" else Invites.current_plan
+	return _lower_first(ChapterDB.plan(id).get("title", ""))
+
+
+func other_plan_title() -> String:
+	return _lower_first(ChapterDB.plan(Invites.other_plan).get("title", ""))
+
+
+## ¿Hizo Ren otro plan a la misma hora que `plan_id`? (para el reproche en persona)
+func went_instead(plan_id: String) -> String:
+	var id := Invites.done_instead(plan_id)
+	return _lower_first(ChapterDB.plan(id).get("title", "")) if id != "" else ""
+
+
+## «Comer en Westlake con Yuna» → «comer en Westlake con Yuna» (para meterlo en una frase).
+func _lower_first(text: String) -> String:
+	return text.left(1).to_lower() + text.substr(1)
 
 
 # --- Selector ---------------------------------------------------------------------------
@@ -282,6 +341,10 @@ func phase_index() -> int:
 
 
 ## Recurso de un cue concreto (para escenas de guion que no pasan por el selector).
+func has_cue(cue_name: String) -> bool:
+	return _cue_files.has(cue_name)
+
+
 func cue(cue_name: String) -> Dictionary:
 	if not _cue_files.has(cue_name):
 		push_error("Story: cue desconocido '%s'" % cue_name)
