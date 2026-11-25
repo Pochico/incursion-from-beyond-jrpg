@@ -43,7 +43,9 @@ const COMMANDS := [
 	{"id": "use", "label": "Usar", "icon": "sparkle", "desc": "Usar lo que hay justo delante: abrir, coger, accionar o luchar."},
 	{"id": "skills", "label": "Habilidades", "icon": "heart", "desc": "Habilidades que sirven fuera del combate: curar o recuperar PM."},
 	{"id": "items", "label": "Objetos", "icon": "flask", "desc": "Lo que llevas encima. Los que curan se usan sobre quien elijas; el resonador lanza un pulso que delata paredes secretas.  [F]"},
-	{"id": "map", "label": "Mapa", "icon": "antenna", "desc": "Automapa de la planta: lo que ya has recorrido.  [M]"},
+	{"id": "pulse", "label": "Resonador", "icon": "alert", "desc": "Lanza un pulso que delata paredes secretas. Gasta una carga.  [F]"},
+	{"id": "map", "label": "Mapa", "icon": "calendar", "desc": "Automapa de la planta: lo que ya has recorrido.  [M]"},
+	{"id": "look", "label": "Vista", "icon": "play", "desc": "Cambia el estilo visual: normal, PS2 o PS1.  [V]"},
 	{"id": "exit", "label": "Salir", "icon": "run", "desc": "Volver a la calle. Desde una zona de extracción (círculo cian) te llevas lo conseguido."},
 ]
 const EXIT_WARNING := "Si sales ahora perderás todo lo que hayas conseguido. Hay zonas de extracción segura. ¿Quieres salir?"
@@ -83,6 +85,9 @@ var _charges := 0              ## cargas del resonador en esta incursión
 const IDLE_STEPS := Vector2i(9, 17)    ## pasos entre comentarios sueltos
 const COMMENT_GAP := 3                 ## pasos mínimos entre comentarios
 var _log_who := ""
+var _extra := 0.0          ## ancho de más sobre 1920 (pantallas alargadas): lo gana el visor
+var _pad: Control          ## cruceta táctil (solo en pantallas táctiles)
+var _map_close: Button
 var _steps := 0
 var _next_idle := 0
 var _last_comment := -99
@@ -96,6 +101,8 @@ func _ready() -> void:
 	_map_id = LocationDB.get_location(GameState.location_id).get("dungeon_map", "torre")
 	_map = DungeonMap.load_map(_map_id)
 	_build()
+	resized.connect(_layout)
+	_layout()
 	if _map == null:
 		_log("No se encuentra el mapa «%s» (src/data/mazmorras/)." % _map_id)
 		return
@@ -163,6 +170,12 @@ func _build() -> void:
 	_big_map.size = _view.size - Vector2(120, 80)
 	_big_map.visible = false
 	add_child(_big_map)
+	_map_close = _round_button("✕", 64, 34)
+	_map_close.pressed.connect(_toggle_map)
+	_big_map.add_child(_map_close)
+
+	if App.is_touch():
+		_build_touch_pad()
 
 	# Columna derecha
 	_automap = DungeonAutomap.new()
@@ -178,9 +191,7 @@ func _build() -> void:
 		add_child(card)
 		_cards.append(card)
 
-	# Comandos
-	var x := 74.0
-	var w := 262.0
+	# Comandos (los reparte _layout a lo ancho)
 	for i in COMMANDS.size():
 		var b := SlantButton.new()
 		b.label = COMMANDS[i].label
@@ -188,11 +199,8 @@ func _build() -> void:
 		b.description = COMMANDS[i].desc
 		b.hover_focus = false
 		b.focus_mode = Control.FOCUS_NONE   # las flechas son para andar
-		b.font_size = 27
-		b.slant = 26
-		b.position = Vector2(x + i * (w + 8), COMMAND_Y)
-		b.size = Vector2(w, 72)
-		b.custom_minimum_size = Vector2(w, 72)
+		b.font_size = 24
+		b.slant = 22
 		b.mouse_entered.connect(func() -> void: _set_info(COMMANDS[i].desc))
 		b.pressed.connect(_on_command.bind(COMMANDS[i].id))
 		add_child(b)
@@ -327,9 +335,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_use_resonator()
 		KEY_V:
 			if not key.echo:
-				DungeonLook.next()
-				DungeonLook.apply(_view, _explorer)
-				_log("Estilo visual: %s  (V para cambiar)" % DungeonLook.label(_view))
+				_next_look()
 		KEY_ESCAPE:
 			if _big_map.visible:
 				_toggle_map()
@@ -392,6 +398,10 @@ func _on_command(id: String) -> void:
 			_show_items()
 		"map":
 			_toggle_map()
+		"pulse":
+			_use_resonator()
+		"look":
+			_next_look()
 		"exit":
 			_clear_options()
 			if _explorer.at_extraction():
@@ -400,6 +410,89 @@ func _on_command(id: String) -> void:
 				_log("Zona de extracción segura: te llevas todo lo que has conseguido.")
 			else:
 				_ask_exit()
+
+
+func _next_look() -> void:
+	DungeonLook.next()
+	DungeonLook.apply(_view, _explorer)
+	_log("Estilo visual: %s" % DungeonLook.label(_view))
+
+
+## Maqueta a lo ancho: la base es 1920×1080; en pantallas más alargadas el visor
+## crece y la columna derecha y la cabecera se pegan al borde.
+func _layout() -> void:
+	_extra = maxf(size.x - 1920.0, 0.0)
+	_view.size = Vector2(VIEWPORT_RECT.size.x - 4 + _extra, VIEWPORT_RECT.size.y - 4)
+	_fx.size = _view.size
+	_big_map.size = _view.size - Vector2(120, 80)
+	_map_close.position = Vector2(_big_map.size.x - 84, 18)
+	_automap.position.x = RIGHT_X + _extra
+	for card in _cards:
+		card.position.x = RIGHT_X + _extra
+	var x0 := 74.0
+	var gap := 8.0
+	var w := (VIEWPORT_RECT.end.x + _extra - x0 - gap * (COMMANDS.size() - 1)) / COMMANDS.size()
+	for i in _commands.size():
+		_commands[i].position = Vector2(x0 + i * (w + gap), COMMAND_Y)
+		_commands[i].size = Vector2(w, 72)
+		_commands[i].custom_minimum_size = Vector2(w, 72)
+	_info.size.x = OPTION_ROW.size.x + _extra
+	_status.size = size
+	if _pad:
+		_pad.position = _view.position + _view.size - _pad.size - Vector2(24, 70)
+	queue_redraw()
+	_info.queue_redraw()
+
+
+## Botón redondo con el estilo de la cruceta (✕ del mapa, flechas).
+func _round_button(text: String, side: float, font: int) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.size = Vector2(side, side)
+	b.add_theme_font_size_override("font_size", font)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(UIStyle.INK, 0.55)
+	sb.border_color = Color(UIStyle.WHITE, 0.6)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(int(side * 0.15))
+	var sb_on := sb.duplicate() as StyleBoxFlat
+	sb_on.bg_color = Color(UIStyle.LIME, 0.85)
+	for st in ["normal", "hover", "focus", "disabled"]:
+		b.add_theme_stylebox_override(st, sb)
+	b.add_theme_stylebox_override("pressed", sb_on)
+	b.add_theme_color_override("font_color", UIStyle.WHITE)
+	b.add_theme_color_override("font_pressed_color", UIStyle.INK)
+	return b
+
+
+## Cruceta táctil sobre el visor (solo en pantallas táctiles): las mismas
+## acciones que W/S/A/D/Q/E.
+func _build_touch_pad() -> void:
+	const SIDE := 118.0
+	const GAP := 10.0
+	_pad = Control.new()
+	_pad.size = Vector2(SIDE * 3 + GAP * 2, SIDE * 2 + GAP)
+	_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_pad)
+	var keys := [
+		["↶", "left"], ["▲", "forward"], ["↷", "right"],
+		["◀", "strafe_left"], ["▼", "back"], ["▶", "strafe_right"],
+	]
+	for i in keys.size():
+		var b := _round_button(keys[i][0], SIDE, 52)
+		b.position = Vector2((i % 3) * (SIDE + GAP), (i / 3) * (SIDE + GAP))
+		b.button_down.connect(_touch_move.bind(keys[i][1]))
+		_pad.add_child(b)
+
+
+func _touch_move(action: String) -> void:
+	if _map == null or _busy or _combat.visible or _status.visible:
+		return
+	if _big_map.visible:
+		_toggle_map()
+	_clear_options()
+	_explorer.act(action)
 
 
 func _toggle_map() -> void:
@@ -790,22 +883,23 @@ func _draw() -> void:
 	var sub := "%s / Zona: %s / %s" % [GameState.region_name, LocationDB.display_name(GameState.location_id), lvl]
 	UIStyle.draw_spaced(self, UIStyle.FONT_REGULAR, Vector2(72, 74), sub, 18, 1.5, Color(UIStyle.WHITE, 0.9))
 
+	var e := _extra
 	draw_polyline(PackedVector2Array([
 		Vector2(0, 112), Vector2(24, 88), Vector2(500, 88), Vector2(522, 70),
-		Vector2(1400, 70), Vector2(1430, 40), Vector2(1440, 40),
+		Vector2(1400 + e, 70), Vector2(1430 + e, 40), Vector2(1440 + e, 40),
 	]), UIStyle.LINE, 1.5, true)
 
-	var hdr := PackedVector2Array([Vector2(1440, 40), Vector2(1470, 6), Vector2(1790, 6), Vector2(1760, 40)])
+	var hdr := PackedVector2Array([Vector2(1440 + e, 40), Vector2(1470 + e, 6), Vector2(1790 + e, 6), Vector2(1760 + e, 40)])
 	draw_colored_polygon(hdr, Color(UIStyle.INK, 1.0))
-	UIIcons.calendar(self, Vector2(1490, 26), 26, UIStyle.WHITE)
-	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
-	draw_line(Vector2(1592, 14), Vector2(1592, 40), UIStyle.WHITE, 1.5)
-	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608, 36), "¥ %s" % UIStyle.format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	UIIcons.calendar(self, Vector2(1490 + e, 26), 26, UIStyle.WHITE)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1516 + e, 36), GameState.weekday_short().capitalize(), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
+	draw_line(Vector2(1592 + e, 14), Vector2(1592 + e, 40), UIStyle.WHITE, 1.5)
+	draw_string(UIStyle.FONT_MEDIUM, Vector2(1608 + e, 36), "¥ %s" % UIStyle.format_money(GameState.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 28, UIStyle.WHITE)
 	for i in 7:
 		var sx := w - 120 + i * 14
 		draw_line(Vector2(sx, 40), Vector2(sx + 16, 6), UIStyle.WHITE, 2.5, true)
 
-	var vp := UIStyle.chamfer_rect(VIEWPORT_RECT, [0.0, 0.0, 22.0, 0.0])
+	var vp := UIStyle.chamfer_rect(Rect2(VIEWPORT_RECT.position, VIEWPORT_RECT.size + Vector2(e, 0)), [0.0, 0.0, 22.0, 0.0])
 	UIStyle.draw_outline(self, vp, UIStyle.LINE, 1.5)
 	draw_line(Vector2(0, COMMAND_Y + 40), Vector2(70, COMMAND_Y + 40), UIStyle.LINE, 1.5)
 
@@ -820,8 +914,8 @@ func _draw_info() -> void:
 	UIStyle.draw_outline(_info, shape, UIStyle.LINE, 1.5)
 	var div_x := 960.0
 	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
-	if _options.get_child_count() == 0:
-		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[WASD] Moverte  [Q E] De lado  [Espacio] Usar  [F] Resonador  [M] Mapa  [Tab] Equipo  [V] Estilo",
+	if _options.get_child_count() == 0 and not App.is_touch():
+		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[WASD] Moverte  [Q E] De lado  [Espacio] Usar  [F] Resonador  [M] Mapa  [Tab] Equipo  [V] Vista",
 				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 19, Color(UIStyle.WHITE, 0.6))
 	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
 	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,
