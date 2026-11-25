@@ -317,7 +317,7 @@ Akane: No es el día. Hablamos otro rato.
 ~ akane_movil_fria
 # cuando: movil, tramo <= fria
 Ren: Hola.
-Akane: Vale.
+Akane: Pa ti mi cola
 => END
 
 ~ akane_movil_tras_incursion
