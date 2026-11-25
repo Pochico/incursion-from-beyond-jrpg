@@ -79,6 +79,13 @@ const ALL := {
 		"layout": "res://src/rooms/cloacas_layout.tscn",
 		"sky_top": Color("120d0a"), "sky_bottom": Color("6a4a2e"), "water": true,
 	},
+	"lago": {
+		"name": "Westlake", "desc": "La terraza junto al lago del Parquesur: tarima, barandilla de cristal y las terrazas al otro lado del agua.",
+		"on_map": true, "pos": Vector2(0.72, 0.74), "safe": true,
+		"cast": ["kenji", "shiori", "rika", "akane", "yuna"],
+		"layout": "res://src/rooms/lago_layout.tscn",
+		"sky_top": Color("1f4f9a"), "sky_bottom": Color("8fc4e8"), "trees": true, "water": true,
+	},
 	"torre": {
 		"name": "La Torre", "desc": "Mazmorra. El acceso al Corredor de la Torre está aquí.",
 		"on_map": true, "pos": Vector2(0.86, 0.48), "dungeon": true, "dungeon_map": "torre",
