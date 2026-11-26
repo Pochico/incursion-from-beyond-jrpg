@@ -225,7 +225,9 @@ Prepara imágenes como texturas de **suelo**, **techo** y **pared** para el dung
 
 Dibuja mapas del dungeon crawler sobre un plano por casillas y los convierte en escenarios 3D ([documento de diseño](docs/diseno/Diseno_Dungeon_Crawler_Godot.md)). Usa las texturas del Estudio de texturas.
 
-**Abrirlo:** ejecuta el juego desde el editor de Godot y pulsa **«Editor de mazmorras»** arriba a la derecha del menú de inicio, o abre `editor_mazmorras.tscn` y pulsa **F6**.
+**Abrirlo:**
+- **En el navegador (móvil o cualquier ordenador, sin Godot)**: `https://pochico.github.io/incursion-from-beyond-jrpg/editor-mazmorras/`. Abre y guarda las mazmorras de `main` en GitHub (cada guardado es un commit; pide el token de GitHub la primera vez, el mismo del editor de diálogos). En pantallas táctiles sale una barra sobre el plano: *Deshacer*, *Rehacer*, *Borrar* (lo que hace el clic derecho), *Mover plano*, zoom y *Encuadrar*; al probar el mapa, una cruceta. El Estudio de texturas y el relieve solo están en Godot.
+- **En Godot**: el editor vive en la rama `herramientas/editor-mazmorras`; tráelo con `tools/herramientas/traer.sh`. Después, ejecuta el juego desde el editor de Godot y pulsa **«Editor de mazmorras»** arriba a la derecha del menú de inicio, o abre `editor_mazmorras.tscn` y pulsa **F6**.
 
 | Herramienta | Qué hace |
 |---|---|
@@ -296,9 +298,16 @@ Da un poco de volumen a una textura, como en los juegos antiguos: marcas qué zo
 - `DungeonExplorer`: movimiento por casillas con cola de una acción, choque con los muros, escaleras entre plantas, lo que hay delante (`front()`) y su uso (puertas, palancas, objetos, encuentros con la señal `encounter`), estado guardable y luz del grupo.
 - `DungeonTextures`: temas, paleta, texturas predeterminadas y relieve (`relief_for`). En el juego carga las texturas importadas; el editor activa `live_files` para leer los PNG recién exportados.
 
+### Herramientas en el móvil (sin Godot ni PC)
+
+Portada: `https://pochico.github.io/incursion-from-beyond-jrpg/`, con el editor de diálogos, el de mazmorras y el juego de pruebas. Cada herramienta vive en su rama (`herramientas/editor-dialogos`, `herramientas/editor-mazmorras`); al subir a ellas o a `main`, la pipeline `.github/workflows/publicar.yml` las junta con el juego de `main` y las publica en GitHub Pages en unos minutos. Lo que se guarda desde los editores va directo a `main`, así que el juego lo tiene en cuanto se hace `git pull`.
+
+- Tenerlas en local: `tools/herramientas/traer.sh`. Subir cambios hechos en local: `tools/herramientas/llevar.sh editor-mazmorras|editor-dialogos "mensaje"`.
+- Requisito, una sola vez: en GitHub, *Settings → Pages → Build and deployment → Source: GitHub Actions*.
+
 ### Editor de diálogos (web, también en el móvil)
 
-App web en `docs/editor-dialogos/`. Lee los diálogos del repositorio en GitHub, permite cambiar **qué conversación sale y cuándo** y guarda los cambios en el repo. Funciona en el navegador del móvil y del ordenador; en el móvil, «Añadir a pantalla de inicio» lo deja como una app.
+App web en `https://pochico.github.io/incursion-from-beyond-jrpg/editor-dialogos/` (código en la rama `herramientas/editor-dialogos`, carpeta `docs/editor-dialogos/`). Lee los diálogos del repositorio en GitHub, permite cambiar **qué conversación sale y cuándo** y guarda los cambios en el repo. Funciona en el navegador del móvil y del ordenador; en el móvil, «Añadir a pantalla de inicio» lo deja como una app.
 
 - **Navegación**: tocar el título vuelve a la lista de diálogos; el botón «atrás» del móvil vuelve a la pantalla anterior (o cierra la ventana abierta) en vez de salir.
 - **Diálogos**: lista de todos los cues con buscador, filtro por personaje y por momento, y avisos si algo está mal.
@@ -412,11 +421,12 @@ src/
   dialogue/               Diálogos (.dialogue), uno por personaje + general
   tools/
     texture_studio/         Estudio de texturas (suelo, techo, pared)
-    editor_mazmorras/       Editor de mazmorras
+    editor_mazmorras/       Editor de mazmorras (rama herramientas/editor-mazmorras; traer.sh)
     editor_relieve/         Editor de relieve de las texturas
     editor_dialogos/        Prueba de paridad del editor de diálogos (lado Godot)
 docs/
-  editor-dialogos/        Editor de diálogos web (GitHub Pages)
+  index.html              Portada de la web de herramientas
+  editor-dialogos/        Editor de diálogos web (rama herramientas/editor-dialogos; traer.sh)
   diseno/                 Documentos de diseño de mecánicas
   ui/referencias/         Referencias visuales de cada interfaz
   capturas/               Capturas del estado actual

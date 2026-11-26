@@ -1,0 +1,123 @@
+# Publica en GitHub Pages, para usarlo desde cualquier dispositivo y sin Godot:
+#   /                    docs/ de main (portada, juego web de pruebas, capturas…)
+#   /editor-dialogos/    rama herramientas/editor-dialogos
+#   /editor-mazmorras/   rama herramientas/editor-mazmorras, exportada con Godot
+# Cada herramienta se junta con el código y los datos de main antes de publicar.
+# Se lanza al subir a main (también los guardados de los editores web, que son
+# commits en main) y desde las ramas de herramientas (su avisar.yml).
+# Requisito: Settings → Pages → Build and deployment → Source: «GitHub Actions».
+name: Publicar herramientas
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+env:
+  GODOT_VERSION: "4.7"
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: juego }
+      - uses: actions/checkout@v4
+        with: { ref: herramientas/editor-dialogos, path: rama-dialogos }
+      - uses: actions/checkout@v4
+        with: { ref: herramientas/editor-mazmorras, path: rama-mazmorras }
+
+      - name: Juntar las herramientas con main
+        run: |
+          rm -rf juego/docs/editor-dialogos juego/src/tools/editor_mazmorras
+          cp -r rama-dialogos/docs/editor-dialogos juego/docs/
+          cp -r rama-mazmorras/src/tools/editor_mazmorras juego/src/tools/
+
+      - name: Godot (caché)
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+      - name: Descargar Godot y la plantilla web
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          mkdir -p ~/godot
+          curl -sSLo /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          curl -sSLo /tmp/plantillas.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest"
+          unzip -q -j /tmp/plantillas.tpz templates/version.txt 'templates/web_nothreads_*' -d "$dest"
+
+      - name: Importar el proyecto
+        working-directory: juego
+        run: |
+          # El editor como escena principal y texturas también para móvil (ETC2/ASTC).
+          sed -i 's|^run/main_scene=.*|run/main_scene="res://src/tools/editor_mazmorras/editor_mazmorras.tscn"|' project.godot
+          sed -i 's|^\[rendering\]$|[rendering]\n\ntextures/vram_compression/import_etc2_astc=true|' project.godot
+          ~/godot/godot --headless --import || true
+          ~/godot/godot --headless --import
+
+      - name: Miniaturas de las caras del editor de diálogos
+        working-directory: juego
+        run: GODOT=~/godot/godot tools/editor_dialogos/miniaturas.sh
+
+      - name: Exportar el editor de mazmorras para web
+        working-directory: juego
+        run: |
+          cp tools/herramientas/editor_mazmorras_web.cfg export_presets.cfg
+          mkdir -p "$GITHUB_WORKSPACE/_site/editor-mazmorras"
+          ~/godot/godot --headless --export-release "Editor de mazmorras" "$GITHUB_WORKSPACE/_site/editor-mazmorras/index.html"
+          test -s "$GITHUB_WORKSPACE/_site/editor-mazmorras/index.pck"
+
+      - name: Montar la web
+        run: |
+          cp -r juego/docs/. _site/
+          rm -f _site/.gdignore
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
+
+  # El editor de diálogos replica el selector de Story: si se separan, avisa
+  # (no frena la publicación).
+  paridad:
+    needs: construir
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: juego }
+      - uses: actions/checkout@v4
+        with: { ref: herramientas/editor-dialogos, path: rama-dialogos }
+      - run: cp -r rama-dialogos/docs/editor-dialogos juego/docs/
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+      - name: Prueba de paridad
+        working-directory: juego
+        run: |
+          ~/godot/godot --headless --import || true
+          ~/godot/godot --headless --import
+          GODOT=~/godot/godot tools/editor_dialogos/paridad.sh 400 | tee /tmp/paridad.txt
+          grep -q "diferencias: 0" /tmp/paridad.txt

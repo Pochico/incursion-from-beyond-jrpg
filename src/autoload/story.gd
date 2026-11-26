@@ -439,7 +439,8 @@ func times_today(who: String, moment: String) -> int:
 
 
 ## Si cambias estas reglas, cambia también el motor del editor de diálogos
-## (docs/editor-dialogos/motor.js) y pasa la prueba de paridad (ver CLAUDE.md).
+## (docs/editor-dialogos/motor.js, rama herramientas/editor-dialogos) y pasa la
+## prueba de paridad (ver CLAUDE.md).
 func _check(c: Dictionary, cue_name: String, who: String, moment: String, context: Dictionary, s: Object) -> bool:
 	var ok := true
 	match c.kind:

@@ -53,9 +53,9 @@ trabajar».
 | `src/screens/` | Pantallas: `title`, `world` (escenario, conversación, combate, móvil), `dungeon` | En `world_screen`, los objetos (`Props`) y personajes (`Scenario`) van dentro de `Backdrop`: muestra u oculta con `_fade_room` (todo) y `_fade_cast` (solo personajes), nunca tocando `modulate` a mano. |
 | `src/ui/` | `UIStyle` (paleta, fuentes, dibujo), `UIIcons`, `components/`, `shaders/` | Reutilizar componentes y `UIStyle` antes de crear estilos nuevos. |
 | `src/rooms/` | Escenas `layout` de cada lugar (casa, cloacas, lago): sitio de los objetos y de las poses de personajes sobre el fondo (`RoomLayout`) | Poses en `assets/escenas/<lugar>/<personaje>.png` (`LocationDB.pose`); en `world_screen` van en `Scenario` como los demás personajes. Las del lago (`lago`, «Westlake») se recortaron de una ilustración de grupo con la segmentación de personas de macOS (Vision) y cortes a mano, y se llevaron al encuadre del fondo vacío (`assets/backgrounds/lago.png`) con una homografía: si se rehacen, el fondo y las poses deben seguir en el mismo encuadre. |
-| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras`, `editor_relieve`, `editor_mapa`; y `editor_dialogos/paridad.tscn` (prueba, no herramienta de usuario) | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. `editor_mapa` también pone los fondos de cada ubicación (copia a `assets/backgrounds/<id>[_<franja>]`; `LocationBackdrop` los lee sin importar si se ejecuta desde el editor). |
+| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras` (vive en su rama, ver «Herramientas en ramas»), `editor_relieve`, `editor_mapa`; y `editor_dialogos/paridad.tscn` (prueba, no herramienta de usuario) | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. `editor_mapa` también pone los fondos de cada ubicación (copia a `assets/backgrounds/<id>[_<franja>]`; `LocationBackdrop` los lee sin importar si se ejecuta desde el editor). |
 | `tools/` | Scripts **externos** (Python, Node, git…). `tools/assets/organizar.sh`: copia ordenada de las imágenes en `~/Documents/assets-game` del usuario (Personajes, Enemigos/<tipo>, Ubicaciones/<lugar>/<momento>) | Tiene `.gdignore`: Godot no lo ve. No poner escenas aquí. Si cambias nombres o rutas de imágenes, el organizador las clasifica por las convenciones del README. |
-| `docs/editor-dialogos/` | **Editor de diálogos web** (HTML + JS, funciona en el móvil). Se publica con GitHub Pages desde `docs/` | `motor.js` replica el selector de `Story`: ver «Paridad». |
+| `docs/editor-dialogos/` | **Editor de diálogos web** (HTML + JS, funciona en el móvil). Vive en su rama (ver «Herramientas en ramas») y se publica con la pipeline | `motor.js` replica el selector de `Story`: ver «Paridad». |
 | `assets/` | Fuentes, retratos, fondos, texturas `textures/<tema>/<superficie>/`, mapa, móvil | Medidas de texturas en `src/data/texture_formats.gd`. Fondos `backgrounds/<id>.png` y, por franja, `<id>_<franja>.png` (`LocationBackdrop`). |
 | `docs/` | Diseño, referencias de UI, capturas | Tiene `.gdignore`. |
 
@@ -82,6 +82,34 @@ líneas finas con quiebro (ver «Guía de estilo» del README).
 
 El usuario guarda material de referencia local en `/context/` y `/refs/`
 (ignorados por git): si te lo pasa, no lo subas.
+
+## Herramientas en ramas y publicación (móvil, sin Godot ni PC)
+
+- Cada herramienta con versión web vive **sola** en su rama:
+  `herramientas/editor-dialogos` (`docs/editor-dialogos/`) y
+  `herramientas/editor-mazmorras` (`src/tools/editor_mazmorras/`). En `main`
+  esas carpetas están en `.gitignore`.
+- **No se tocan en `main`**. Para tenerlas en local: `tools/herramientas/traer.sh`
+  (no pisa cambios locales sin `--forzar`). Para subir cambios hechos en local:
+  `tools/herramientas/llevar.sh <herramienta> "mensaje"` (commit y push a su
+  rama desde una copia aparte; la rama no tiene CLAUDE.md: si el cambio afecta
+  al contexto, actualiza este archivo en `main`). Lista en `tools/herramientas/lista.sh`.
+- **Publicación** (`.github/workflows/publicar.yml`, al subir a `main` o, con
+  `avisar.yml` de cada rama, al subir a una herramienta): junta cada
+  herramienta con el código y los datos de `main`, regenera las miniaturas de
+  las caras, exporta el editor de mazmorras a web con Godot 4.7 (preset
+  `tools/herramientas/editor_mazmorras_web.cfg`, escena principal cambiada solo
+  en la nube, ETC2/ASTC) y publica en GitHub Pages: `/` (portada
+  `docs/index.html` y el resto de `docs/` de main), `/editor-dialogos/`,
+  `/editor-mazmorras/`. Un trabajo aparte pasa la prueba de paridad (avisa, no
+  frena). Requiere Pages con *Source: GitHub Actions*.
+- **Datos**: los editores web leen y guardan directamente en `main` con la API
+  de GitHub (un commit por guardado, con `[contexto-ok]`; mismo token en el
+  navegador para los dos: `localStorage` «editor-dialogos:token»). El editor de
+  mazmorras web usa `GithubStore` (`src/tools/editor_mazmorras/github_store.gd`
+  en su rama): sin Estudio de texturas ni relieve; con barra táctil (Borrar =
+  clic derecho, Mover plano, zoom, Deshacer) y cruceta al probar.
+- Antes de trabajar en `main`, `git pull`: los guardados desde el móvil son commits en `main`.
 
 ## Editor de diálogos (web) y paridad con el juego
 
@@ -147,9 +175,9 @@ hoy son Kenji, Shiori, Akane, Rika (enfado, sorpresa) y Yuna (enfado, incomodo).
 
 En el editor web: `motor.js` lee `portrait`/`faces` de `character_db.gd` y
 `FACES`/`FACE_TAG` de `conversation_view.gd`; el formulario de línea tiene un
-selector de gesto con miniaturas de `docs/editor-dialogos/caras/`. **Al añadir
-retratos o gestos, ejecuta `tools/editor_dialogos/miniaturas.sh`** y sube las
-miniaturas (pocos KB cada una). Las funciones de `Story` que valida el editor
+selector de gesto con miniaturas de `docs/editor-dialogos/caras/`. Las genera
+la publicación con `tools/editor_dialogos/miniaturas.sh` (en local, solo para
+ver caras nuevas en el editor sin publicar). Las funciones de `Story` que valida el editor
 también se leen de `story.gd` (`cfg.storyApi`): no hay lista a mano.
 
 ## Combate
@@ -176,8 +204,8 @@ también se leen de `story.gd` (`cfg.storyApi`): no hay lista a mano.
   horizontal, ETC2/ASTC y `export_presets.cfg` (Android arm64 sin Gradle y Web
   sin hilos, con aviso de «gira el móvil»). Firma por variables de entorno
   (`GODOT_ANDROID_KEYSTORE_RELEASE_*`), nunca claves en el repo.
-- Publicación: la web exportada va en `docs/pruebas/web/` de `main` (GitHub
-  Pages solo sirve `main/docs`). **La APK no se sube al repositorio** (ni a la
+- Publicación: la web exportada va en `docs/pruebas/web/` de `main` (la
+  pipeline de Pages publica `main/docs` tal cual). **La APK no se sube al repositorio** (ni a la
   rama ni a `main`): se genera y se le pasa al usuario directamente (el
   usuario pidió borrar del historial la que se subió). Página:
   `docs/pruebas/index.html`. Cada exportación web nueva pesa ~85 MB en el

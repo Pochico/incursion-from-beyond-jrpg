@@ -38,6 +38,9 @@ func _add_tools_button() -> void:
 		return
 	var right := 48.0
 	for tool: Array in [["Estudio de texturas", "sparkle", TEXTURE_STUDIO], ["Editor de mazmorras", "menu", DUNGEON_EDITOR]]:
+		# El editor de mazmorras vive en su rama: solo si se trajo (tools/herramientas/traer.sh).
+		if not ResourceLoader.exists(tool[2]):
+			continue
 		var b := PillButton.new()
 		b.label = tool[0]
 		b.icon_name = tool[1]
