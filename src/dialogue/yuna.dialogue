@@ -129,8 +129,8 @@ Yuna: ¿Has visto el vídeo de {{Story.incursion_place()}}? Kenji no deja de pon
 
 ~ yuna_hablar_reunion
 # cuando: hablar, fase >= reunion, una vez
-Yuna: Lo dije en las Cloacas y lo digo otra vez. Yo no entro en La Torre. Pero estaré fuera. Siempre.
-Yuna: Y si Kenji entra, tú entras con él. Prométemelo.
+Yuna: Lo dije en las Cloacas y lo digo otra vez. De noche, nadie solo.
+Yuna: Y si Kenji se mete en algo raro, tú estás con él. Prométemelo.
 - Te lo prometo. [#protector, #franco]
 	Yuna: Gracias. Ya puedo dormir un poco mejor.
 	$> Story.change("yuna", "confianza", 3)

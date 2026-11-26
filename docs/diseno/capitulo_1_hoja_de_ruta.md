@@ -129,8 +129,8 @@ carga fases, desbloqueos y grupo sin romper las partidas viejas.
 ### Fase 2 — Incursión 1 ✅ (escenas provisionales)
 
 Hecho: `ChapterDB.BEATS.incursion_1`, plan `kenji_a_solas` (día 10), combate
-`basic_only`, subida de nivel de los dos. Falta repasar las escenas de alarma y
-de después para el «a solas».
+`basic_only`, subida de nivel de los dos. Las escenas de alarma y de después ya
+sirven para el «a solas».
 
 - **Disparo**: suceso `incursion_1`. Fase `rutina`, día ≥ 8, en un sitio donde
   están **Ren y exactamente una persona** (cast presente = 1, o plan o quedada
@@ -150,7 +150,15 @@ de después para el «a solas».
 - **Hecha cuando**: salta solo a solas, a partir del día 8, con combate básico,
   y sube un nivel a los dos.
 
-### Fase 3 — Lo comentan (reunión) e incursiones 2 y 3
+### Fase 3 — Lo comentan (reunión) e incursiones 2 y 3 ✅ (criaturas provisionales)
+
+Hecho: reunión reescrita (los que no estaban no se lo creen, quien estaba lo
+confirma, se calman; Akane solo si es amiga; Cloacas `friends_only`); sucesos
+`incursion_2` (Engendro) e `incursion_3` (dos Imps) al llegar a un sitio con
+alguien del grupo, un día después como mínimo; pistas `pista_barro` y
+`pista_colinas`; charlas de después de la reunión sin «entrar en La Torre».
+Yuna tiene datos de combate. Las escenas de alarma y de después de la primera
+incursión ya existían para los cuatro.
 
 - **Reunión en las Cloacas**: existe (`reunion_cloacas`). Reescribir para «no se
   lo creen» y que la situación se calme. Quien estuvo en la incursión lo cuenta

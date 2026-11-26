@@ -423,16 +423,16 @@ Kenji: Oye, Ren. Lo que dijiste allí abajo... Gracias. Me sentía solo con lo d
 %
 	Kenji: He grabado otra vez a las 3\:33. Ahora la voz dice dos palabras. «Abre» y algo que suena a «arriba». Shiori está como loca.
 %
-	Kenji: Yuna me ha hecho un botiquín para La Torre. Tiene tiritas de dinosaurios. Dice que son para la moral.
+	Kenji: Yuna me ha hecho un botiquín. Tiene tiritas de dinosaurios. Dice que son para la moral.
 %
-	Kenji: Si entramos en La Torre, yo llevo el altavoz. Si hay monstruos, les pongo reguetón. Algo tiene que funcionar.
+	Kenji: Ahora llevo el bajo a todas partes. Si sale otro bicho, por lo menos tengo con qué darle.
 => END
 
 ~ kenji_movil_reunion
 # cuando: movil, fase >= reunion, sabe incursion_1
 Ren: ¿Todo bien?
 Kenji: Todo bien, socio. He puesto la foto de la cascada de fondo del grupo. Shiori dice que da hongos solo con verla.
-Kenji: Mañana nos vemos. Nadie entra solo, ¿eh? Ni en La Torre ni en el baño de Parquesur, que también da miedo.
+Kenji: Mañana nos vemos. Y nada de volver solo de noche, ¿eh?
 => END
 
 # --- Citas y parejas (Romance) ----------------------------------------------------

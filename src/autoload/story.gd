@@ -227,6 +227,16 @@ func is_friend(who: String) -> bool:
 	return Acquaintance.is_friend(who)
 
 
+## Con quién estaba Ren en la incursión `n` (id; "" si no ha pasado).
+func incursion_with(n: int = 1) -> String:
+	return String(GameState.get_flag("con_incursion_%d" % n, ""))
+
+
+## Su nombre, para los diálogos: «{{Story.incursion_with_name()}}: Yo lo vi».
+func incursion_with_name(n: int = 1) -> String:
+	return CharacterDB.display_name(incursion_with(n))
+
+
 func day() -> int:
 	return GameState.day_number()
 

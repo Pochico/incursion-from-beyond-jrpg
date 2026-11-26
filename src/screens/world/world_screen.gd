@@ -258,6 +258,13 @@ func _travel(location_id: String) -> void:
 	if plan_id != "":
 		await _play_plan(plan_id)
 		return
+	# Sucesos al llegar (las incursiones en la calle): no en sitios seguros ni en casa.
+	if location_id != LocationDB.HOME and not LocationDB.get_location(location_id).get("safe", false) \
+			and not LocationDB.is_dungeon(location_id):
+		var beat := StoryBeats.check("arrive", "", _cast(location_id))
+		if beat != "":
+			await _run_beat(beat, StoryBeats.companion(ChapterDB.BEATS[beat], _cast(location_id)), "")
+			return
 	if LocationDB.is_dungeon(location_id):
 		GameState.save_game()
 		await _dungeon_entrance(1.4)
@@ -330,14 +337,15 @@ func _play_plan(plan_id: String) -> void:
 	_empty_hint.visible = false
 	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
 	_show_hud(false)
-	GameState.scene_cast = plan.get("cast", [])
+	# Quien Ren no conoce no cuenta como presente (p. ej. Akane en la reunión).
+	GameState.scene_cast = plan.get("cast", []).filter(func(c: String) -> bool: return Acquaintance.is_friend(c))
 	Invites.current_plan = plan_id   # para Story.activity() / other_guests() en las quedadas
 	for scene: Dictionary in plan.scenes:
 		if scene.get("black", false):
 			await _black_scene(Story.cue(scene.cue))
 		else:
 			await _conversation.play(Story.cue(scene.cue), scene.get("npc", ""))
-	var cast: Array = plan.get("cast", [])
+	var cast: Array = GameState.scene_cast
 	GameState.scene_cast = []
 	GameState.set_flag(ChapterDB.PLAN_DONE + plan_id)
 	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, cast)
@@ -929,22 +937,26 @@ func _use_bed(id: String, action: String) -> void:
 ## Fundido → combate → fundido. Devuelve si ha ganado el grupo.
 ## En el primer combate contra una criatura lucha también un compañero
 ## (`ally_hint` o uno al azar) con habilidades al azar de todo el catálogo.
-func _run_combat(enemy_id: String, ally_hint: String = "", rules: Dictionary = {}) -> bool:
+## `enemies`: un id o una lista (hasta tres). Con `ally_hint` contra criaturas,
+## ese compañero lucha con Ren (con 2 habilidades al azar, provisional hasta que
+## cada uno tenga las suyas).
+func _run_combat(enemies: Variant, ally_hint: String = "", rules: Dictionary = {}) -> bool:
 	mode = Mode.COMBAT
+	var enemy_id: String = enemies[0] if enemies is Array else enemies
 	var ally := ""
 	var ally_skills: Array = []
 	if rules.get("basic_only", false):
 		ally = ally_hint   # la primera incursión: quien estaba con Ren, sin habilidades
 		GameState.first_creature_fight_done = true
-	elif CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
+	elif CharacterDB.is_enemy(enemy_id) and (ally_hint != "" or not GameState.first_creature_fight_done):
 		GameState.first_creature_fight_done = true
-		ally = ally_hint if ally_hint in CharacterDB.COMPANIONS else CharacterDB.COMPANIONS.pick_random()
+		ally = ally_hint if ally_hint != "" else CharacterDB.COMPANIONS.pick_random()
 		ally_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(ally), CharacterDB.get_character(ally).get("nature", ""))
 	await SceneRouter.fade_out(0.25)
 	# Criaturas en la calle: al nivel de Ren (ver ProgressionDB). Las personas, al suyo.
 	var level := ProgressionDB.street_creature_level(GameState.level_of(CharacterDB.PROTAGONIST)) \
 			if CharacterDB.is_enemy(enemy_id) else 0
-	_combat.setup(enemy_id, ally, ally_skills, {}, level, false, rules)
+	_combat.setup(enemies, ally, ally_skills, {}, level, false, rules)
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -966,6 +978,8 @@ func _run_beat(beat: String, npc_id: String, action: String) -> void:
 	match beat:
 		"incursion_1":
 			await _run_incursion(npc_id, action)
+		"incursion_2", "incursion_3":
+			await _run_street_incursion(beat, npc_id)
 
 
 ## Primera incursión: la conversación con `npc_id` (si la hay) se corta de golpe,
@@ -993,6 +1007,7 @@ func _run_incursion(npc_id: String, action: String) -> void:
 			up.append(CharacterDB.display_name(pair[i]))
 		Toast.show_in(self, "%s suben al nivel %d" % [" y ".join(up), GameState.level_of(npc_id)], UIStyle.LIME, 4.0, 170.0)
 	GameState.incursion_done = true
+	GameState.set_flag("con_incursion_1", npc_id)
 	# Todos los presentes lo han visto: a partir de aquí saben que existen las criaturas.
 	GameState.record("incursion", enemy_id, npc_id, {"won": won}, Social.present(), "incursion_1")
 	GameState.set_flag("conoce_criaturas")
@@ -1003,6 +1018,36 @@ func _run_incursion(npc_id: String, action: String) -> void:
 	await _conversation.play(Story.pick(npc_id, "tras_incursion", result), npc_id)
 	if action != "":
 		_announce_plans()   # el grupo convoca la reunión (tras un plan, ya avisa _play_plan)
+
+
+## Incursiones 2 y 3 (ChapterDB.BEATS): al llegar a un sitio, tiembla todo y
+## aparecen criaturas; Ren lucha con `ally_id` (alguien del grupo que estaba
+## allí). Escenas `<cue>_aparece` y `<cue>_despues` (capitulo1.dialogue); la
+## segunda sabe si ganaron por el flag `incursion_ganada`.
+func _run_street_incursion(beat: String, ally_id: String) -> void:
+	var b: Dictionary = ChapterDB.BEATS[beat]
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_empty_hint.visible = false
+	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	await _quake()
+	await _conversation.play(Story.cue(b.cue + "_aparece"), ally_id, true, true)
+	var won := await _run_combat(b.enemies, ally_id)
+	GameState.set_flag("incursion_ganada", won)
+	GameState.set_flag("con_" + beat, ally_id)
+	GameState.set_flag("lugar_" + beat, LocationDB.display_name(GameState.location_id))
+	GameState.record("incursion", b.enemies[0], ally_id, {"won": won}, Social.present(), beat)
+	GameState.set_phase(b.sets_phase)
+	await _conversation.play(Story.cue(b.cue + "_despues"), ally_id)
+	GameState.save_game()
+	_fade_cast(true, 0.3)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	_update_empty_hint()
+	_announce_plans()
 
 
 ## Temblor de cámara: sacudida fuerte con destello, réplica y una más pequeña.

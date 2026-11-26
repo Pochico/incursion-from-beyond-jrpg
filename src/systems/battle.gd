@@ -109,7 +109,11 @@ func _make_fighter(id: String, level: int = 0, boss: bool = false) -> Dictionary
 	if level <= 0:
 		level = maxi(c.get("level", 1), 1) if data.get("enemy", false) else GameState.level_of(id)
 	level = clampi(level, 1, ProgressionDB.MAX_LEVEL)
-	var stats := ProgressionDB.stats_at(c.get("stats", {}), level)
+	var stats := ProgressionDB.stats_at(c.get("stats", {}), level, c.get("growth"))
+	if not data.get("enemy", false):
+		var extra := GameState.stat_extras(id)   # puntos al azar de Ren y entrenamiento
+		for attr: String in extra:
+			stats[attr] = int(stats.get(attr, 0)) + int(extra[attr])
 	var pv_mult := float(c.get("pv_mult", 1.0))
 	var tier := 0
 	if data.get("enemy", false):

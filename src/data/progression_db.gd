@@ -61,14 +61,25 @@ static func new_floor_xp(area_level: int) -> int:
 
 # --- Crecimiento ---------------------------------------------------------------------------
 
-## Atributos al nivel `level`: los de la ficha son los de nivel 1 y todos suben
-## 1 punto cada 2 niveles (la referencia de habilidades_1.md: 10 + floor((L−1)/2)).
+## Atributos al nivel `level`: los de la ficha son los de nivel 1. La referencia
+## (habilidades_1.md: 10 + floor((L−1)/2)) es 1 punto cada 2 niveles; `growth`
+## (combat.growth de la ficha) lo multiplica por atributo: {"FUE": 1.6, "INT": 0.6}
+## (sin dato, ×1). Con `growth` = RANDOM_GROWTH (Ren) no sube nada por fórmula:
+## gana RANDOM_GAINS_PER_LEVEL puntos al azar al subir de nivel (GameState.add_xp),
+## y además lo que entrene (GameState.stat_bonus). Ver GameState.stat_extras.
 ## PV, PM, daño, curación y costes ya salen del nivel por fórmula (SkillDB).
-static func stats_at(base: Dictionary, level: int) -> Dictionary:
+const RANDOM_GROWTH := "random"
+const RANDOM_GAINS_PER_LEVEL := 2
+
+static func stats_at(base: Dictionary, level: int, growth: Variant = null) -> Dictionary:
 	var out := {}
-	var bonus := floori((level - 1) / 2.0)
 	for k: String in base:
-		out[k] = int(base[k]) + bonus
+		var mult := 1.0
+		if growth is String and growth == RANDOM_GROWTH:
+			mult = 0.0
+		elif growth is Dictionary:
+			mult = float(growth.get(k, 1.0))
+		out[k] = int(base[k]) + floori((level - 1) * mult / 2.0)
 	return out
 
 

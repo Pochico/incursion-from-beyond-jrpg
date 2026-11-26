@@ -56,8 +56,9 @@ const ALL := {
 		"nature": "biological",
 		"gear": {"arma": "Cúter retráctil", "accesorio": "Auriculares rotos", "modulo": ""},
 		"bio": "Estudia en el instituto de Leganés, última fila junto a la ventana. Perdió a su padre hace tiempo y le costó levantar cabeza; ahora vuelve a ser el de antes: bromista, despistado y con los cascos al cuello. Kenji no le ha soltado en ningún momento.",
-		"combat": {"level": 1, "attack": "Corte rápido",
-			"stats": {"FUE": 12, "TEC": 9, "INT": 9, "VOL": 10, "RES": 11, "AGI": 12},
+		# Equilibrado: sube 2 atributos al azar por nivel y lo que entrene (ProgressionDB).
+		"combat": {"level": 1, "attack": "Corte rápido", "growth": "random",
+			"stats": {"FUE": 11, "TEC": 11, "INT": 11, "VOL": 11, "RES": 11, "AGI": 11},
 			"skills": ["BIO-03", "bio_impulso_organico", "BIO-04", "BIO-05"]},
 	},
 	"kenji": {

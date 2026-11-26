@@ -7,7 +7,7 @@
 		"gender": "mujer",
 		"generation": "joven",
 		"tagline": "Novia de Kenji",
-		"role": "Novia de Kenji, de su misma clase. Tranquila y de pocas palabras con todos menos con él. Cuida de Kenji como si fuera su manager."
+		"role": "Novia de Kenji, de su misma clase. Tranquila y de pocas palabras con todos menos con él. Cuida de Kenji como si fuera su manager. Hace taekwondo desde pequeña: rápida y con mucha pegada."
 	},
 	"traits": {
 		"extroversion": 40,
@@ -29,6 +29,7 @@
 		"Kenji (aunque no lo admita delante de nadie)",
 		"las napolitanas de chocolate",
 		"el chándal",
+		"el taekwondo (entrena tres tardes por semana)",
 		"grabar a Kenji haciendo el tonto"
 	],
 	"dislikes": [
@@ -184,6 +185,13 @@
 			"confianza": 10,
 			"respeto": 20
 		}
+	},
+
+	"combat": {
+		"level": 1, "attack": "Patada de hacha",
+		"items": {"pochicola": 1},
+		"stats": {"FUE": 13, "TEC": 8, "INT": 9, "VOL": 9, "RES": 9, "AGI": 14},
+		"growth": {"FUE": 1.6, "TEC": 0.6, "INT": 0.8, "VOL": 0.7, "RES": 0.7, "AGI": 1.6}
 	},
 
 	"citas": {

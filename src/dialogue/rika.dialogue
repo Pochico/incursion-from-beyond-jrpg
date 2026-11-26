@@ -447,7 +447,7 @@ Rika: Tenía miedo de que me dejarais fuera por ser la que no sabe hacer nada.
 ~ rika_hablar_tras_reunion
 # cuando: hablar, fase >= reunion, no hoy >= 2
 %
-	Rika: He puesto «nadie entra solo» de fondo de pantalla. Con brillitos. Me parecía importante.
+	Rika: He fijado el grupo de las Cloacas arriba del todo. Con brillitos.
 %
 	Rika: Me he apuntado a defensa personal. Primera clase el jueves. Si un monstruo me ataca, le haré una llave. Supongo.
 %

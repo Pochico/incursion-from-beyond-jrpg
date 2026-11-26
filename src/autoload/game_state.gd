@@ -38,6 +38,8 @@ var dungeons: Dictionary = {}
 ## Nivel y experiencia de Ren y los compañeros: id -> {level, xp} (xp = la que
 ## lleva dentro del nivel actual). Sin entrada = nivel de su ficha, 0 EXP.
 var levels: Dictionary = {}
+## Atributos entrenados con actividades: id -> {atributo: puntos} (fase de preparación).
+var stat_bonus: Dictionary = {}
 ## Planes que propone Ren (Invites): "ren:N" -> {activity, day, slot, guests: {id: "si"}}.
 var ren_plans: Dictionary = {}
 
@@ -122,6 +124,7 @@ func new_game() -> void:
 	messages = {}
 	dungeons = {}
 	levels = {}
+	stat_bonus = {}
 	ren_plans = {}
 	phase = PHASES[0]
 	flags = {}
@@ -183,14 +186,36 @@ func add_xp(id: String, amount: int) -> Dictionary:
 	var from := level_of(id)
 	var lv := from
 	var xp := xp_of(id) + maxi(amount, 0)
+	var gains: Dictionary = levels.get(id, {}).get("gains", {})
+	var random_growth: bool = str(CharacterDB.get_character(id).get("combat", {}).get("growth", "")) == ProgressionDB.RANDOM_GROWTH
 	while lv < ProgressionDB.MAX_LEVEL and xp >= ProgressionDB.xp_to_next(lv):
 		xp -= ProgressionDB.xp_to_next(lv)
 		lv += 1
+		if random_growth:
+			_roll_gains(id, gains)
 	if lv >= ProgressionDB.MAX_LEVEL:
 		xp = 0
-	levels[id] = {"level": lv, "xp": xp}
+	levels[id] = {"level": lv, "xp": xp, "gains": gains}
 	changed.emit()
 	return {"id": id, "xp": amount, "from": from, "to": lv}
+
+
+## Subida de nivel de quien crece al azar (Ren): RANDOM_GAINS_PER_LEVEL puntos
+## en atributos distintos, elegidos al azar.
+func _roll_gains(id: String, gains: Dictionary) -> void:
+	var attrs: Array = CharacterDB.get_character(id).get("combat", {}).get("stats", {}).keys()
+	attrs.shuffle()
+	for attr: String in attrs.slice(0, ProgressionDB.RANDOM_GAINS_PER_LEVEL):
+		gains[attr] = int(gains.get(attr, 0)) + 1
+
+
+## Puntos de atributo que no salen de la fórmula: los de subir al azar y los entrenados.
+func stat_extras(id: String) -> Dictionary:
+	var out: Dictionary = levels.get(id, {}).get("gains", {}).duplicate()
+	var trained: Dictionary = stat_bonus.get(id, {})
+	for attr: String in trained:
+		out[attr] = int(out.get(attr, 0)) + int(trained[attr])
+	return out
 
 
 ## Sube a `id` justo al nivel siguiente (la primera incursión).
@@ -301,6 +326,7 @@ func _last_stamp(contact: String) -> String:
 func set_phase(id: String) -> void:
 	assert(id in PHASES, "Fase desconocida: %s" % id)
 	phase = id
+	set_flag(PHASE_DAY + id, day_number())   # para los sucesos «N días después» (StoryBeats)
 	changed.emit()
 
 
@@ -322,6 +348,8 @@ func get_flag(id: String, default: Variant = false) -> Variant:
 
 
 const DAY_FLAG := "dia_"
+## Flag con el día en que empezó cada fase: «fase_dia:reunion» = 9.
+const PHASE_DAY := "fase_dia:"
 
 
 ## Día de la partida: 1 el primer día (START_DATE), 2 el siguiente...
@@ -346,7 +374,7 @@ func save_game() -> void:
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
 		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
-		"levels": levels, "ren_plans": ren_plans,
+		"levels": levels, "stat_bonus": stat_bonus, "ren_plans": ren_plans,
 		"relations": relations, "moods": moods,
 		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
@@ -387,7 +415,10 @@ func load_game() -> bool:
 	levels = {}
 	for id: String in data.get("levels", {}):
 		var v: Dictionary = data.levels[id]
-		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0))}
+		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0)), "gains": _ints(v.get("gains", {}))}
+	stat_bonus = {}
+	for id: String in data.get("stat_bonus", {}):
+		stat_bonus[id] = _ints(data.stat_bonus[id])
 	ren_plans = {}
 	var rp: Dictionary = data.get("ren_plans", {})
 	for id: String in rp:

@@ -118,7 +118,7 @@ Sale en el registro de la mazmorra: «Pasadizo descubierto: + 20 EXP».
 | Qué | Cómo | Estado |
 |---|---|---|
 | PV y PM máximos | Por fórmula: `PV = 100 + 10L + 5·RES`, `PM = 35 + 3L + 2·max(INT, VOL)` | [DEFINIDO] |
-| Atributos | Los de la ficha son los de nivel 1; **todos suben +1 cada 2 niveles** (la referencia `10 + floor((L−1)/2)` de habilidades_1.md) | [PROPUESTA] |
+| Atributos | Los de la ficha son los de nivel 1. Cada personaje crece distinto: la referencia (+1 cada 2 niveles, `10 + floor((L−1)/2)` de habilidades_1.md) se multiplica por atributo con `combat.growth` de su ficha (Yuna: FUE y AGI ×1,6, el resto por debajo; Shiori: INT ×1,8; Akane: FUE y RES ×1,4…). **Ren**: equilibrado (11 en todo), sube **2 atributos al azar por nivel** y los que entrene con actividades (`GameState.stat_bonus`) | [DEFINIDO] el criterio (usuario); [PROPUESTA] los números |
 | Daño, curación, efectos y costes | Por fórmula con el nivel actual (`SkillDB`) | [DEFINIDO] |
 | PV y PM actuales a mitad de incursión | Suben lo mismo que el máximo (no se cura del todo) | [PROPUESTA] |
 

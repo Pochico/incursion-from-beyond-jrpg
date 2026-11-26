@@ -106,7 +106,8 @@
 	"combat": {
 		"level": 1, "attack": "Patada de pogo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 13, "TEC": 8, "INT": 8, "VOL": 10, "RES": 11, "AGI": 12}
+		"stats": {"FUE": 14, "TEC": 7, "INT": 8, "VOL": 11, "RES": 13, "AGI": 10},
+		"growth": {"FUE": 1.4, "TEC": 0.5, "INT": 0.6, "VOL": 1.1, "RES": 1.4, "AGI": 1.0}
 	},
 
 	"citas": {

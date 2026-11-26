@@ -328,6 +328,19 @@ const BEATS := {
 		"on": ["talk", "plan_end"], "alone": true,
 		"with": ["kenji", "rika", "shiori", "yuna"],
 	},
+	# Segunda y tercera: en la calle, al llegar a un sitio con alguien del grupo,
+	# al menos un día después de la anterior. Criaturas provisionales (el usuario
+	# decidirá cuáles salen). Escenas: <cue>_aparece y <cue>_despues.
+	"incursion_2": {
+		"phase": "reunion", "before_phase": "incursion_2", "days_after_phase": 1,
+		"on": ["arrive"], "with": ["kenji", "rika", "shiori", "yuna"],
+		"enemies": ["engendro"], "cue": "incursion_2", "sets_phase": "incursion_2",
+	},
+	"incursion_3": {
+		"phase": "incursion_2", "before_phase": "incursion_3", "days_after_phase": 1,
+		"on": ["arrive"], "with": ["kenji", "rika", "shiori", "yuna"],
+		"enemies": ["imp", "imp"], "cue": "incursion_3", "sets_phase": "incursion_3",
+	},
 }
 
 ## Escena extra de la mañana de algunos días, después del despertar (`intro`).
