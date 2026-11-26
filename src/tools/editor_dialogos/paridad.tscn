@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://src/tools/editor_dialogos/paridad.gd" id="1_paridad"]
-
-[node name="Paridad" type="Node"]
-script = ExtResource("1_paridad")
