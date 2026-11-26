@@ -63,6 +63,14 @@ var _cast_tween: Tween
 
 
 func _ready() -> void:
+	Story.stage = self
+	tree_exiting.connect(func() -> void:
+		if Story.stage == self:
+			Story.stage = null)
+	_conversation.closed.connect(func() -> void:
+		# Un `Story.fondo(...)` de la escena dura lo que la conversación.
+		if _backdrop.location_id != GameState.location_id:
+			_backdrop.set_location(GameState.location_id))
 	_refresh_hints()
 	_phone = PhoneOverlay.new()
 	add_child(_phone)
@@ -991,8 +999,7 @@ func _run_incursion(npc_id: String, action: String) -> void:
 	_show_hud(false)
 	if action != "":
 		await _conversation.play(Story.pick(npc_id, Story.moment_for(action)), npc_id, true, true, INCURSION_CUT_AFTER)
-	await _quake()
-	await _conversation.play(Story.cue("temblor"), npc_id, true, true)
+	await _conversation.play(Story.cue("temblor"), npc_id, true, true)   # tiembla: Story.efecto en el diálogo
 	await _conversation.play(Story.pick(npc_id, "alarma"), npc_id, true, true)
 	await _conversation.play(Story.cue("aparece_" + enemy_id), enemy_id, true)
 	var pair := [CharacterDB.PROTAGONIST, npc_id]
@@ -1032,8 +1039,7 @@ func _run_street_incursion(beat: String, ally_id: String) -> void:
 	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
 	_fade_cast(false, 0.25)
 	_show_hud(false)
-	await _quake()
-	await _conversation.play(Story.cue(b.cue + "_aparece"), ally_id, true, true)
+	await _conversation.play(Story.cue(b.cue + "_aparece"), ally_id, true, true)   # el temblor va en la escena
 	var won := await _run_combat(b.enemies, ally_id)
 	GameState.set_flag("incursion_ganada", won)
 	GameState.set_flag("con_" + beat, ally_id)
@@ -1048,6 +1054,49 @@ func _run_street_incursion(beat: String, ally_id: String) -> void:
 	_set_cast_interactive(true)
 	_update_empty_hint()
 	_announce_plans()
+
+
+# --- Comandos de escena (Story.fondo/entra/sale/efecto, desde los .dialogue) -----------------
+
+func scene_background(location_id: String) -> void:
+	var id := location_id if location_id != "" else GameState.location_id
+	if id == _backdrop.location_id:
+		return
+	await SceneRouter.fade_out(0.25)
+	_fade_cast(id == GameState.location_id)
+	_backdrop.set_location(id)
+	await SceneRouter.fade_in(0.25)
+
+
+func scene_enter(id: String) -> void:
+	await _conversation.stage_enter(id)
+
+
+func scene_leave(id: String) -> void:
+	await _conversation.stage_leave(id)
+
+
+func scene_effect(effect: String) -> void:
+	match effect:
+		"temblor":
+			await _quake()
+		"destello":
+			var flash := ColorRect.new()
+			flash.color = Color(1, 1, 1, 0)
+			flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+			flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			add_child(flash)
+			var t := create_tween()
+			t.tween_property(flash, "color:a", 0.85, 0.06)
+			t.tween_property(flash, "color:a", 0.0, 0.45)
+			await t.finished
+			flash.queue_free()
+		"negro":
+			await SceneRouter.fade_out(0.6)
+		"vuelve":
+			await SceneRouter.fade_in(0.6)
+		_:
+			push_warning("Story.efecto: efecto desconocido «%s» (ver Story.SCENE_EFFECTS)" % effect)
 
 
 ## Temblor de cámara: sacudida fuerte con destello, réplica y una más pequeña.

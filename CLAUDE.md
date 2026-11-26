@@ -111,7 +111,31 @@ El usuario guarda material de referencia local en `/context/` y `/refs/`
   clic derecho, Mover plano, zoom, Deshacer) y cruceta al probar.
 - Antes de trabajar en `main`, `git pull`: los guardados desde el móvil son commits en `main`.
 
-## Editor de diálogos (web) y paridad con el juego
+## Comandos de escena (puesta en escena desde el diálogo)
+
+`Story.fondo(id)` (otro fondo mientras dura la conversación; `""` vuelve al
+del sitio), `Story.entra(id)` / `Story.sale(id)` (retrato de la derecha),
+`Story.efecto(nombre)` (`Story.SCENE_EFFECTS`: temblor, destello, negro, vuelve)
+y `Story.esperar(seg)`. Se escriben como `$> Story.efecto("temblor")` en los
+`.dialogue` y Dialogue Manager espera a que terminen. Los ejecuta `Story.stage`
+(WorldScreen se registra en `_ready`: `scene_background`, `scene_enter`,
+`scene_leave`, `scene_effect`; `ConversationView.stage_enter/stage_leave`; el
+fondo vuelve al cerrarse la vista, señal `closed`). Sin `stage` (mazmorra) no
+hacen nada. Las incursiones ya tiemblan así (`temblor`, `incursion_2_aparece`).
+Pon la puesta en escena en el diálogo, no en código: el editor de escenas la
+muestra como bloques. Si añades un efecto, añádelo a `SCENE_EFFECTS` y a
+`WorldScreen.scene_effect` (el editor lee la lista de `story.gd`).
+
+## Editor de escenas (web) y paridad con el juego
+
+El antiguo editor de diálogos (misma carpeta y rama) ahora es el **editor de
+escenas**: lista con títulos legibles (`# titulo: …` en el cue, que solo usa
+el editor: `motor.parseFile` lo lee en `cue.title`; si no hay, `humanize` del
+nombre interno), agrupada por días y por tipo; pantalla de escena con
+«Cuándo sale» en una frase, bloques (diagrama + barra para añadir líneas,
+respuestas y comandos de escena) y «Avanzado» con lo técnico; y **▶ Ver
+escena** (`openPlayer`, recorre el cue con `walkScene` y pinta fondos de
+`assets/backgrounds`, retratos y efectos desde raw.githubusercontent).
 
 `docs/editor-dialogos/` es una app web de una página (móvil y escritorio) que
 lee los `.dialogue` de GitHub, edita las reglas `# cuando:` y el texto, simula

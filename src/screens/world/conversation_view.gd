@@ -26,6 +26,8 @@ extends Control
 ## la charla), usar `keep_open`; `stop_after` corta el guion de golpe.
 
 signal finished
+## La vista se ha cerrado del todo (no con `keep_open`).
+signal closed
 signal _line_done
 signal _typed
 signal _choice_made(index: int)
@@ -323,6 +325,31 @@ func _animate_out() -> void:
 	visible = false
 	_open = false
 	_reactions.clear()
+	closed.emit()
+
+
+# --- Comandos de escena (Story.entra / Story.sale) -------------------------------
+
+## Entra `id`: su retrato ocupa el de la derecha (el que estuviera sale).
+func stage_enter(id: String) -> void:
+	if not _open:
+		_npc_id = id
+		return
+	_right.modulate.a = 1.0
+	await _swap_portraits(id, _has_protagonist)
+
+
+## Sale `id` si es quien está a la derecha: su retrato se va y queda vacío
+## hasta que hable otro o entre alguien.
+func stage_leave(id: String) -> void:
+	if not _open or id != _right_id:
+		return
+	var t := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	t.tween_property(_right, "slide", 220.0, 0.25)
+	await t.finished
+	_right.visible = false
+	_right_id = ""
+	_npc_id = ""
 
 
 # --- Líneas ----------------------------------------------------------------------

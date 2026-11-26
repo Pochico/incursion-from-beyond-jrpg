@@ -546,6 +546,7 @@ En el móvil, el grupo cambia de nombre\: «Cloacas FC». Lo ha puesto Kenji.
 # Colinas para la fase de la grieta.
 
 ~ incursion_2_aparece
+$> Story.efecto("temblor")
 Las farolas parpadean. El suelo cruje igual que la otra vez.
 {{Story.speaker}}: Ren... No. Otra vez no.
 Delante de vosotros, el aire se dobla como un plástico al fuego. Algo sale de ahí.
@@ -567,6 +568,7 @@ $> Story.text("shiori", "He visto la foto. Ese barro no es de la calle. Tiene se
 ~ incursion_3_aparece
 Esta vez no hay temblor. Solo un pitido agudo, muy fino, que se te mete en los dientes.
 {{Story.speaker}}: ¿Lo oyes? Ren, ¿lo oyes tú también?
+$> Story.efecto("destello")
 Son dos. Salen del suelo a la vez, como si alguien los hubiera dejado caer.
 => END
 

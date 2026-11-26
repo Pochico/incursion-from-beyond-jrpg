@@ -237,6 +237,48 @@ func incursion_with_name(n: int = 1) -> String:
 	return CharacterDB.display_name(incursion_with(n))
 
 
+# --- Puesta en escena ------------------------------------------------------------------------
+# Comandos de escena que se escriben en los .dialogue como `$> Story.efecto("temblor")`:
+# Dialogue Manager espera a que terminen antes de seguir. Los ejecuta quien muestra la
+# conversación (`stage`: WorldScreen, que se registra al abrirse); sin él no hacen nada.
+# El editor de escenas web los muestra como bloques (Entra, Sale, Efecto, Fondo, Esperar).
+
+## Efectos de `efecto`.
+const SCENE_EFFECTS: Array[String] = ["temblor", "destello", "negro", "vuelve"]
+
+var stage: Object = null
+
+
+## Cambia el fondo al de otra ubicación (id de LocationDB) mientras dura la
+## conversación; "" vuelve al de la ubicación actual.
+func fondo(location_id: String = "") -> void:
+	if stage:
+		await stage.scene_background(location_id)
+
+
+## Entra un personaje en la conversación (su retrato, a la derecha).
+func entra(id: String) -> void:
+	if stage:
+		await stage.scene_enter(id)
+
+
+## Sale el personaje del retrato de la derecha.
+func sale(id: String) -> void:
+	if stage:
+		await stage.scene_leave(id)
+
+
+## temblor (la pantalla tiembla), destello, negro (fundido a negro) o vuelve (de negro).
+func efecto(name: String) -> void:
+	if stage:
+		await stage.scene_effect(name)
+
+
+## Pausa de `seconds` segundos.
+func esperar(seconds: float) -> void:
+	await get_tree().create_timer(seconds).timeout
+
+
 func day() -> int:
 	return GameState.day_number()
 

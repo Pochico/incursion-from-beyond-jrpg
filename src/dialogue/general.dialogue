@@ -96,6 +96,7 @@ Ren: Lo que no me atrevo a tirar: cómics de cuando era crío, cables «por si a
 # --- Primera incursión --------------------------------------------------------------
 
 ~ temblor
+$> Story.efecto("temblor")
 Un crujido sordo recorre el suelo. Las farolas parpadean. Los cristales de los escaparates vibran a la vez.
 => END
 
