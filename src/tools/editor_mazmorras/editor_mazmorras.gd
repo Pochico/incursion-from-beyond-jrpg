@@ -25,6 +25,11 @@ extends Control
 ##
 ## Abrir: menú de inicio (botón «Editor de mazmorras», solo desde el editor de
 ## Godot) o abrir esta escena y pulsar F6. Guarda en src/data/mazmorras/<id>.json.
+##
+## Versión web (móvil o cualquier navegador, publicada desde main): abre y
+## guarda las mazmorras de main en GitHub (GithubStore), sin Estudio de
+## texturas ni relieve. Con pantalla táctil o en web sale una barra para el
+## plano (Deshacer, Borrar = clic derecho, Mover, zoom) y una cruceta al probar.
 
 const SELF_PATH := "res://src/tools/editor_mazmorras/editor_mazmorras.tscn"
 const TITLE_SCREEN := "res://src/screens/title/title_screen.tscn"
@@ -129,10 +134,21 @@ var _light_values := DungeonMap.LIGHT_DEFAULT.duplicate()   ## valores de la pr�
 var _light_color: ColorPickerButton
 var _light_sliders := {}             ## clave -> HSlider
 
+# --- Web y táctil ---------------------------------------------------------------------
+var _web := GithubStore.enabled()
+var _store: GithubStore
+var _remote_maps: Array[String] = [] ## mazmorras de main en GitHub (web)
+var _erase_mode := false             ## táctil: el toque borra (como el clic derecho)
+var _pan_mode := false               ## táctil: arrastrar mueve el plano
+
 
 func _ready() -> void:
 	theme = ToolTheme.get_theme()
-	DungeonTextures.live_files = true
+	# En web no hay PNG sueltos: solo las texturas importadas del paquete.
+	DungeonTextures.live_files = not _web
+	if _web:
+		_store = GithubStore.new()
+		add_child(_store)
 	DungeonTextures.clear_cache()
 	_build_ui()
 	var ctx := SceneRouter.tool_context
@@ -148,6 +164,23 @@ func _ready() -> void:
 		_map = DungeonMap.load_map(saved[0]) if not saved.is_empty() else _new_map()
 	SceneRouter.tool_context = {}
 	_load_into_ui()
+	if _web:
+		_load_remote()
+
+
+## Web: lista de mazmorras de main y abre la que había (o la primera).
+func _load_remote() -> void:
+	_set_status("Leyendo las mazmorras de GitHub…")
+	_remote_maps = await _store.list_maps()
+	_refresh_maps()
+	if _remote_maps.is_empty():
+		_set_status("No se pudo leer GitHub: se ven las mazmorras del paquete publicado.", true)
+		return
+	_open(_map.id if _map.id in _remote_maps else _remote_maps[0])
+
+
+func _touch_ui() -> bool:
+	return _web or App.is_touch()
 
 
 func _new_map() -> DungeonMap:
@@ -186,9 +219,12 @@ func _build_ui() -> void:
 	header.add_child(spacer)
 	header.add_child(_button("Nuevo", _on_new))
 	header.add_child(_button("Guardar", _save))
-	header.add_child(_button("Probar mapa  [P]", _start_test))
-	header.add_child(_button("Estudio de texturas", _go_to_studio))
-	header.add_child(_button("Volver", func() -> void: SceneRouter.go_to(TITLE_SCREEN)))
+	header.add_child(_button("Probar mapa" if _touch_ui() else "Probar mapa  [P]", _start_test))
+	if not _web:
+		header.add_child(_button("Estudio de texturas", _go_to_studio))
+		header.add_child(_button("Volver", func() -> void: SceneRouter.go_to(TITLE_SCREEN)))
+	if _touch_ui():
+		root.add_child(_build_touch_bar())
 
 	# Cuerpo: plano + (vista 3D y panel)
 	var body := HBoxContainer.new()
@@ -471,9 +507,10 @@ func _build_sidebar(col: VBoxContainer) -> void:
 		_refresh_default_btn())
 	col.add_child(_palette)
 	_default_btn = _button("Usar como predeterminada del tema", _set_theme_default)
-	col.add_child(_default_btn)
-	col.add_child(_button("Recargar texturas", _reload_textures))
-	col.add_child(_button("Relieve de la textura…", _go_to_relief))
+	if not _web:   # escriben archivos del proyecto: solo en Godot
+		col.add_child(_default_btn)
+		col.add_child(_button("Recargar texturas", _reload_textures))
+		col.add_child(_button("Relieve de la textura…", _go_to_relief))
 	col.add_child(_small("Salen del Estudio de texturas (assets/textures/<tema>/suelo, techo o pared). " +
 			"Las casillas sin textura propia usan la predeterminada del tema; si el tema no tiene ninguna, una provisional."))
 
@@ -535,9 +572,73 @@ func _build_test_overlay() -> void:
 	_test_msg.modulate.a = 0.0
 	_test.add_child(_test_msg)
 
+	if _touch_ui():
+		keys.visible = false
+		_build_test_pad()
+
 	_combat = CombatView.new()
 	_combat.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_test.add_child(_combat)
+
+
+## Barra táctil del plano: lo que con ratón y teclado son el clic derecho, la
+## rueda, el botón central y Cmd+Z.
+func _build_touch_bar() -> Control:
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 12)
+	bar.add_child(_button("Deshacer", _undo_step))
+	bar.add_child(_button("Rehacer", _redo_step))
+	var erase := _button("Borrar", Callable())
+	erase.toggle_mode = true
+	erase.toggled.connect(func(on: bool) -> void: _erase_mode = on)
+	bar.add_child(erase)
+	var pan := _button("Mover plano", Callable())
+	pan.toggle_mode = true
+	pan.toggled.connect(func(on: bool) -> void:
+		_pan_mode = on
+		_panning = false)
+	bar.add_child(pan)
+	bar.add_child(_button("  −  ", func() -> void: _zoom_plan(1.0 / 1.25, _plan.size * 0.5)))
+	bar.add_child(_button("  +  ", func() -> void: _zoom_plan(1.25, _plan.size * 0.5)))
+	bar.add_child(_button("Encuadrar", _fit_plan))
+	for b in bar.get_children():
+		(b as Button).custom_minimum_size.y = 64
+	return bar
+
+
+## Cruceta de «Probar mapa» para pantallas táctiles (las teclas W/S/A/D/Q/E/Espacio/Esc).
+func _build_test_pad() -> void:
+	var pad := GridContainer.new()
+	pad.columns = 3
+	pad.add_theme_constant_override("h_separation", 10)
+	pad.add_theme_constant_override("v_separation", 10)
+	pad.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	pad.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	pad.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	pad.offset_right = -40
+	pad.offset_bottom = -90
+	for k: Array in [["Girar izq.", "left"], ["Avanzar", "forward"], ["Girar der.", "right"],
+			["De lado izq.", "strafe_left"], ["Retroceder", "back"], ["De lado der.", "strafe_right"]]:
+		var b := _button(k[0], _test_act.bind(k[1]))
+		b.custom_minimum_size = Vector2(170, 110)
+		pad.add_child(b)
+	_test.add_child(pad)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	row.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	row.offset_left = 40
+	row.offset_bottom = -90
+	for k: Array in [["Usar", _test_act.bind("interact")], ["Volver al editor", _stop_test]]:
+		var b := _button(k[0], k[1])
+		b.custom_minimum_size = Vector2(220, 110)
+		row.add_child(b)
+	_test.add_child(row)
+
+
+func _test_act(action: String) -> void:
+	if not _combat.visible:
+		_explorer.act(action)
 
 
 func _button(text: String, action: Callable) -> Button:
@@ -613,13 +714,13 @@ func _refresh_themes() -> void:
 func _refresh_maps() -> void:
 	_maps_opt.clear()
 	_maps_opt.add_item("Elegir…")
-	for id in DungeonMap.list_maps():
+	for id in (_remote_maps if _web and not _remote_maps.is_empty() else DungeonMap.list_maps()):
 		_maps_opt.add_item(id)
 	_maps_opt.select(0)
 
 
 func _refresh_path() -> void:
-	_path_label.text = DungeonMap.path_for(_map.id)
+	_path_label.text = ("GitHub · main · " + GithubStore.repo_path(_map.id)) if _web else DungeonMap.path_for(_map.id)
 	_title.queue_redraw()
 
 
@@ -876,6 +977,9 @@ func _redo_step() -> void:
 
 
 func _save() -> void:
+	if _web:
+		_save_remote()
+		return
 	var err := _map.save()
 	if err != OK:
 		_set_status("No se pudo guardar (%s)." % error_string(err), true)
@@ -896,8 +1000,63 @@ func _on_new() -> void:
 	_set_status("Mapa nuevo (Cmd/Ctrl+Z para recuperar el anterior).")
 
 
+## Web: sube el mapa a main en GitHub (un commit; la publicación hace el resto).
+func _save_remote() -> void:
+	if _store.token() == "":
+		_ask_token()
+		return
+	_set_status("Subiendo «%s» a GitHub…" % _map.id)
+	var err: String = await _store.save_map(_map)
+	if err != "":
+		_set_status("No se pudo guardar: %s." % err, true)
+		if err.contains("token"):
+			_ask_token()
+		return
+	_dirty = false
+	_title.queue_redraw()
+	if not _map.id in _remote_maps:
+		_remote_maps.append(_map.id)
+		_remote_maps.sort()
+	_refresh_maps()
+	_set_status("Guardado en GitHub (main): %s" % GithubStore.repo_path(_map.id))
+
+
+## Web: pide el token de GitHub (el del editor de diálogos sirve: se comparte).
+func _ask_token() -> void:
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Token de GitHub"
+	dlg.ok_button_text = "Guardar y subir"
+	dlg.cancel_button_text = "Cancelar"
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	var info := _small("Para guardar hace falta un token de GitHub con permiso de escritura en el repositorio " +
+			"(el mismo del editor de diálogos: si ya lo pusiste allí, se usa solo). Se guarda solo en este navegador.")
+	info.custom_minimum_size = Vector2(760, 0)
+	box.add_child(info)
+	var edit := LineEdit.new()
+	edit.secret = true
+	edit.placeholder_text = "github_pat_… o ghp_…"
+	box.add_child(edit)
+	dlg.add_child(box)
+	dlg.confirmed.connect(func() -> void:
+		if edit.text.strip_edges() != "":
+			_store.set_token(edit.text)
+			_save_remote())
+	dlg.visibility_changed.connect(func() -> void:
+		if not dlg.visible:
+			dlg.queue_free())
+	add_child(dlg)
+	dlg.popup_centered(Vector2i(860, 320))
+	edit.grab_focus()
+
+
 func _open(id: String) -> void:
-	var m := DungeonMap.load_map(id)
+	var m: DungeonMap
+	if _web:
+		_set_status("Abriendo «%s» desde GitHub…" % id)
+		m = await _store.load_map(id)
+	else:
+		m = DungeonMap.load_map(id)
 	if m == null:
 		_set_status("No se pudo abrir «%s»." % id, true)
 		return
@@ -954,7 +1113,7 @@ func _reload_textures() -> void:
 
 func _notification(what: int) -> void:
 	# Al volver a la ventana (p. ej. tras exportar desde otra copia del Estudio).
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN and _palette != null:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN and _palette != null and not _web:
 		_reload_textures()
 
 
@@ -995,11 +1154,17 @@ func _on_plan_input(event: InputEvent) -> void:
 		elif mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			_zoom_plan(1.12 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.12, mb.position)
 		elif mb.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+			var button := mb.button_index
+			if button == MOUSE_BUTTON_LEFT and _pan_mode:   # táctil: «Mover plano»
+				_panning = mb.pressed
+				return
+			if button == MOUSE_BUTTON_LEFT and _erase_mode:   # táctil: «Borrar»
+				button = MOUSE_BUTTON_RIGHT
 			if mb.pressed:
 				_stroke_before = _map.to_dict()
-				_stroke_button = mb.button_index
-				_apply_tool(_pick(mb.position), mb.button_index == MOUSE_BUTTON_LEFT, true)
-			elif mb.button_index == _stroke_button:
+				_stroke_button = button
+				_apply_tool(_pick(mb.position), button == MOUSE_BUTTON_LEFT, true)
+			elif button == _stroke_button:
 				_end_stroke()
 	elif event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
