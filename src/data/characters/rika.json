@@ -107,7 +107,8 @@
 	"combat": {
 		"level": 1, "attack": "Bolsazo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 9, "TEC": 11, "INT": 10, "VOL": 12, "RES": 9, "AGI": 11}
+		"stats": {"FUE": 8, "TEC": 10, "INT": 10, "VOL": 13, "RES": 8, "AGI": 12},
+		"growth": {"FUE": 0.6, "TEC": 1.0, "INT": 1.0, "VOL": 1.5, "RES": 0.6, "AGI": 1.3}
 	},
 
 	"citas": {

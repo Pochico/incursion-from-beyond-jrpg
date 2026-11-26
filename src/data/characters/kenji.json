@@ -107,7 +107,8 @@
 	"combat": {
 		"level": 1, "attack": "Golpe de bajo",
 		"items": {"pochicola": 1},
-		"stats": {"FUE": 10, "TEC": 12, "INT": 9, "VOL": 10, "RES": 11, "AGI": 10}
+		"stats": {"FUE": 11, "TEC": 12, "INT": 8, "VOL": 10, "RES": 12, "AGI": 9},
+		"growth": {"FUE": 1.1, "TEC": 1.3, "INT": 0.6, "VOL": 1.0, "RES": 1.3, "AGI": 0.7}
 	},
 
 	"citas": {

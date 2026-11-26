@@ -30,7 +30,7 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 	Kenji: Uhhh ¿y eso? ¿Hiciste algo en especial?
 	- Sí, bueno. Más o menos. [#reservado]
 		Kenji: ¿Qué fue? Cuenta, cuenta.
-	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|akane|rika|yuna|madre_kenji, #atrevido, #franco]
+	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|rika|yuna|madre_kenji, #atrevido, #franco]
 		if Story.persona == "yuna"
 			$> Story.set_flag("dia1_cita_yuna")
 			Kenji: ...
@@ -63,11 +63,6 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 				Kenji: ¿Shiori? ¿La que habla como un diccionario?
 				Kenji: Ren, tú y yo nos conocemos desde los seis años. Eso no te lo crees ni tú.
 				Kenji: ¿Qué hicisteis, leer en silencio en la biblioteca? Porque eso no cuenta como cita.
-			elif Story.persona == "akane"
-				$> Story.set_flag("dia1_cita_akane")
-				Kenji: ¿Akane? ¿La de las recreativas? ¿La de la banda punk?
-				Kenji: Tío, esa te come vivo. Bueno, ya me contarás si sobreviviste. Por lo visto, sí.
-				Kenji: Esta tarde en Parquesur pasamos por las recreativas y se lo pregunto a ella.
 - Meh, un poco mierdolo, pero no terrible. [#franco]
 	Kenji: ¿Y eso? ¿Ha pasado algo?
 	- No, simplemente un poco rollo. [#evasivo]
@@ -185,12 +180,7 @@ Rika: ¡Ren, salta conmigo! ¡A la de tres!
 	Al tercer salto se te escapa la risa. Aquí es imposible hacerse el serio.
 Shiori: Kenji, Ren salta más alto que tú.
 Kenji: Porque yo cargo con el peso del arte. Es otra liga.
-if Story.flag("dia1_cita_akane")
-	Kenji: Por cierto, he pasado por las recreativas a preguntarle a Akane por vuestra «cita».
-	Kenji: Me ha mirado tres segundos sin pestañear y me ha dicho: «¿Y a ti qué te importa?». [#cara=sorpresa]
-	Kenji: Eso es un sí, tío. No me jodas. [#cara=sorpresa]
-	Rika: ¿Ren y Akane? ¿La punki? ¿Pero me estáis vacilando? [#cara=sorpresa]
-elif Story.flag("dia1_cita_madre_kenji")
+if Story.flag("dia1_cita_madre_kenji")
 	Kenji: Le he contado a mi madre lo de vuestra «cita».
 	Kenji: Me ha mandado tres corazones y un «ay, mi niño».
 	Yuna: Tu madre es la mejor, cielo.
@@ -330,16 +320,19 @@ Kenji: ¡Ren! ¡Socio! Ya estamos todos. Bueno, todos los importantes.
 Yuna: Apuntado. Hola, Ren. Hay bocadillos de tortilla. Si no comes, se los come él y luego le duele la tripa.
 Kenji: Eso era una vez.
 Yuna: Eran tres.
-Al fondo, alguien con una chupa llena de chapas baja la rampa grande sin frenar. Es Akane.
-Akane: (Parando de golpe a vuestro lado.) Anda. El de las recreativas, el del bajo y la novia del del bajo. Qué plan más raro.
+Al fondo, una chica con una chupa llena de chapas baja la rampa grande sin frenar.
+Akane: (Parando de golpe a vuestro lado.) Anda. El del bajo y la novia del del bajo.
 Kenji: ¡Akane! ¿Patinas?
 Akane: No. Estoy haciendo la compra. Claro que patino.
+Kenji: Ren, esta es Akane. Curra en las recres de Parquesur, en el turno de noche.
+$> Story.introduce("akane")
+Akane: Ya. Te he visto alguna vez por allí. Mirando, nunca jugando.
 - ¿Me enseñas? [#curioso, #atrevido]
 	Akane: Te enseño a caerte. Lo demás viene solo.
 	Te caes cuatro veces. A la quinta, bajas la rampa pequeña de pie. Akane asiente una vez. Viniendo de ella, es una ovación.
 	$> Story.change("akane", "respeto", 2)
 - Yo miro, que se me da mejor. [#reservado, #bromista]
-	Akane: Típico. Mirar también cuenta, ¿no? Eso dijiste una vez.
+	Akane: Típico.
 	Akane: Pues mira bien.
 	Baja la rampa grande de espaldas. Kenji grita como si fuera un gol.
 - Kenji va a intentar el mortal otra vez. [#bromista, #provocador, #alude=kenji]
@@ -475,77 +468,206 @@ if Story.phase("incursion_1")
 # --- Reunión en las Cloacas (tras la primera incursión) -------------------------------
 
 ~ reunion_cloacas
-Las Cloacas. El canal baja en escalones y la cascada hace un ruido que tapa todos los demás. Huele a humedad y a hierro.
-Alguien ha bajado unas sillas plegables y una lámpara de camping. Están todos. Hasta Akane.
-Kenji: Vale. Ya estamos. Bienvenidos a la primera reunión oficial de... no sé de qué. Ya le pondremos nombre.
-Rika: ¿Por qué aquí? Huele fatal.
-Akane: Porque aquí no hay cámaras, ni pantallas, ni gente. Y porque las cloacas no tiemblan. Lo he comprobado.
-Shiori: Y porque el agua hace ruido blanco. Si algo escucha, aquí oye poco.
-Rika: Vale, eso último no me ha tranquilizado nada.
-Yuna: (Repartiendo zumos.) Hay de piña y de melocotón. El de piña es para quien haya pasado más miedo.
-Kenji coge el de piña sin dudar.
-Kenji: Bueno. Lo de {{Story.incursion_place()}}. Ren estaba delante. Que lo cuente él.
+Las Cloacas. El canal baja en escalones y la cascada tapa cualquier otro ruido. Huele a humedad.
+Alguien ha bajado unas sillas plegables y una lámpara de camping.
+if Story.is_friend("akane")
+	Akane está apoyada en la pared, un poco apartada. Kenji le ha escrito y ha venido.
+Kenji: Vale. Ya estamos todos.
+Rika: ¿Y por qué aquí? Huele fatal.
+Kenji: Porque aquí no nos oye nadie. Y lo que nos tienen que contar no se cuenta en un bar.
+Yuna: (Repartiendo zumos.) Hay de piña y de melocotón.
+{{Story.incursion_with_name()}}: Cuéntalo tú, Ren. Yo todavía no me lo creo.
 $> Story.tell("kenji", "incursion_1")
 $> Story.tell("yuna", "incursion_1")
 $> Story.tell("rika", "incursion_1")
 $> Story.tell("shiori", "incursion_1")
-$> Story.tell("akane", "incursion_1")
-- (Contarlo todo tal cual, sin adornar.) [#franco]
-	Les cuentas el temblor, la grieta, la criatura. Lo que sentiste al plantarte delante. Nadie te interrumpe.
-	Shiori lo apunta todo. Rika se abraza las rodillas.
+if Story.is_friend("akane")
+	$> Story.tell("akane", "incursion_1")
+- (Contarlo tal cual.) [#franco]
+	Les cuentas el temblor, el aire rasgándose y la criatura. Cómo le plantasteis cara los dos.
+	Nadie te interrumpe.
 	$> Story.change("shiori", "confianza", 2)
-	$> Story.change("akane", "respeto", 1)
-- (Quitarle hierro para no asustarles.) [#protector, #bromista]
-	Ren: Era grande, feo y olía mal. Como Kenji por la mañana.
-	Kenji: ¡Oye!
-	Por un momento, todos se ríen. Luego, poco a poco, dejan de hacerlo.
-	Akane: Vale, gracioso. Ahora cuéntalo de verdad.
+- (Quitarle hierro.) [#bromista, #protector]
+	Ren: Un bicho feo. Le dimos un par de hostias y se fue.
+	Rika: ¿Un par de hostias? ¿A un bicho?
 	$> Story.change("rika", "afecto", 1)
-- (Decir que no sabes qué pasó y que no quieres hablar de ello.) [#reservado, #evasivo]
-	Ren: No sé qué era. No sé cómo lo hice. Y no sé si quiero saberlo.
-	Akane: Pues vas a tener que querer. Porque esa cosa iba a por ti.
-	$> Story.change("akane", "confianza", -1)
-Shiori: Ahora lo mío. He cruzado todo lo que tenemos.
-Shiori: Kenji oye una voz a las 3\:33. Akane ve tu nombre en una máquina a las 3\:33. Yo cuento catorce pisos en La Torre de noche. Trece de día.
-Shiori: Y la criatura salió cuando Ren estaba cerca. No antes.
-Kenji: La voz dice «abre». Siempre «abre».
-Akane: ¿Abre qué?
-Shiori: Esa es la pregunta. Yo creo que una puerta. Y creo que está en La Torre.
-Rika: Vale. Votación. ¿Quién quiere hacer como que no ha pasado nada y volver a su vida normal?
-Rika levanta la mano. Yuna también, despacio. Nadie más.
-Rika: ...Ya. Lo suponía. Bajo la mano, bajo la mano.
-Yuna: Yo no voy a entrar en ninguna torre. Pero si vosotros vais, yo me quedo fuera con el móvil cargado y la ubicación activada. Y con tiritas.
-Kenji: Esa es mi chica.
-Akane: Yo entro. Conozco la puerta de servicio. Está siempre entornada. Siempre. Eso no es normal.
-- Iremos juntos. Nadie entra solo. [#protector, #decidido, #proteger_a_otros=si]
-	Kenji: Nadie entra solo. Me gusta. Lo pongo de descripción en el grupo.
+- (No sabes ni cómo contarlo.) [#reservado]
+	Ren: No sé ni por dónde empezar.
+	{{Story.incursion_with_name()}}: Por el principio. Yo te ayudo.
+if Story.incursion_with() != "rika"
+	Rika: A ver, a ver. ¿Un {{Story.enemy_name()}}? ¿Aquí? ¿En Leganés? [#cara=sorpresa]
+if Story.incursion_with() != "kenji"
+	Kenji: Tío, te quiero, pero eso suena a que ibais fumadísimos.
+if Story.incursion_with() != "shiori"
+	Shiori: ¿A qué hora fue? ¿Cuánto duró? ¿Lo vio alguien más?
+	Ren: No había nadie más. Solo nosotros.
+if Story.incursion_with() != "yuna"
+	Yuna: ¿Pero estáis bien? ¿Os hizo algo?
+{{Story.incursion_with_name()}}: Yo lo vi. Estaba ahí, a dos metros. No me lo estoy inventando.
+Se hace un silencio. Solo se oye la cascada.
+Shiori: No ha salido en ninguna noticia. Lo he mirado todo esta mañana.
+Rika: Pues yo no quiero creérmelo. Lo siento.
+Yuna: Yo sí. Ren no se inventa estas cosas.
+Kenji: Ni Ren ni nadie de aquí.
+- Si vuelve a pasar, estamos juntos. Nadie se queda solo. [#protector, #decidido, #proteger_a_otros=si]
+	Kenji: Eso. Nadie solo.
 	$> Story.change("kenji", "confianza", 2)
 	$> Story.change("rika", "confianza", 2)
 	$> Story.change("yuna", "confianza", 2)
-- Primero quiero entender qué son. Puede que no todas quieran hacernos daño. [#curioso, #idealista, #criaturas=acoger]
-	Akane: ¿Entender? Ren, una casi te come.
-	Shiori: Déjale. Tiene razón en una cosa. No sabemos nada. Y del miedo sin datos solo sale más miedo.
+- Quiero saber qué era. [#curioso, #criaturas=acoger]
+	Shiori: Yo también. A partir de hoy lo apunto todo.
 	$> Story.change("shiori", "respeto", 2)
-	$> Story.change("akane", "respeto", -1)
-- Si salen de La Torre, habrá que cerrarla. Sea como sea. [#decidido, #criaturas=rechazar]
-	Akane: Así se habla.
-	Shiori: «Sea como sea» es mucho decir. Pero vale. Es un objetivo.
-	$> Story.change("akane", "respeto", 2)
+- Lo que sea, que no vuelva. [#decidido, #criaturas=rechazar]
+	Rika: Eso. Que no vuelva.
+	$> Story.change("rika", "respeto", 1)
 - No sé si estoy preparado para esto. [#franco, #dubitativo]
-	Rika: Nadie lo está, Ren. Por eso estamos aquí. Para no estarlo juntos.
+	Rika: Nadie lo está, Ren.
 	$> Story.change("rika", "afecto", 2)
-Shiori: Propongo unas reglas. Una, nadie entra solo en La Torre. Dos, todo lo raro se apunta en el grupo, por tonto que parezca. Tres, a las doce, todos en casa.
-Kenji: ¿A las doce? Pero si yo grabo a las 3\:33.
-Yuna: Grabas desde la cama. Con el móvil. Y me despiertas solo si sale un monstruo.
-Akane: Cuatro. Si alguien ve una grieta, corre. No se hace el héroe. (Te mira.) Va por ti.
-Rika: Y cinco. Los viernes hay pizza. Si vamos a salvar el mundo, por lo menos que haya pizza.
-Kenji: Aprobado por unanimidad. Se levanta la sesión.
+Shiori: Propongo una cosa. Seguimos con lo de siempre. Clase, casa, lo normal. Pero si alguien ve algo raro, lo pone en el grupo.
+Yuna: Y de noche nadie va solo por ahí.
+Kenji: Hecho.
+if Story.is_friend("akane")
+	Akane: Yo trabajo de noche.
+	Kenji: Pues nos escribes cuando salgas.
+	Akane: Vale.
+Rika: ¿Y ya está? ¿Nos vamos a casa como si nada?
+Shiori: Como si nada no. Atentos.
 => END
 
 ~ reunion_cloacas_fin
-Subís la escalera de hierro uno detrás de otro. Arriba ya es otra hora y la calle parece la misma de siempre.
-Pero no lo es. Ahora sabéis que algo se está abriendo. Y que no vais a mirar hacia otro lado.
-En el móvil, el grupo cambia de nombre. «Cloacas FC». Shiori pide que conste en acta que ella no lo ha votado.
+Subís la escalera de hierro uno detrás de otro. Arriba la calle está igual que siempre.
+En el móvil, el grupo cambia de nombre\: «Cloacas FC». Lo ha puesto Kenji.
+=> END
+
+
+# --- Incursiones 2 y 3 (ChapterDB.BEATS) ---------------------------------------------
+# Saltan al llegar a un sitio con alguien del grupo, días después de la anterior.
+# Quien habla es ese compañero ({{Story.speaker}}). Cada una deja una pista hacia
+# Colinas para la fase de la grieta.
+
+~ incursion_2_aparece
+$> Story.efecto("temblor")
+Las farolas parpadean. El suelo cruje igual que la otra vez.
+{{Story.speaker}}: Ren... No. Otra vez no.
+Delante de vosotros, el aire se dobla como un plástico al fuego. Algo sale de ahí.
+Ren: Ponte detrás de mí.
+=> END
+
+~ incursion_2_despues
+if Story.flag("incursion_ganada")
+	La criatura se deshace en el aire. Donde estaba solo queda un rastro de barro oscuro y hierba aplastada.
+else
+	Cuando consigues levantarte, la criatura ya no está. Donde estaba solo queda un rastro de barro oscuro y hierba aplastada.
+{{Story.speaker}}: ¿Barro? Aquí no hay barro. Aquí no hay ni un árbol.
+Ren: Y huele a césped recién cortado.
+{{Story.speaker}}: Le hago una foto. La subo al grupo.
+$> Story.set_flag("pista_barro")
+$> Story.text("shiori", "He visto la foto. Ese barro no es de la calle. Tiene semillas de las de los parques. Mañana lo miro mejor.")
+=> END
+
+~ incursion_3_aparece
+Esta vez no hay temblor. Solo un pitido agudo, muy fino, que se te mete en los dientes.
+{{Story.speaker}}: ¿Lo oyes? Ren, ¿lo oyes tú también?
+$> Story.efecto("destello")
+Son dos. Salen del suelo a la vez, como si alguien los hubiera dejado caer.
+=> END
+
+~ incursion_3_despues
+if Story.flag("incursion_ganada")
+	Las dos criaturas se deshacen. Antes de desaparecer del todo, los restos se arrastran por el suelo, todos hacia el mismo lado.
+else
+	Cuando abres los ojos ya no están. Las marcas que han dejado en el suelo van todas hacia el mismo lado.
+El móvil vibra solo. El mapa se abre sin que lo toques y la brújula da vueltas hasta que se queda quieta.
+{{Story.speaker}}: Mira el mío. Está igual.
+Ren: Apuntan al mismo sitio.
+{{Story.speaker}}: Eso es Colinas.
+$> Story.set_flag("pista_colinas")
+$> Story.text("shiori", "Ya lo he visto en el grupo. El barro de la otra vez, las marcas de hoy. Todo va hacia Colinas. Mañana hablamos.")
+=> END
+
+
+# --- La grieta (fase 4; plan investigacion_colinas de ChapterDB.PLANS) ------------------
+# Al día siguiente de la incursión 3, Shiori cita al grupo en Colinas. Encuentran
+# la grieta, Ren y Kenji se asoman y salen corriendo. Después, la fase es «grieta».
+# La puesta en escena (negro, temblor, destello) va en los comandos Story.efecto.
+
+~ investigacion_colinas
+# titulo: Buscar en Colinas
+Colinas. Pasadas las pistas de vóley, el césped sube hasta una fila de pinos. Detrás ya no hay farolas.
+Shiori: Aquí. Las dos marcas dan aquí.
+Kenji: Aquí no hay nada, loco. Hierba y una papelera.
+Rika: ¿Y si nos vamos? Lo digo en serio.
+Yuna: Kenji, no te separes.
+if Story.is_friend("akane")
+	Akane: Callaos un momento.
+Shiori: Mirad el suelo.
+Hay barro. El mismo barro oscuro de la otra vez, con la hierba aplastada en círculo.
+Ren: Va hacia los pinos.
+- (Ir delante.) [#decidido, #protector]
+	Ren: Quedaos detrás de mí.
+	Kenji: Ni de broma te dejo ir solo.
+- Esperad aquí. Miro yo y vuelvo. [#prudente]
+	Shiori: No. Vamos todos o no va nadie.
+- ¿Tú qué dices, Shiori? [#reservado]
+	Shiori: Que si nos damos la vuelta ahora, mañana estamos igual.
+Echáis a andar hacia los pinos.
+=> END
+
+~ grieta_aparece
+# titulo: La grieta
+$> Story.efecto("negro")
+Entre los dos pinos, el aire hace un ruido. Como una tela que se rasga muy despacio.
+$> Story.efecto("temblor")
+$> Story.efecto("vuelve")
+Ahí está. Una raja en el aire, de arriba abajo, más alta que una persona. Por dentro es violeta y se mueve, como si respirara.
+Rika: ¿Qué es eso? ¿Eso qué es?
+Kenji: No me jodas.
+Yuna: Kenji. Kenji, vámonos.
+Shiori: No la toquéis. Nadie la toque.
+if Story.is_friend("akane")
+	Akane: Es como lo de la máquina. Igual.
+Del otro lado sale aire frío. Huele a hierro.
+Kenji: Yo me asomo. Un segundo y salgo.
+- Voy contigo. [#decidido]
+	Kenji: Eso, my brodel. Los dos.
+- Echa el freno, magdaleno. [#prudente, #bromista]
+	Kenji: Si no miramos, no sabemos qué hay.
+	Kenji: Un segundo, Ren. Uno.
+	Ren: Pues voy contigo.
+=> END
+
+~ grieta_asomarse
+# titulo: Asomarse a la grieta
+Pasáis los dos. Detrás, Shiori os agarra de la mochila.
+$> Story.efecto("destello")
+$> Story.efecto("negro")
+Del otro lado no hay pinos. Hay un pasillo que no acaba, con paredes que parecen de carne y de cable a la vez.
+Algo gotea. Algo más lejos contesta.
+Kenji: Ren... ¿eso son ojos?
+Al fondo se encienden una docena de luces. Todas a la vez. Todas os miran.
+Ren: Fuera. ¡Fuera!
+$> Story.efecto("temblor")
+$> Story.efecto("vuelve")
+Caéis de espaldas en la hierba. La grieta sigue ahí, quieta, como si no hubiera pasado nada.
+Rika: ¿Qué habéis visto? ¿Qué había?
+Kenji: No lo sé. No lo sé, tía.
+Shiori: Vale. Nos vamos. Ya.
+Yuna le coge la mano a Kenji y no se la suelta.
+=> END
+
+~ grieta_fin
+# titulo: Vuelta a casa tras la grieta
+Nadie habla en todo el camino de vuelta.
+En el grupo, Shiori escribe lo único que dice nadie esa noche.
+$> Story.text("shiori", "Nadie vuelve allí solo. Mañana lo hablamos.")
+$> Story.set_flag("grieta_vista")
+=> END
+
+~ grieta_mirar
+# titulo: Mirar la grieta
+La grieta sigue entre los dos pinos. Se abre y se cierra muy despacio, como si respirara.
+Sale aire frío. Huele a hierro.
+Ren: Todavía no.
 => END
 
 
@@ -1033,6 +1155,7 @@ Kenji: Y le habrían echado. Jajaja.
 La terraza de Westlake de noche. Guirnaldas de luces, un altavoz con más bajos que canciones y gente del grupo de Rika que no conoces.
 Rika: ¡Has venido! Mira, mira. Esta es Mio, esta es Natsuki, este es el primo de Natsuki que nadie sabe cómo se llama.
 Rika: Y esa de ahí apoyada en la barandilla, con cara de querer estar en otro sitio, es Akane. La he invitado yo. No preguntes.
+$> Story.introduce("akane")
 Akane: Me ha invitado. No me ha preguntado si quería.
 Rika: ¡Porque sabía que sí!
 - (Bailar con Rika.) [#desenfadado, #atrevido]
@@ -1140,4 +1263,25 @@ Mamá: Ha sido buena semana, ¿no? Te he visto mucho por ahí. Con tus amigos. R
 	$> Story.change("madre_ren", "afecto", 2)
 Mamá apoya la cabeza en tu hombro. A los diez minutos ronca un poquito.
 No apagas la tele. Te quedas un rato más, viendo cómo el cirujano descubre que la gemela no es gemela. Total, ya no hay prisa.
+=> END
+
+# --- A solas con Kenji (si la primera incursión no ha saltado antes) -------------------
+# Plan `kenji_a_solas` (desde el día 10). Al terminar salta la incursión (ChapterDB.BEATS).
+
+~ kenji_a_solas
+Bowls, a última hora. No queda nadie en las rampas. Kenji está sentado en el bordillo con el altavoz en las rodillas.
+Kenji: ¡Socio! Siéntate, siéntate. Esto lo tienes que oír con calma.
+Kenji: Tres noches con ella. Mi madre ya me ha amenazado con quitarme el enchufe.
+- Dale. [#decidido]
+- ¿Es la del final raro? [#curioso]
+	Kenji: Esa parte la he quitado. Me daba mal rollo.
+Kenji le da al play. Es buena. Más que buena.
+Kenji: ¿Y? Sé sincero.
+- Es lo mejor que has hecho. [#cariñoso, #franco]
+	Kenji: ¿Sí? ¿De verdad? No me lo digas por decir, loco.
+	$> Story.change("kenji", "afecto", 2)
+- Le sobra el último minuto. [#franco]
+	Kenji: Ya... Lo sabía. Lo sabía y no lo quería quitar.
+	$> Story.change("kenji", "respeto", 2)
+Kenji: Se la voy a mandar a mi padre. Cuando esté terminada del todo.
 => END

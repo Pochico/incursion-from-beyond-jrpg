@@ -56,8 +56,9 @@ const ALL := {
 		"nature": "biological",
 		"gear": {"arma": "Cúter retráctil", "accesorio": "Auriculares rotos", "modulo": ""},
 		"bio": "Estudia en el instituto de Leganés, última fila junto a la ventana. Perdió a su padre hace tiempo y le costó levantar cabeza; ahora vuelve a ser el de antes: bromista, despistado y con los cascos al cuello. Kenji no le ha soltado en ningún momento.",
-		"combat": {"level": 1, "attack": "Corte rápido",
-			"stats": {"FUE": 12, "TEC": 9, "INT": 9, "VOL": 10, "RES": 11, "AGI": 12},
+		# Equilibrado: sube 2 atributos al azar por nivel y lo que entrene (ProgressionDB).
+		"combat": {"level": 1, "attack": "Corte rápido", "growth": "random",
+			"stats": {"FUE": 11, "TEC": 11, "INT": 11, "VOL": 11, "RES": 11, "AGI": 11},
 			"skills": ["BIO-03", "bio_impulso_organico", "BIO-04", "BIO-05"]},
 	},
 	"kenji": {
@@ -76,6 +77,7 @@ const ALL := {
 	},
 	"akane": {
 		"name": "Akane", "color": Color("ff3d5a"),
+		"stranger_name": "Tía punki",   # hasta que Ren se presenta (Acquaintance)
 		"portrait": "res://assets/characters/akane.png",
 		"faces": {"enfado": "res://assets/characters/akane_enfado.png", "sorpresa": "res://assets/characters/akane_sorpresa.png"},
 		"scene": {"height": 770.0},
@@ -273,13 +275,22 @@ static func with_profile() -> Array[String]:
 ## Id a partir del nombre visible ("Rika" -> "rika"); "" si no existe.
 static func id_from_name(character_name: String) -> String:
 	for id: String in ALL:
-		if ALL[id].name == character_name:
+		if ALL[id].name == character_name or ALL[id].get("stranger_name", "") == character_name:
 			return id
 	return ""
 
 
+## Nombre visible: el genérico (`stranger_name`) mientras Ren no le conoce
+## (Acquaintance). GameState se busca en el árbol para que este archivo de datos
+## no dependa del autoload (herramientas y scripts sueltos).
 static func display_name(id: String) -> String:
-	return get_character(id).get("name", "")
+	var data := get_character(id)
+	if data.has("stranger_name"):
+		var tree := Engine.get_main_loop() as SceneTree
+		var gs: Node = tree.root.get_node_or_null(^"GameState") if tree else null
+		if gs and not gs.acquaintance.has(id):
+			return data.stranger_name
+	return data.get("name", "")
 
 
 ## Altura (m) a la que flota una criatura voladora en la mazmorra; 0 = de pie.

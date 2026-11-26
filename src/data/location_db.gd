@@ -11,7 +11,8 @@ extends RefCounted
 ## editor del mapa). Si el `cast` tiene más, cada franja del día se eligen
 ## `capacity` (siempre los mismos durante esa franja). Sin nadie, al llegar salta un
 ## combate contra un enemigo al azar (ver `RANDOM_ENEMIES`), salvo en los
-## (`cast_phase` = el `cast` solo aparece desde esa fase de la historia)
+## (`cast_phase` = el `cast` solo aparece desde esa fase de la historia;
+## `friends_only` = solo salen los que ya son amigos de Ren, ver Acquaintance)
 ## lugares seguros (`safe`), en casa y en las mazmorras (`dungeon`: al llegar se
 ## pregunta si entrar; `dungeon_map` = mapa de src/data/mazmorras/;
 ## `battle_background` = fondo de los combates dentro de la mazmorra).
@@ -47,6 +48,9 @@ const ALL := {
 	"plaza": {
 		"name": "Plaza Mayor", "desc": "Centro del distrito. Siempre hay alguien con quien hablar.",
 		"on_map": true, "pos": Vector2(0.46, 0.46), "cast": ["kenji", "rika", "yuna"],
+		# La grieta (fase 4): fondo propio cuando exista la imagen (plaza_grieta[_franja]).
+		"from_phase": {"grieta": {"desc": "Pasadas las pistas, entre dos pinos, el aire está rajado. Nadie más parece verlo.",
+				"backdrop": "plaza_grieta", "rift": true}},
 		"sky_top": Color("15112a"), "sky_bottom": Color("7a64b4"), "trees": true, "tower": true,
 	},
 	"estacion": {
@@ -78,6 +82,7 @@ const ALL := {
 		"name": "Cloacas", "desc": "Un canal bajo la ciudad con una cascada en escalones. Por las rejillas entra la luz de la calle.",
 		"on_map": true, "pos": Vector2(0.36, 0.60), "capacity": 5, "safe": true,
 		"cast": ["kenji", "shiori", "rika", "akane", "yuna"], "cast_phase": "incursion_1",
+		"friends_only": true,   # el sitio del grupo: quien Ren no conoce no está
 		"layout": "res://src/rooms/cloacas_layout.tscn",
 		"sky_top": Color("120d0a"), "sky_bottom": Color("6a4a2e"), "water": true,
 	},
@@ -114,6 +119,12 @@ static func get_location(id: String) -> Dictionary:
 		loc.desc = cfg.descs[id]
 	if cfg.get("capacity", {}).has(id):
 		loc.capacity = int(cfg.capacity[id])
+	# Cambios por fase de la historia (`from_phase`: {fase: {clave: valor}}), los
+	# últimos: p. ej. Colinas con la grieta (descripción, fondo `backdrop`, `rift`).
+	var by_phase: Dictionary = loc.get("from_phase", {})
+	for phase: String in by_phase:
+		if GameState.phase_at_least(phase):
+			loc.merge(by_phase[phase], true)
 	return loc
 
 
@@ -164,7 +175,10 @@ static func cast(id: String) -> Array:
 	if loc.has("cast_phase") and not GameState.phase_at_least(loc.cast_phase):
 		return []
 	var when: Dictionary = loc.get("cast_when", {})
+	var friends_only: bool = loc.get("friends_only", false)
 	var all: Array = loc.get("cast", []).filter(func(c: String) -> bool:
+		if friends_only and not Acquaintance.is_friend(c):
+			return false
 		if not when.has(c):
 			return true
 		var w: Dictionary = when[c]

@@ -38,6 +38,8 @@ var dungeons: Dictionary = {}
 ## Nivel y experiencia de Ren y los compañeros: id -> {level, xp} (xp = la que
 ## lleva dentro del nivel actual). Sin entrada = nivel de su ficha, 0 EXP.
 var levels: Dictionary = {}
+## Atributos entrenados con actividades: id -> {atributo: puntos} (fase de preparación).
+var stat_bonus: Dictionary = {}
 ## Planes que propone Ren (Invites): "ren:N" -> {activity, day, slot, guests: {id: "si"}}.
 var ren_plans: Dictionary = {}
 
@@ -50,6 +52,14 @@ const PHASES: Array[String] = [
 	"rutina",         ## Día normal: nadie sabe nada de las criaturas.
 	"incursion_1",    ## Tras la primera incursión.
 	"reunion",        ## Tras la reunión del grupo en las Cloacas (ChapterDB.PLANS).
+	# Resto del capítulo 1 (ver docs/diseno/capitulo_1_hoja_de_ruta.md); aún sin contenido.
+	"incursion_2",    ## Tras la segunda incursión.
+	"incursion_3",    ## Tras la tercera incursión.
+	"grieta",         ## Han encontrado la grieta y se han asomado: preparación.
+	"exploracion_1",  ## Tras la primera exploración (retirada forzada).
+	"escaner",        ## Tienen el escáner; se abre el Pidl.
+	"captura",        ## Tienen el dispositivo de captura.
+	"jefe_1",         ## Jefe de la primera mazmorra vencido: fin del capítulo 1.
 ]
 
 ## Franjas del día. Las actividades (ir a clase, las camas elásticas, una
@@ -84,17 +94,16 @@ var story_step := ""
 ## reaccionen a las opciones de Ren (Social.present). No se guarda.
 var scene_cast: Array = []
 
-## Primera incursión: al hablar con el segundo personaje distinto aparece una
-## de estas criaturas, elegida al azar al empezar cada partida.
+## Primera incursión (suceso `incursion_1` de ChapterDB.BEATS): aparece una de
+## estas criaturas, elegida al azar al empezar cada partida.
 const INCURSION_ENEMIES: Array[String] = ["tiranosaurio", "oni"]
-const INCURSION_AT_CHARACTER := 2
 
 var incursion_enemy := ""
 var incursion_done := false
 ## El primer combate contra una criatura se hace con un compañero.
 var first_creature_fight_done := false
-## Personajes distintos con los que se ha hablado, en orden.
-var talked_to: Array[String] = []
+## Gente que Ren va conociendo: id -> "presentado" | "amigo" (ver Acquaintance).
+var acquaintance: Dictionary = {}
 
 
 func _ready() -> void:
@@ -115,6 +124,7 @@ func new_game() -> void:
 	messages = {}
 	dungeons = {}
 	levels = {}
+	stat_bonus = {}
 	ren_plans = {}
 	phase = PHASES[0]
 	flags = {}
@@ -125,6 +135,7 @@ func new_game() -> void:
 	for a: String in partners:
 		if a < partners[a]:
 			RelationEvents.record_couple(a, partners[a], CharacterDB.with_profile())
+	acquaintance = {}
 	intro_done = false
 	story_step = ChapterDB.FIRST_STEP
 	_reset_incursion()
@@ -135,16 +146,6 @@ func _reset_incursion() -> void:
 	incursion_enemy = INCURSION_ENEMIES.pick_random()
 	incursion_done = false
 	first_creature_fight_done = false
-	talked_to = []
-
-
-## Registra que se empieza una conversación con `character_id`. Devuelve true
-## si esta conversación desencadena la incursión.
-func register_conversation(character_id: String) -> bool:
-	if character_id in talked_to:
-		return false
-	talked_to.append(character_id)
-	return not incursion_done and talked_to.size() == INCURSION_AT_CHARACTER
 
 
 func set_location(id: String) -> void:
@@ -185,14 +186,41 @@ func add_xp(id: String, amount: int) -> Dictionary:
 	var from := level_of(id)
 	var lv := from
 	var xp := xp_of(id) + maxi(amount, 0)
+	var gains: Dictionary = levels.get(id, {}).get("gains", {})
+	var random_growth: bool = str(CharacterDB.get_character(id).get("combat", {}).get("growth", "")) == ProgressionDB.RANDOM_GROWTH
 	while lv < ProgressionDB.MAX_LEVEL and xp >= ProgressionDB.xp_to_next(lv):
 		xp -= ProgressionDB.xp_to_next(lv)
 		lv += 1
+		if random_growth:
+			_roll_gains(id, gains)
 	if lv >= ProgressionDB.MAX_LEVEL:
 		xp = 0
-	levels[id] = {"level": lv, "xp": xp}
+	levels[id] = {"level": lv, "xp": xp, "gains": gains}
 	changed.emit()
 	return {"id": id, "xp": amount, "from": from, "to": lv}
+
+
+## Subida de nivel de quien crece al azar (Ren): RANDOM_GAINS_PER_LEVEL puntos
+## en atributos distintos, elegidos al azar.
+func _roll_gains(id: String, gains: Dictionary) -> void:
+	var attrs: Array = CharacterDB.get_character(id).get("combat", {}).get("stats", {}).keys()
+	attrs.shuffle()
+	for attr: String in attrs.slice(0, ProgressionDB.RANDOM_GAINS_PER_LEVEL):
+		gains[attr] = int(gains.get(attr, 0)) + 1
+
+
+## Puntos de atributo que no salen de la fórmula: los de subir al azar y los entrenados.
+func stat_extras(id: String) -> Dictionary:
+	var out: Dictionary = levels.get(id, {}).get("gains", {}).duplicate()
+	var trained: Dictionary = stat_bonus.get(id, {})
+	for attr: String in trained:
+		out[attr] = int(out.get(attr, 0)) + int(trained[attr])
+	return out
+
+
+## Sube a `id` justo al nivel siguiente (la primera incursión).
+func level_up(id: String) -> Dictionary:
+	return add_xp(id, ProgressionDB.xp_to_next(level_of(id)) - xp_of(id))
 
 
 ## Reparte `amount` a quienes participan (`ids`) y BENCH_SHARE al resto de los que
@@ -265,6 +293,9 @@ func add_money(amount: int) -> void:
 
 
 func add_message(contact: String, from: String, text: String) -> void:
+	# Quien no tiene el número de Ren no le escribe (ver Acquaintance).
+	if not Acquaintance.is_friend(contact):
+		return
 	var t := Time.get_time_dict_from_system()
 	if not messages.has(contact):
 		messages[contact] = []
@@ -295,6 +326,7 @@ func _last_stamp(contact: String) -> String:
 func set_phase(id: String) -> void:
 	assert(id in PHASES, "Fase desconocida: %s" % id)
 	phase = id
+	set_flag(PHASE_DAY + id, day_number())   # para los sucesos «N días después» (StoryBeats)
 	changed.emit()
 
 
@@ -316,6 +348,8 @@ func get_flag(id: String, default: Variant = false) -> Variant:
 
 
 const DAY_FLAG := "dia_"
+## Flag con el día en que empezó cada fase: «fase_dia:reunion» = 9.
+const PHASE_DAY := "fase_dia:"
 
 
 ## Día de la partida: 1 el primer día (START_DATE), 2 el siguiente...
@@ -340,12 +374,13 @@ func save_game() -> void:
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
 		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
-		"levels": levels, "ren_plans": ren_plans,
+		"levels": levels, "stat_bonus": stat_bonus, "ren_plans": ren_plans,
 		"relations": relations, "moods": moods,
 		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
 		"incursion": {"enemy": incursion_enemy, "done": incursion_done,
-			"first_creature_fight_done": first_creature_fight_done, "talked_to": talked_to},
+			"first_creature_fight_done": first_creature_fight_done},
+		"acquaintance": acquaintance,
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
@@ -380,7 +415,10 @@ func load_game() -> bool:
 	levels = {}
 	for id: String in data.get("levels", {}):
 		var v: Dictionary = data.levels[id]
-		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0))}
+		levels[id] = {"level": int(v.get("level", 1)), "xp": int(v.get("xp", 0)), "gains": _ints(v.get("gains", {}))}
+	stat_bonus = {}
+	for id: String in data.get("stat_bonus", {}):
+		stat_bonus[id] = _ints(data.stat_bonus[id])
 	ren_plans = {}
 	var rp: Dictionary = data.get("ren_plans", {})
 	for id: String in rp:
@@ -397,7 +435,7 @@ func load_game() -> bool:
 	incursion_enemy = inc.get("enemy", incursion_enemy)
 	incursion_done = inc.get("done", false)
 	first_creature_fight_done = inc.get("first_creature_fight_done", false)
-	talked_to.assign(inc.get("talked_to", []))
+	acquaintance = data.get("acquaintance", {})
 	changed.emit()
 	return true
 

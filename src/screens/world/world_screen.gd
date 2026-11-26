@@ -63,6 +63,14 @@ var _cast_tween: Tween
 
 
 func _ready() -> void:
+	Story.stage = self
+	tree_exiting.connect(func() -> void:
+		if Story.stage == self:
+			Story.stage = null)
+	_conversation.closed.connect(func() -> void:
+		# Un `Story.fondo(...)` de la escena dura lo que la conversación.
+		if _backdrop.location_id != GameState.location_id:
+			_backdrop.set_location(GameState.location_id))
 	_refresh_hints()
 	_phone = PhoneOverlay.new()
 	add_child(_phone)
@@ -165,7 +173,27 @@ func _refresh_hints() -> void:
 	]
 	if LocationDB.is_dungeon(GameState.location_id):
 		items.append({"id": "dungeon", "key": "E", "label": "Entrar"})
+	if _has_rift():
+		items.append({"id": "rift", "key": "G", "label": "La grieta"})
 	_hint_bar.set_items(items)
+
+
+## Colinas desde la fase `grieta` (LocationDB `from_phase` → `rift`).
+func _has_rift() -> bool:
+	return LocationDB.get_location(GameState.location_id).get("rift", false)
+
+
+## «La grieta»: por ahora solo mirarla (cue `grieta_mirar`); entrar llega en la fase 6.
+func _look_at_rift() -> void:
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	await _conversation.play(Story.cue("grieta_mirar"), "")
+	_fade_cast(true, 0.25)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
 
 
 func _on_hint_pressed(id: String) -> void:
@@ -174,6 +202,8 @@ func _on_hint_pressed(id: String) -> void:
 	match id:
 		"dungeon":
 			_dungeon_entrance()
+		"rift":
+			_look_at_rift()
 		"map":
 			_open_map()
 		"phone":
@@ -196,6 +226,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event is InputEventKey and event.pressed and not event.echo \
 					and (event as InputEventKey).physical_keycode == KEY_E and LocationDB.is_dungeon(GameState.location_id):
 				_dungeon_entrance()
+			elif event is InputEventKey and event.pressed and not event.echo \
+					and (event as InputEventKey).physical_keycode == KEY_G and _has_rift():
+				_look_at_rift()
 			elif (event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")) \
 					and get_viewport().gui_get_focus_owner() == null:
 				_focus_character(_first_character())
@@ -258,6 +291,13 @@ func _travel(location_id: String) -> void:
 	if plan_id != "":
 		await _play_plan(plan_id)
 		return
+	# Sucesos al llegar (las incursiones en la calle): no en sitios seguros ni en casa.
+	if location_id != LocationDB.HOME and not LocationDB.get_location(location_id).get("safe", false) \
+			and not LocationDB.is_dungeon(location_id):
+		var beat := StoryBeats.check("arrive", "", _cast(location_id))
+		if beat != "":
+			await _run_beat(beat, StoryBeats.companion(ChapterDB.BEATS[beat], _cast(location_id)), "")
+			return
 	if LocationDB.is_dungeon(location_id):
 		GameState.save_game()
 		await _dungeon_entrance(1.4)
@@ -330,18 +370,27 @@ func _play_plan(plan_id: String) -> void:
 	_empty_hint.visible = false
 	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
 	_show_hud(false)
-	GameState.scene_cast = plan.get("cast", [])
+	# Quien Ren no conoce no cuenta como presente (p. ej. Akane en la reunión).
+	GameState.scene_cast = plan.get("cast", []).filter(func(c: String) -> bool: return Acquaintance.is_friend(c))
 	Invites.current_plan = plan_id   # para Story.activity() / other_guests() en las quedadas
 	for scene: Dictionary in plan.scenes:
 		if scene.get("black", false):
 			await _black_scene(Story.cue(scene.cue))
 		else:
 			await _conversation.play(Story.cue(scene.cue), scene.get("npc", ""))
+	var cast: Array = GameState.scene_cast
 	GameState.scene_cast = []
 	GameState.set_flag(ChapterDB.PLAN_DONE + plan_id)
-	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, plan.get("cast", []))
+	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, cast)
+	# A solas con alguien al acabar el plan: puede saltar un suceso (la incursión).
+	if cast.size() == 1:
+		var beat := StoryBeats.check("plan_end", cast[0], cast)
+		if beat != "":
+			await _run_beat(beat, cast[0], "")
 	if plan.has("sets_phase"):
 		GameState.set_phase(plan.sets_phase)
+		_backdrop.set_location(GameState.location_id)   # la ubicación puede cambiar con la fase
+		_refresh_hints()
 	if plan.get("advance_time", false) and GameState.slot_id() != "noche":
 		_pass_time()
 	_spawn_cast()
@@ -676,7 +725,9 @@ func _on_character_activated(id: String) -> void:
 	var sprite: CharacterSprite = _sprites[id]
 	var img := sprite.image_rect()
 	var actions: Array = InteractionMenu.ACTIONS
-	if CharacterDB.get_character(id).get("talk_only", false):
+	if not Acquaintance.is_friend(id):
+		actions = Acquaintance.menu_actions(id)   # saludar / charla corta / pedir el número
+	elif CharacterDB.get_character(id).get("talk_only", false):
 		actions = actions.filter(func(a: Dictionary) -> bool: return a.id in ["talk", "plan"])
 	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "", Color(0, 0, 0, 0), actions)
 
@@ -715,9 +766,11 @@ func _on_action_chosen(id: String, action: String) -> void:
 	if action == "examine":
 		GameState.record("examine", CharacterDB.PROTAGONIST, id)
 		await _conversation.play(Story.cue("examinar_" + id), "")
-	elif GameState.register_conversation(id):
+	elif not Acquaintance.is_friend(id):
+		await _talk_to_acquaintance(id, action)
+	elif action == "talk" and StoryBeats.check("talk", id, _cast(GameState.location_id)) != "":
 		Social.begin_interaction(id, action, true)
-		await _run_incursion(id, action)
+		await _run_beat(StoryBeats.check("talk", id, _cast(GameState.location_id)), id, action)
 	else:
 		var result := Social.begin_interaction(id, action)
 		if result != Social.OK:
@@ -742,6 +795,23 @@ func _on_action_chosen(id: String, action: String) -> void:
 	mode = Mode.EXPLORE
 	_set_cast_interactive(true)
 	_focus_character(id)
+
+
+## Charla con alguien que aún no es amigo de Ren (Acquaintance): presentarse, una
+## charla corta o pedirle el número. Sin cue escrito, una línea genérica.
+func _talk_to_acquaintance(id: String, action: String) -> void:
+	var was := Acquaintance.state(id)
+	var cue := Acquaintance.cue_for(id, action)
+	if Story.has_cue(cue):
+		await _conversation.play(Story.cue(cue), id)
+	else:
+		await _conversation.play(Story.cue("conocido_" + cue.trim_prefix(id + "_")), id)
+	if was == Acquaintance.STRANGER:
+		Acquaintance.introduce(id)
+	elif action == "befriend":
+		Acquaintance.befriend(id)
+		Toast.show_in(self, "%s ya está en tus contactos" % CharacterDB.display_name(id), UIStyle.LIME, 3.0, 170.0)
+	_spawn_cast()   # su nombre en la etiqueta
 
 
 # --- Citas (Romance) -------------------------------------------------------------------
@@ -902,19 +972,26 @@ func _use_bed(id: String, action: String) -> void:
 ## Fundido → combate → fundido. Devuelve si ha ganado el grupo.
 ## En el primer combate contra una criatura lucha también un compañero
 ## (`ally_hint` o uno al azar) con habilidades al azar de todo el catálogo.
-func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
+## `enemies`: un id o una lista (hasta tres). Con `ally_hint` contra criaturas,
+## ese compañero lucha con Ren (con 2 habilidades al azar, provisional hasta que
+## cada uno tenga las suyas).
+func _run_combat(enemies: Variant, ally_hint: String = "", rules: Dictionary = {}) -> bool:
 	mode = Mode.COMBAT
+	var enemy_id: String = enemies[0] if enemies is Array else enemies
 	var ally := ""
 	var ally_skills: Array = []
-	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
+	if rules.get("basic_only", false):
+		ally = ally_hint   # la primera incursión: quien estaba con Ren, sin habilidades
 		GameState.first_creature_fight_done = true
-		ally = ally_hint if ally_hint in CharacterDB.COMPANIONS else CharacterDB.COMPANIONS.pick_random()
+	elif CharacterDB.is_enemy(enemy_id) and (ally_hint != "" or not GameState.first_creature_fight_done):
+		GameState.first_creature_fight_done = true
+		ally = ally_hint if ally_hint != "" else CharacterDB.COMPANIONS.pick_random()
 		ally_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(ally), CharacterDB.get_character(ally).get("nature", ""))
 	await SceneRouter.fade_out(0.25)
 	# Criaturas en la calle: al nivel de Ren (ver ProgressionDB). Las personas, al suyo.
 	var level := ProgressionDB.street_creature_level(GameState.level_of(CharacterDB.PROTAGONIST)) \
 			if CharacterDB.is_enemy(enemy_id) else 0
-	_combat.setup(enemy_id, ally, ally_skills, {}, level)
+	_combat.setup(enemies, ally, ally_skills, {}, level, false, rules)
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -929,17 +1006,42 @@ func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
 
 # --- Incursión ---------------------------------------------------------------------------
 
-## La conversación con `npc_id` se corta de golpe: temblor, aparece la criatura
-## de esta partida y hay que combatirla.
+## Reproduce el suceso de guion `beat` (ChapterDB.BEATS) con `npc_id`.
+## `action`: lo que Ren iba a hacer con él ("" si salta al acabar un plan).
+func _run_beat(beat: String, npc_id: String, action: String) -> void:
+	StoryBeats.mark_done(beat)
+	match beat:
+		"incursion_1":
+			await _run_incursion(npc_id, action)
+		"incursion_2", "incursion_3":
+			await _run_street_incursion(beat, npc_id)
+
+
+## Primera incursión: la conversación con `npc_id` (si la hay) se corta de golpe,
+## tiembla todo, aparece la criatura de esta partida y hay que combatirla los dos
+## solos, sin habilidades ni objetos. Si ganan, los dos suben un nivel.
 func _run_incursion(npc_id: String, action: String) -> void:
 	var enemy_id := GameState.incursion_enemy
-	await _conversation.play(Story.pick(npc_id, Story.moment_for(action)), npc_id, true, true, INCURSION_CUT_AFTER)
-	await _quake()
-	await _conversation.play(Story.cue("temblor"), npc_id, true, true)
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	if action != "":
+		await _conversation.play(Story.pick(npc_id, Story.moment_for(action)), npc_id, true, true, INCURSION_CUT_AFTER)
+	await _conversation.play(Story.cue("temblor"), npc_id, true, true)   # tiembla: Story.efecto en el diálogo
 	await _conversation.play(Story.pick(npc_id, "alarma"), npc_id, true, true)
 	await _conversation.play(Story.cue("aparece_" + enemy_id), enemy_id, true)
-	var won := await _run_combat(enemy_id, npc_id)
+	var pair := [CharacterDB.PROTAGONIST, npc_id]
+	var before := pair.map(func(w: String) -> int: return GameState.level_of(w))
+	var won := await _run_combat(enemy_id, npc_id, {"basic_only": true})
+	if won:
+		# Suben un nivel (si la EXP del combate no les ha subido ya).
+		var up: Array[String] = []
+		for i in pair.size():
+			if GameState.level_of(pair[i]) == before[i]:
+				GameState.level_up(pair[i])
+			up.append(CharacterDB.display_name(pair[i]))
+		Toast.show_in(self, "%s suben al nivel %d" % [" y ".join(up), GameState.level_of(npc_id)], UIStyle.LIME, 4.0, 170.0)
 	GameState.incursion_done = true
+	GameState.set_flag("con_incursion_1", npc_id)
 	# Todos los presentes lo han visto: a partir de aquí saben que existen las criaturas.
 	GameState.record("incursion", enemy_id, npc_id, {"won": won}, Social.present(), "incursion_1")
 	GameState.set_flag("conoce_criaturas")
@@ -948,7 +1050,80 @@ func _run_incursion(npc_id: String, action: String) -> void:
 	var result := {"resultado": "gana" if won else "pierde"}
 	await _conversation.play(Story.cue("derrota_%s_%s" % [enemy_id, result.resultado]), npc_id, true, true)
 	await _conversation.play(Story.pick(npc_id, "tras_incursion", result), npc_id)
-	_announce_plans()   # el grupo convoca la reunión en las Cloacas
+	if action != "":
+		_announce_plans()   # el grupo convoca la reunión (tras un plan, ya avisa _play_plan)
+
+
+## Incursiones 2 y 3 (ChapterDB.BEATS): al llegar a un sitio, tiembla todo y
+## aparecen criaturas; Ren lucha con `ally_id` (alguien del grupo que estaba
+## allí). Escenas `<cue>_aparece` y `<cue>_despues` (capitulo1.dialogue); la
+## segunda sabe si ganaron por el flag `incursion_ganada`.
+func _run_street_incursion(beat: String, ally_id: String) -> void:
+	var b: Dictionary = ChapterDB.BEATS[beat]
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_empty_hint.visible = false
+	await get_tree().create_timer(1.4).timeout   # deja ver el cartel de la ubicación
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	await _conversation.play(Story.cue(b.cue + "_aparece"), ally_id, true, true)   # el temblor va en la escena
+	var won := await _run_combat(b.enemies, ally_id)
+	GameState.set_flag("incursion_ganada", won)
+	GameState.set_flag("con_" + beat, ally_id)
+	GameState.set_flag("lugar_" + beat, LocationDB.display_name(GameState.location_id))
+	GameState.record("incursion", b.enemies[0], ally_id, {"won": won}, Social.present(), beat)
+	GameState.set_phase(b.sets_phase)
+	await _conversation.play(Story.cue(b.cue + "_despues"), ally_id)
+	GameState.save_game()
+	_fade_cast(true, 0.3)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	_update_empty_hint()
+	_announce_plans()
+
+
+# --- Comandos de escena (Story.fondo/entra/sale/efecto, desde los .dialogue) -----------------
+
+func scene_background(location_id: String) -> void:
+	var id := location_id if location_id != "" else GameState.location_id
+	if id == _backdrop.location_id:
+		return
+	await SceneRouter.fade_out(0.25)
+	_fade_cast(id == GameState.location_id)
+	_backdrop.set_location(id)
+	await SceneRouter.fade_in(0.25)
+
+
+func scene_enter(id: String) -> void:
+	await _conversation.stage_enter(id)
+
+
+func scene_leave(id: String) -> void:
+	await _conversation.stage_leave(id)
+
+
+func scene_effect(effect: String) -> void:
+	match effect:
+		"temblor":
+			await _quake()
+		"destello":
+			var flash := ColorRect.new()
+			flash.color = Color(1, 1, 1, 0)
+			flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+			flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			add_child(flash)
+			var t := create_tween()
+			t.tween_property(flash, "color:a", 0.85, 0.06)
+			t.tween_property(flash, "color:a", 0.0, 0.45)
+			await t.finished
+			flash.queue_free()
+		"negro":
+			await SceneRouter.fade_out(0.6)
+		"vuelve":
+			await SceneRouter.fade_in(0.6)
+		_:
+			push_warning("Story.efecto: efecto desconocido «%s» (ver Story.SCENE_EFFECTS)" % effect)
 
 
 ## Temblor de cámara: sacudida fuerte con destello, réplica y una más pequeña.

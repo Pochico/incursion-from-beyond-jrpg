@@ -2,6 +2,51 @@
 # Ficha: src/data/characters/akane.json
 
 # =====================================================================================
+# CONOCERLA — hasta que Ren tiene su número (Acquaintance; los lanza el menú)
+# =====================================================================================
+
+~ akane_presentacion
+Una chica con una chupa llena de chapas. Te mira de arriba abajo.
+Ren: Hola. Soy Ren.
+Akane: Ya. Te he visto por las recres. Siempre mirando, nunca jugando.
+Akane: Akane.
+- ¿Trabajas allí? [#curioso]
+	Akane: Turno de noche. Cambio monedas y echo a los pesados.
+- Un día de estos juego. [#bromista]
+	Akane: Eso dicen todos.
+- Encantado. [#reservado]
+	Akane: Vale.
+=> END
+
+~ akane_charla
+%
+	Akane: ¿Qué pasa?
+	Ren: Nada. Pasaba por aquí.
+	Akane: Vale.
+%
+	Akane: Hoy hay poca gente. Mejor.
+%
+	Akane: Ey. ¿Otra vez por aquí?
+	Ren: Eso parece.
+%
+	Akane: Estoy esperando a alguien. Bueno, a nadie. Pero estoy esperando.
+=> END
+
+~ akane_amistad
+Ren: Oye, ¿me das tu número?
+Akane: ¿Para qué?
+- Por si un día voy a veros tocar. [#cariñoso]
+	Akane: ¿Cómo sabes que tengo banda? ...Kenji. Qué bocazas.
+- Para hablar, sin más. [#franco]
+	Akane: Vale. Pero no me mandes audios.
+- Por si necesitas a alguien que mire mientras juegas. [#bromista]
+	Akane: Qué gracioso.
+Akane te quita el móvil, se apunta ella misma y se hace una perdida.
+Akane: Ya está.
+$> Story.change("akane", "afecto", 2)
+=> END
+
+# =====================================================================================
 # HABLAR — antes de la incursión
 # =====================================================================================
 
@@ -317,7 +362,7 @@ Akane: No es el día. Hablamos otro rato.
 ~ akane_movil_fria
 # cuando: movil, tramo <= fria
 Ren: Hola.
-Akane: Vale.
+Akane: Pa ti mi cola
 => END
 
 ~ akane_movil_tras_incursion
@@ -406,7 +451,7 @@ else
 => END
 
 ~ akane_hablar_reunion
-# cuando: hablar, fase >= reunion, una vez
+# cuando: hablar, fase >= reunion, sabe incursion_1, una vez
 Akane: Oye. Lo de las Cloacas. Que conste que fui porque Rika no paraba de mandar audios. No porque me importe.
 Akane: ...Vale, me importa. Pero no lo digas en el grupo.
 - No diré nada. [#cariñoso]
@@ -417,17 +462,17 @@ Akane: ...Vale, me importa. Pero no lo digas en el grupo.
 	$> Story.change("akane", "afecto", 2)
 - Lo voy a poner en el grupo ahora mismo. [#bromista, #provocador]
 	Akane: Hazlo y te hago tragar el móvil. Con funda.
-Akane: Cuando entremos en La Torre, voy delante. No es negociable.
+Akane: Si vuelve a pasar algo, me escribes. A mí también.
 => END
 
 ~ akane_hablar_tras_reunion
-# cuando: hablar, fase >= reunion, no hoy >= 2
+# cuando: hablar, fase >= reunion, sabe incursion_1, no hoy >= 2
 %
-	Akane: He ido a ver la puerta de servicio de La Torre. Entornada. Como siempre. Le he puesto un trozo de chicle en la bisagra. Por si alguien la mueve.
+	Akane: Ayer volví andando a casa a las cuatro. Sola. Ya sé lo que dijo Yuna. No pasó nada.
 %
 	Akane: He escrito una canción sobre las Cloacas. Se llama «Huele a hierro». Es la mejor que he hecho. Y la más corta.
 %
-	Akane: Si vas a entrar en La Torre, avísame. Regla uno. No me hagas repetirla.
+	Akane: Si ves algo raro, avísame a mí primero. Los demás se asustan.
 => END
 
 ~ akane_movil_reunion

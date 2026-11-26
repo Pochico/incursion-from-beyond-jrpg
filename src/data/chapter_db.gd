@@ -67,6 +67,9 @@ static func step(id: String) -> Dictionary:
 # cualquiera menos la noche) el día `day` (sin `day`, cualquiera), se juegan sus
 # escenas, como en los pasos del guion. Cada plan se hace una vez.
 #   phase / before_phase  solo desde esa fase / antes de esa fase
+#   min_day               solo desde ese día (los planes sin `day`)
+#   days_after_phase      solo al menos N días después de empezar `phase`
+#   Un plan con `invite` de alguien que aún no es amigo de Ren (Acquaintance) no sale.
 #   invite                quién lo propone y cómo (ver Invites):
 #                           from, text  mensaje que lo propone
 #                           via         "mensaje" (por defecto) o "persona": te lo
@@ -291,6 +294,15 @@ const PLANS := {
 			"text_late": "Esta noche serie de médicos y manta, ¿te apuntas? Tú pones las palomitas."},
 		"missed_text": "He visto el capítulo sola. Se ha muerto uno. No te digo cuál.",
 	},
+	# --- Si la primera incursión no ha saltado (ver BEATS) ---
+	"kenji_a_solas": {
+		"title": "Escuchar la base nueva de Kenji", "min_day": 10, "slots": ["tarde"], "target": "parque",
+		"before_phase": "incursion_1",
+		"cast": ["kenji"],
+		"scenes": [{"cue": "kenji_a_solas", "npc": "kenji"}],
+		"invite": {"from": "kenji", "text": "Loco, tengo la base terminada. Esta tarde en Bowls, tú y yo, que quiero que la oigas antes que nadie."},
+		"missed_text": "Te he esperado una hora en Bowls. Ya te la pasaré por aquí.",
+	},
 	# --- Tras la primera incursión (cualquier día) ---
 	"reunion_cloacas": {
 		"title": "Reunión en las Cloacas", "target": "cloacas",
@@ -303,6 +315,49 @@ const PLANS := {
 		"invite": {"from": "kenji", "text": "Reunión. En las Cloacas, donde la cascada. Rika está avisando a todo el mundo. Ven cuando puedas, pero ven."},
 		"advance_time": true,
 		"sets_phase": "reunion",
+	},
+	# Fase 4: tras la incursión 3, Shiori junta las pistas (el barro, las brújulas)
+	# y quedan en Colinas. Encuentran la grieta, se asoman y salen corriendo.
+	# Como la reunión, no caduca: cualquier día desde el siguiente, menos de noche.
+	"investigacion_colinas": {
+		"title": "Buscar en Colinas", "target": "plaza",
+		"phase": "incursion_3", "before_phase": "grieta", "days_after_phase": 1,
+		"cast": ["shiori", "kenji", "rika", "yuna", "akane"],
+		"scenes": [
+			{"cue": "investigacion_colinas", "npc": "shiori"},
+			{"cue": "grieta_aparece", "npc": "kenji"},
+			{"cue": "grieta_asomarse", "npc": "kenji"},
+			{"cue": "grieta_fin", "black": true},
+		],
+		"invite": {"from": "shiori", "text": "Lo he mirado bien. El barro, las brújulas, todo da a Colinas, a la parte de atrás, pasadas las pistas. Os espero allí. Cuando podáis, pero hoy mejor que mañana."},
+		"advance_time": true,
+		"sets_phase": "grieta",
+	},
+}
+
+## Sucesos de guion (StoryBeats): saltan solos cuando se cumplen sus condiciones.
+## Qué pasa en cada uno lo decide WorldScreen._run_beat.
+const BEATS := {
+	# Primera incursión: desde el día 8, cuando Ren está a solas con uno de su
+	# grupo (hablando con él en un sitio donde no hay nadie más, o al terminar un
+	# plan con él solo). Si el día 10 aún no ha pasado, Kenji le cita a solas.
+	"incursion_1": {
+		"phase": "rutina", "before_phase": "incursion_1", "min_day": 8,
+		"on": ["talk", "plan_end"], "alone": true,
+		"with": ["kenji", "rika", "shiori", "yuna"],
+	},
+	# Segunda y tercera: en la calle, al llegar a un sitio con alguien del grupo,
+	# al menos un día después de la anterior. Criaturas provisionales (el usuario
+	# decidirá cuáles salen). Escenas: <cue>_aparece y <cue>_despues.
+	"incursion_2": {
+		"phase": "reunion", "before_phase": "incursion_2", "days_after_phase": 1,
+		"on": ["arrive"], "with": ["kenji", "rika", "shiori", "yuna"],
+		"enemies": ["engendro"], "cue": "incursion_2", "sets_phase": "incursion_2",
+	},
+	"incursion_3": {
+		"phase": "incursion_2", "before_phase": "incursion_3", "days_after_phase": 1,
+		"on": ["arrive"], "with": ["kenji", "rika", "shiori", "yuna"],
+		"enemies": ["imp", "imp"], "cue": "incursion_3", "sets_phase": "incursion_3",
 	},
 }
 
@@ -388,6 +443,14 @@ static func plan_available(id: String) -> bool:
 		return false
 	if p.get("ren", false) and p.cast.is_empty():
 		return false   # plan de Ren al que nadie ha dicho que sí
+	if p.has("invite") and not Acquaintance.is_friend(p.invite.from):
+		return false   # quien no tiene el número de Ren no le invita
+	if p.has("min_day") and GameState.day_number() < int(p.min_day):
+		return false
+	if p.has("days_after_phase"):
+		var since: int = int(GameState.get_flag(GameState.PHASE_DAY + p.phase, 0))
+		if GameState.day_number() - since < int(p.days_after_phase):
+			return false
 	return true
 
 

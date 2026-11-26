@@ -44,18 +44,18 @@ trabajar».
 | `src/autoload/` | Singletons | Estado global en `GameState` (guardado en `user://partida.json`). |
 | `src/data/` | Datos sin lógica: `*_db.gd`, fichas `characters/<id>.json`, `mazmorras/*.json`, `mapa3d.json` | Valores de balance **provisionales**; centralizados aquí, no repartidos por el código. |
 | `src/dialogue/` | Diálogos `.dialogue` (uno por personaje + `general` + `capitulo1` + `mazmorra`). `capitulo1` tiene el día 1, los planes de los días 2 y 3 y la reunión de las Cloacas; `general` el despertar de cada día (`intro`) | Cada conversación con su regla `# cuando:` (ver `docs/diseno/personajes_y_relaciones.md`). `mazmorra` son los comentarios del compañero (sin reglas: los lee `DungeonBanter` por nombre de cue). Todo texto que diga un personaje va aquí, no en código. |
-| `src/systems/` | Lógica sin interfaz (`battle.gd`, `social.gd`, `event_log.gd`, `romance.gd`: citas, parejas y rupturas, `GameState.partners`; momentos `cita_pide`/`cita`/`deja_a_ren` con `resultado`; ver «Citas y parejas» en `personajes_y_relaciones.md`; `lies.gd`: opciones `[#miente=cita\|ayer\|dia_N]`, testigos que cubren o delatan según afinidad, `GameState.secrets` que se descubren por la mañana; ver «Mentiras y secretos»; `invites.gd`: invitaciones a planes en persona o por mensaje, respuestas sí/no/«ya he quedado» no excluyentes, plantones con reproche por móvil o en persona; flags `por_proponer:`/`plan_si:`/`plan_no:`/`plan_otro:`/`plan_plantado:`/`reproche:` + id del plan; también los planes que propone Ren (`ren_invite`, ids `ren:N` en `GameState.ren_plans`, `ChapterDB.plan` y `all_ids` los incluyen; reproche en persona con `reproach_cue`); ver «Invitaciones a planes»; `relation_events.gd`: parejas, rupturas y enfados graves en el `EventLog` con ids fijos `pareja_a_b`/`ruptura_a_b`/`enfado_quien_con` para `sabe`, `flag enfadado_<id>`; `Social.change` lleva `cause` y detecta el enfado; ver «Sucesos de relación») | Devuelven datos/eventos; la vista los anima. No mezclar UI aquí. |
+| `src/systems/` | Lógica sin interfaz (`battle.gd`, `social.gd`, `event_log.gd`, `romance.gd`: citas, parejas y rupturas, `GameState.partners`; momentos `cita_pide`/`cita`/`deja_a_ren` con `resultado`; ver «Citas y parejas» en `personajes_y_relaciones.md`; `lies.gd`: opciones `[#miente=cita\|ayer\|dia_N]`, testigos que cubren o delatan según afinidad, `GameState.secrets` que se descubren por la mañana; ver «Mentiras y secretos»; `invites.gd`: invitaciones a planes en persona o por mensaje, respuestas sí/no/«ya he quedado» no excluyentes, plantones con reproche por móvil o en persona; flags `por_proponer:`/`plan_si:`/`plan_no:`/`plan_otro:`/`plan_plantado:`/`reproche:` + id del plan; también los planes que propone Ren (`ren_invite`, ids `ren:N` en `GameState.ren_plans`, `ChapterDB.plan` y `all_ids` los incluyen; reproche en persona con `reproach_cue`); ver «Invitaciones a planes»; `acquaintance.gd`: gente que Ren no conoce (`stranger_name` en CharacterDB): desconocido → presentado → amigo en `GameState.acquaintance`; `CharacterDB.display_name` da el nombre genérico; el móvil, los mensajes (`GameState.add_message` los descarta), los planes con `invite` y `Social.person_candidates` filtran a los que no son amigos; cues `<id>_presentacion`/`_charla`/`_amistad`, `Story.introduce`/`befriend`/`is_friend`; `story_beats.gd`: sucesos de guion de `ChapterDB.BEATS` (condiciones fase, `min_day`, `on` talk/plan_end, `alone`, `with`; flag `suceso:<id>`) que reproduce `WorldScreen._run_beat` (incursión 1 a solas, con `CombatView` `rules.basic_only` y `GameState.level_up`; incursiones 2 y 3 al llegar a un sitio con alguien del grupo, `days_after_phase` con el flag `fase_dia:<fase>` que pone `GameState.set_phase`, `enemies`, escenas `<cue>_aparece`/`_despues`; `Story.incursion_with(n)` = con quién estaba Ren; los planes solo cuentan como presentes a los amigos); `relation_events.gd`: parejas, rupturas y enfados graves en el `EventLog` con ids fijos `pareja_a_b`/`ruptura_a_b`/`enfado_quien_con` para `sabe`, `flag enfadado_<id>`; `Social.change` lleva `cause` y detecta el enfado; ver «Sucesos de relación») | Devuelven datos/eventos; la vista los anima. No mezclar UI aquí. |
 | `src/dungeon/` | Mazmorras: `DungeonMap`, `DungeonBuilder`, `DungeonExplorer`, `DungeonTextures`, `EnemyModel` (modelo 3D `assets/modelos/<enemigo>.glb`, si existe, en vez del retrato plano; las voladoras flotan con `hover` en su ficha, `CharacterDB.hover`; objetos en 3D con `assets/modelos/objetos/<id>.glb` o `image` de `ItemDB`, girando con `ItemSpin`), punto de guardado (`DungeonMap.SAVE`, `DungeonBuilder._save_point`), criaturas que sueltan algo (`drop` en la cosa del mapa), resonador (`DungeonExplorer.pulse`, capa `pulse.gdshader` como `material_overlay`; paredes secretas `hidden` = solo con el pulso, `DungeonMap.is_hidden`) ; luces del mapa (`DungeonMap.lights` por planta: color, energy, range, decay, height; `DungeonBuilder.light_point`; el explorador enciende solo las `MAX_MAP_LIGHTS` más cercanas por el límite de luces por malla de Compatibility; herramienta «Luces» del editor); puertas de seguridad de dos hojas (`DungeonBuilder._door`: «Hoja»/«Izq»/«Der», vano invisible «Hueco» para el recuadro, consolas «ConsolaA/B» con `set_door_lock` rojo/verde que refresca `DungeonExplorer.update_door_locks`; `front()` de una puerta trae `console`, que `DungeonScreen` recuadra al pasar el cursor; hackear aún sin dispositivo); estilo visual (`DungeonLook`: normal/PS2/PS1 con `stretch_shrink` del SubViewportContainer, filtrado de texturas por `DungeonBuilder.texture_filter`, niebla y brillo; tecla V; el recuadro del objetivo se escala por `stretch_shrink`) | Compartido por el juego y el editor. Los GLB se reducen con `tools/modelos/reducir_glb.py` (texturas a 1024). |
 | `src/screens/dungeon/` | `DungeonScreen`: incursión con PV/PM persistentes (`Battle.party_vitals`/`set_party_vitals`, `CombatView.setup(..., vitals)`), habilidades y objetos fuera del combate (`Battle.field_use_skill`/`field_use_item`, `is_field_skill`) y extracción (`DungeonMap.EXTRACTION`, `is_extraction`; salir fuera de una zona deshace lo ganado desde la entrada o el último punto de guardado con `_lose_run`; `_mark_run_start` marca lo que queda a salvo). Objetos: `ItemDB.restores`/`is_attack`/`roll_loot`; cajas (`ItemDB.is_box`, `loot_always` + `loot`) van al inventario y se abren con `GameState.open_box` (al cogerlas, «Abrir ya / Guardar»; también desde el inventario del móvil). Resonador con cargas por incursión (`ItemDB.charges`, `DungeonScreen._charges`; baterías `bateria`). No guardar la partida a mitad de incursión. | `ConfirmPopup` (`src/ui/components/`) para confirmaciones con el estilo del juego. |
-| `src/data/chapter_db.gd` (planes) | `PLANS` con `invite` {from, text, via mensaje\|persona, at, text_late} y `missed_text`; `MORNINGS` (escena con Mamá tras el despertar de los días 4, 6 y 7), `REN_ACTIVITIES` (lo que Ren puede proponer), `REN_MISSED_TEXT` y `MESSAGES` (mensajes sueltos por día y franja, con `if`/`unless` de flag) | Los textos de invitación y reproche viven aquí (llegan como mensajes); lo que se dice en persona o al contestar va en el `.dialogue` (`<id>_movil_plan`, `<id>_movil_plantado`, `<id>_hablar_invita_<plan>`, `<id>_hablar_plantado_<plan>`; de los planes de Ren: `<id>_quedar`, `<id>_quedada`, `<id>_hablar_plantado` y `quedada_<actividad>` en general). |
-| `src/data/location_db.gd` | Ubicaciones. `cast_when` = alguien solo está a ciertas franjas o desde un día (Mamá en casa por la mañana y la noche desde el día 4). `CharacterDB` `talk_only` = en el menú solo «Hablar» (Mamá) | |
+| `src/data/chapter_db.gd` (planes) | `PLANS` (condiciones `phase`, `before_phase`, `min_day`, `days_after_phase`; `investigacion_colinas` = fase 4, pasa a `grieta`) con `invite` {from, text, via mensaje\|persona, at, text_late} y `missed_text`; `MORNINGS` (escena con Mamá tras el despertar de los días 4, 6 y 7), `REN_ACTIVITIES` (lo que Ren puede proponer), `REN_MISSED_TEXT` y `MESSAGES` (mensajes sueltos por día y franja, con `if`/`unless` de flag) | Los textos de invitación y reproche viven aquí (llegan como mensajes); lo que se dice en persona o al contestar va en el `.dialogue` (`<id>_movil_plan`, `<id>_movil_plantado`, `<id>_hablar_invita_<plan>`, `<id>_hablar_plantado_<plan>`; de los planes de Ren: `<id>_quedar`, `<id>_quedada`, `<id>_hablar_plantado` y `quedada_<actividad>` en general). |
+| `src/data/location_db.gd` | Ubicaciones. `from_phase` = cambios desde una fase (Colinas con la grieta: `desc`, fondo `backdrop` → `assets/backgrounds/plaza_grieta[_franja]`, `rift` = acción «La grieta», tecla G, cue `grieta_mirar`; la entrada a la mazmorra llega en la fase 6). `cast_when` = alguien solo está a ciertas franjas o desde un día (Mamá en casa por la mañana y la noche desde el día 4). `CharacterDB` `talk_only` = en el menú solo «Hablar» (Mamá) | |
 | `src/map3d/` | Mapa 3D de Leganés (`CityBuilder`, `CityMap`, `MapConfig`). `MapConfig` guarda también nombres, descripciones y `capacity` (personajes a la vez) de las ubicaciones editadas | Datos OSM en `assets/map/` (ODbL, mantener el crédito). |
 | `src/screens/` | Pantallas: `title`, `world` (escenario, conversación, combate, móvil), `dungeon` | En `world_screen`, los objetos (`Props`) y personajes (`Scenario`) van dentro de `Backdrop`: muestra u oculta con `_fade_room` (todo) y `_fade_cast` (solo personajes), nunca tocando `modulate` a mano. |
 | `src/ui/` | `UIStyle` (paleta, fuentes, dibujo), `UIIcons`, `components/`, `shaders/` | Reutilizar componentes y `UIStyle` antes de crear estilos nuevos. |
 | `src/rooms/` | Escenas `layout` de cada lugar (casa, cloacas, lago): sitio de los objetos y de las poses de personajes sobre el fondo (`RoomLayout`) | Poses en `assets/escenas/<lugar>/<personaje>.png` (`LocationDB.pose`); en `world_screen` van en `Scenario` como los demás personajes. Las del lago (`lago`, «Westlake») se recortaron de una ilustración de grupo con la segmentación de personas de macOS (Vision) y cortes a mano, y se llevaron al encuadre del fondo vacío (`assets/backgrounds/lago.png`) con una homografía: si se rehacen, el fondo y las poses deben seguir en el mismo encuadre. |
-| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras`, `editor_relieve`, `editor_mapa`; y `editor_dialogos/paridad.tscn` (prueba, no herramienta de usuario) | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. `editor_mapa` también pone los fondos de cada ubicación (copia a `assets/backgrounds/<id>[_<franja>]`; `LocationBackdrop` los lee sin importar si se ejecuta desde el editor). |
+| `src/tools/` | **Herramientas que corren en Godot**: `texture_studio`, `editor_mazmorras` (vive en su rama, ver «Herramientas en ramas»), `editor_relieve`, `editor_mapa`; y `editor_dialogos/paridad.tscn` (prueba, no herramienta de usuario) | Se abren con F6 o desde el menú de inicio (solo desde el editor). Guardan dentro del proyecto. `editor_mapa` también pone los fondos de cada ubicación (copia a `assets/backgrounds/<id>[_<franja>]`; `LocationBackdrop` los lee sin importar si se ejecuta desde el editor). |
 | `tools/` | Scripts **externos** (Python, Node, git…). `tools/assets/organizar.sh`: copia ordenada de las imágenes en `~/Documents/assets-game` del usuario (Personajes, Enemigos/<tipo>, Ubicaciones/<lugar>/<momento>) | Tiene `.gdignore`: Godot no lo ve. No poner escenas aquí. Si cambias nombres o rutas de imágenes, el organizador las clasifica por las convenciones del README. |
-| `docs/editor-dialogos/` | **Editor de diálogos web** (HTML + JS, funciona en el móvil). Se publica con GitHub Pages desde `docs/` | `motor.js` replica el selector de `Story`: ver «Paridad». |
+| `docs/editor-dialogos/` | **Editor de diálogos web** (HTML + JS, funciona en el móvil). Vive en su rama (ver «Herramientas en ramas») y se publica con la pipeline | `motor.js` replica el selector de `Story`: ver «Paridad». |
 | `assets/` | Fuentes, retratos, fondos, texturas `textures/<tema>/<superficie>/`, mapa, móvil | Medidas de texturas en `src/data/texture_formats.gd`. Fondos `backgrounds/<id>.png` y, por franja, `<id>_<franja>.png` (`LocationBackdrop`). |
 | `docs/` | Diseño, referencias de UI, capturas | Tiene `.gdignore`. |
 
@@ -70,6 +70,7 @@ definitivas sin preguntar.
 | `sistema_de_naturalezas_y_asimilacion_parte_1.md` | Naturalezas, subtipos, asimilación, compatibilidad de efectos. |
 | `habilidades_1.md` | Habilidades, fórmulas de nivel 1–60, `SkillDB`. Cita `inicio_y_progresion_de_la_historia.md`, que **no está en el repo**. |
 | `habilidades_tiers.md` | Las 32 habilidades por tipo (PSY, ARQ, BIO, CYBER, MECH) con tier 1–5, escalado por nivel, límites de acumulación y pruebas obligatorias. Efectos sincronizados con la tabla del usuario; números pendientes de prueba de combate. |
+| `capitulo_1_hoja_de_ruta.md` | **Plan del capítulo 1** (roadmap del usuario): arco, calendario, fases de trabajo con lo que hay y lo que falta, arquitectura prevista (sucesos de guion, desbloqueos, grupo de 4, entrenamiento semanal, tienda, captura) y decisiones abiertas. Léelo antes de tocar historia o progresión, y marca lo que se haga. |
 | `experiencia_y_niveles.md` | Progresión: curva de EXP, EXP por combate y exploración, crecimiento de atributos y nivel de las criaturas por zona (`ProgressionDB`, `GameState.levels`). Casi todo es [PROPUESTA] con valores provisionales. |
 | `personajes_y_relaciones.md` | Fichas, relaciones, ánimo, cansancio, reglas `# cuando:` de los diálogos. |
 | `Diseno_Dungeon_Crawler_Godot.md` | Mazmorras: movimiento por casillas, bordes, puertas, texturas, editor. |
@@ -82,7 +83,59 @@ líneas finas con quiebro (ver «Guía de estilo» del README).
 El usuario guarda material de referencia local en `/context/` y `/refs/`
 (ignorados por git): si te lo pasa, no lo subas.
 
-## Editor de diálogos (web) y paridad con el juego
+## Herramientas en ramas y publicación (móvil, sin Godot ni PC)
+
+- Cada herramienta con versión web vive **sola** en su rama:
+  `herramientas/editor-dialogos` (`docs/editor-dialogos/`) y
+  `herramientas/editor-mazmorras` (`src/tools/editor_mazmorras/`). En `main`
+  esas carpetas están en `.gitignore`.
+- **No se tocan en `main`**. Para tenerlas en local: `tools/herramientas/traer.sh`
+  (no pisa cambios locales sin `--forzar`). Para subir cambios hechos en local:
+  `tools/herramientas/llevar.sh <herramienta> "mensaje"` (commit y push a su
+  rama desde una copia aparte; la rama no tiene CLAUDE.md: si el cambio afecta
+  al contexto, actualiza este archivo en `main`). Lista en `tools/herramientas/lista.sh`.
+- **Publicación** (`.github/workflows/publicar.yml`, al subir a `main` o, con
+  `avisar.yml` de cada rama, al subir a una herramienta): junta cada
+  herramienta con el código y los datos de `main`, regenera las miniaturas de
+  las caras, exporta el editor de mazmorras a web con Godot 4.7 (preset
+  `tools/herramientas/editor_mazmorras_web.cfg`, escena principal cambiada solo
+  en la nube, ETC2/ASTC) y publica en GitHub Pages: `/` (portada
+  `docs/index.html` y el resto de `docs/` de main), `/editor-dialogos/`,
+  `/editor-mazmorras/`. Un trabajo aparte pasa la prueba de paridad (avisa, no
+  frena). Requiere Pages con *Source: GitHub Actions*.
+- **Datos**: los editores web leen y guardan directamente en `main` con la API
+  de GitHub (un commit por guardado, con `[contexto-ok]`; mismo token en el
+  navegador para los dos: `localStorage` «editor-dialogos:token»). El editor de
+  mazmorras web usa `GithubStore` (`src/tools/editor_mazmorras/github_store.gd`
+  en su rama): sin Estudio de texturas ni relieve; con barra táctil (Borrar =
+  clic derecho, Mover plano, zoom, Deshacer) y cruceta al probar.
+- Antes de trabajar en `main`, `git pull`: los guardados desde el móvil son commits en `main`.
+
+## Comandos de escena (puesta en escena desde el diálogo)
+
+`Story.fondo(id)` (otro fondo mientras dura la conversación; `""` vuelve al
+del sitio), `Story.entra(id)` / `Story.sale(id)` (retrato de la derecha),
+`Story.efecto(nombre)` (`Story.SCENE_EFFECTS`: temblor, destello, negro, vuelve)
+y `Story.esperar(seg)`. Se escriben como `$> Story.efecto("temblor")` en los
+`.dialogue` y Dialogue Manager espera a que terminen. Los ejecuta `Story.stage`
+(WorldScreen se registra en `_ready`: `scene_background`, `scene_enter`,
+`scene_leave`, `scene_effect`; `ConversationView.stage_enter/stage_leave`; el
+fondo vuelve al cerrarse la vista, señal `closed`). Sin `stage` (mazmorra) no
+hacen nada. Las incursiones ya tiemblan así (`temblor`, `incursion_2_aparece`).
+Pon la puesta en escena en el diálogo, no en código: el editor de escenas la
+muestra como bloques. Si añades un efecto, añádelo a `SCENE_EFFECTS` y a
+`WorldScreen.scene_effect` (el editor lee la lista de `story.gd`).
+
+## Editor de escenas (web) y paridad con el juego
+
+El antiguo editor de diálogos (misma carpeta y rama) ahora es el **editor de
+escenas**: lista con títulos legibles (`# titulo: …` en el cue, que solo usa
+el editor: `motor.parseFile` lo lee en `cue.title`; si no hay, `humanize` del
+nombre interno), agrupada por días y por tipo; pantalla de escena con
+«Cuándo sale» en una frase, bloques (diagrama + barra para añadir líneas,
+respuestas y comandos de escena) y «Avanzado» con lo técnico; y **▶ Ver
+escena** (`openPlayer`, recorre el cue con `walkScene` y pinta fondos de
+`assets/backgrounds`, retratos y efectos desde raw.githubusercontent).
 
 `docs/editor-dialogos/` es una app web de una página (móvil y escritorio) que
 lee los `.dialogue` de GitHub, edita las reglas `# cuando:` y el texto, simula
@@ -146,17 +199,17 @@ hoy son Kenji, Shiori, Akane, Rika (enfado, sorpresa) y Yuna (enfado, incomodo).
 
 En el editor web: `motor.js` lee `portrait`/`faces` de `character_db.gd` y
 `FACES`/`FACE_TAG` de `conversation_view.gd`; el formulario de línea tiene un
-selector de gesto con miniaturas de `docs/editor-dialogos/caras/`. **Al añadir
-retratos o gestos, ejecuta `tools/editor_dialogos/miniaturas.sh`** y sube las
-miniaturas (pocos KB cada una). Las funciones de `Story` que valida el editor
+selector de gesto con miniaturas de `docs/editor-dialogos/caras/`. Las genera
+la publicación con `tools/editor_dialogos/miniaturas.sh` (en local, solo para
+ver caras nuevas en el editor sin publicar). Las funciones de `Story` que valida el editor
 también se leen de `story.gd` (`cfg.storyApi`): no hay lista a mano.
 
 ## Combate
 
 - `SkillDB` (datos y fórmulas) + `Battle` (lógica, devuelve eventos) + `CombatView` (anima). Las habilidades son declarativas: `ops` (`damage`, `heal`, `status`, `self_damage`, `recover_pm`, `cleanse`, `reveal`) y los estados (`SkillDB.STATUSES`) llevan banderas y valores por aplicación. Si añades una habilidad, usa esas piezas antes de tocar `Battle`.
-- Todo se calcula por fórmula para el nivel exacto (1..60): PV, PM, daño, curación, coste y valores escalables `[base, cada, paso]`. **Todos empiezan en el nivel 1** (decisión del usuario) y suben con EXP (`ProgressionDB`, `GameState.level_of`/`grant_xp`; ver `experiencia_y_niveles.md`). Los atributos de las fichas son los de nivel 1 y crecen con `ProgressionDB.stats_at` (referencia `10 + floor((L−1)/2)`); las criaturas toman el nivel de la zona (`Battle.new(..., enemy_level)`, `DungeonMap.creature_level`).
+- Todo se calcula por fórmula para el nivel exacto (1..60): PV, PM, daño, curación, coste y valores escalables `[base, cada, paso]`. **Todos empiezan en el nivel 1** (decisión del usuario) y suben con EXP (`ProgressionDB`, `GameState.level_of`/`grant_xp`; ver `experiencia_y_niveles.md`). Los atributos de las fichas son los de nivel 1 y crecen con `ProgressionDB.stats_at` (referencia `10 + floor((L−1)/2)`, multiplicada por atributo con `combat.growth` de cada ficha: Yuna, taekwondo, FUE y AGI ×1,6; Shiori INT ×1,8…). **Ren** (`growth: "random"`) es equilibrado (11 en todo) y gana 2 puntos al azar por nivel (`levels[id].gains`, `GameState._roll_gains`) más lo entrenado (`GameState.stat_bonus`, fase de preparación); `Battle._make_fighter` suma `GameState.stat_extras`; las criaturas toman el nivel de la zona (`Battle.new(..., enemy_level)`, `DungeonMap.creature_level`).
 - Vista: cada golpe se anima según su tipo con `AttackFx` (naturaleza de la habilidad, o la de la criatura en su ataque básico; «fisico» para el básico del grupo). Si añades una naturaleza, añade su dibujo ahí. Los estados se marcan con `StatusBadges` (color por `origin` del estado) en `EnemyPlate.statuses` y `CombatantCard.statuses`, que rellena `CombatView._update_status_tags`.
-- **Pantallas anchas y táctil**: `DungeonScreen` y `CombatView` se maquetan sobre 1920×1080 y reparten el ancho de más (`_extra`, `_layout` al cambiar de tamaño): el visor crece, la columna derecha y la cabecera se pegan al borde. `App.is_touch()` (y `App.force_touch` para probar) muestra la cruceta de la mazmorra y quita la línea de teclas; en combate, tocar a un rival lo ataca o lo elige (`_foe_at`), y los comandos de una sola opción van al primer toque.
+- **Pantallas anchas y táctil**: `DungeonScreen` y `CombatView` se maquetan sobre 1920×1080 y reparten el ancho de más (`_extra`, `_layout` al cambiar de tamaño): el visor crece, la columna derecha y la cabecera se pegan al borde. `App.is_touch()` (y `App.force_touch` para probar) muestra la cruceta de la mazmorra y quita la línea de teclas; en combate, elegir rival es `State.TARGET` con el marco lima (`_start_targeting`, `_set_target`, `_confirm_target`, `_draw_target`; rectángulo opaco con `CharacterSprite.content_rect`): un toque en un rival lo marca y otro en el marcado confirma; ningún toque actúa solo (los comandos siempre abren su fila de opciones).
 - **Hasta 3 rivales** (`Battle.FOES` = `enemy`/`enemy2`/`enemy3`, `Battle.is_enemy`, `alive_foes`, `enemy_turn(who)` + `end_round`; `Battle.new(..., ids, ..., enemy_level, boss)`; `CombatView.setup(ids, ...)` los pone en fila con `_layout_foes` y pide objetivo con `_show_foe_targets`). En la mazmorra, la cosa del mapa lleva `group` (escolta) y `boss`.
 - **Tiers de criaturas**: `combat.tier` en la ficha y `CharacterDB.ENEMY_TIERS` (PV, atributos, daño), `BOSS_PV_MULT`, `GROUP_SCALE` (menos PV y daño por criatura en grupo). Las habilidades de una criatura son de su tier o menos (las básicas sin tier = tier 1). Tier 2: Oni y Tiranosaurio. Ajustados con combates simulados a petición del usuario; si los tocas, vuelve a simular.
 - Compatibilidad por etiquetas (`SkillDB.NATURE_TAGS`, o `combat.tags`): se comprueba antes que la probabilidad.
@@ -175,8 +228,8 @@ también se leen de `story.gd` (`cfg.storyApi`): no hay lista a mano.
   horizontal, ETC2/ASTC y `export_presets.cfg` (Android arm64 sin Gradle y Web
   sin hilos, con aviso de «gira el móvil»). Firma por variables de entorno
   (`GODOT_ANDROID_KEYSTORE_RELEASE_*`), nunca claves en el repo.
-- Publicación: la web exportada va en `docs/pruebas/web/` de `main` (GitHub
-  Pages solo sirve `main/docs`). **La APK no se sube al repositorio** (ni a la
+- Publicación: la web exportada va en `docs/pruebas/web/` de `main` (la
+  pipeline de Pages publica `main/docs` tal cual). **La APK no se sube al repositorio** (ni a la
   rama ni a `main`): se genera y se le pasa al usuario directamente (el
   usuario pidió borrar del historial la que se subió). Página:
   `docs/pruebas/index.html`. Cada exportación web nueva pesa ~85 MB en el
@@ -222,7 +275,7 @@ desactives los hooks para saltarte la regla.
 
 ## Estado y pendientes (resumen)
 
-Hecho: editor de diálogos web (también móvil), capítulo 1 (día guiado, días 2-4 y fin de semana 5-7 con planes opcionales; Ren también propone planes a quien quiera (*Quedar* / *Proponer plan*); planes opcionales en `ChapterDB.PLANS`: se proponen en persona o por mensaje, se contestan, se juegan al llegar al sitio en su franja y, si dices que sí y no vas, te lo reprochan; el jueves coinciden planes y hay que elegir, con desayuno y cena con Mamá, que desde ese día está en casa por la mañana y por la noche; fases `rutina` → `incursion_1` → `reunion` tras la reunión en las Cloacas; `flag dia_N` en las reglas; `GameState.scene_cast` = presentes en un plan), mundo libre, conversaciones con reglas,
+Hecho: editor de diálogos web (también móvil), capítulo 1 (día guiado, días 2-4 y fin de semana 5-7 con planes opcionales; Ren también propone planes a quien quiera (*Quedar* / *Proponer plan*); planes opcionales en `ChapterDB.PLANS`: se proponen en persona o por mensaje, se contestan, se juegan al llegar al sitio en su franja y, si dices que sí y no vas, te lo reprochan; el jueves coinciden planes y hay que elegir, con desayuno y cena con Mamá, que desde ese día está en casa por la mañana y por la noche; fases `rutina` → `incursion_1` → `reunion` tras la reunión en las Cloacas, y después `incursion_2` … `jefe_1`, ya declaradas pero sin contenido (ver `capitulo_1_hoja_de_ruta.md`); `flag dia_N` en las reglas; `GameState.scene_cast` = presentes en un plan), mundo libre, conversaciones con reglas,
 relaciones y ánimo, móvil, combate en grupo con 42 habilidades (tiers, escalado
 por nivel, estados y compatibilidades; todos en nivel 1), criaturas y
 recompensas, guardado automático, mapa 3D con luz por franjas, mazmorra de La
@@ -230,6 +283,6 @@ Torre (cinco plantas de 260-300 casillas, encuentros de 1 a 3 criaturas por tier
 secretas, compañero con comentarios),
 editores de mazmorras, relieve, mapa y Estudio de texturas.
 
-Pendiente: opciones, misiones y criaturas del móvil, asimilación y naturalezas
+Pendiente: el resto del capítulo 1, por fases en `docs/diseno/capitulo_1_hoja_de_ruta.md`; opciones, misiones y criaturas del móvil, asimilación y naturalezas
 completas, equipo con efecto en combate, fondos y mapas definitivos. El detalle
 está en el README («Pendiente»).

@@ -18,6 +18,7 @@ const GLOW_MARGIN := 40.0
 	set(value):
 		texture = value
 		_image = null
+		_used = Rect2()
 		_head_px = Vector2(-1, -1)
 		queue_redraw()
 
@@ -69,6 +70,7 @@ enum Motion { NONE, HOP, SHAKE }
 var _glow := 0.0
 var _time := 0.0
 var _image: Image
+var _used := Rect2()   ## parte opaca de la textura (px), ver content_rect
 var _head_px := Vector2(-1, -1)
 var _tween: Tween
 ## Gesto anterior mientras dura el fundido (`_fade` de 0 a 1).
@@ -258,6 +260,20 @@ func _find_head(img: Image) -> Vector2:
 				sum += x
 				n += 1
 	return Vector2(sum / maxf(n, 1), top)
+
+
+## Parte opaca de la imagen (coordenadas locales): para enmarcar al personaje
+## sin el aire transparente de su textura.
+func content_rect() -> Rect2:
+	var rect := image_rect()
+	if not _used.has_area():
+		if _get_image() == null:
+			return rect
+		_used = Rect2(_image.get_used_rect())
+		if not _used.has_area():
+			return rect
+	var s := _scale2()
+	return Rect2(rect.position + _used.position * s, _used.size * s)
 
 
 func _get_image() -> Image:

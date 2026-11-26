@@ -183,15 +183,15 @@ func _open_chat(who: String, from_screen: String) -> void:
 func _rows() -> Array:
 	match _screen:
 		"contacts":
-			return CharacterDB.CONTACTS
+			return Acquaintance.friends(CharacterDB.CONTACTS)
 		"relations":
-			return CharacterDB.RELATIONS
+			return Acquaintance.friends(CharacterDB.RELATIONS)
 		"messages":
-			return GameState.conversations()
+			return Acquaintance.friends(GameState.conversations())
 		"inventory":
 			return GameState.inventory.keys().filter(func(id: String) -> bool: return GameState.item_count(id) > 0)
 		"gear":
-			return [CharacterDB.PROTAGONIST] + CharacterDB.COMPANIONS
+			return [CharacterDB.PROTAGONIST] + Acquaintance.friends(CharacterDB.COMPANIONS)
 	return []
 
 

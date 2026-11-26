@@ -4,7 +4,9 @@ extends Control
 ##
 ## Si existe `res://assets/backgrounds/<id>_<franja>.(png|jpg|webp)` (franja de
 ## GameState.TIME_SLOTS: manana, dia, tarde, noche), se usa esa imagen; si no,
-## `<id>.(png|jpg|webp)`, la de cualquier momento.
+## `<id>.(png|jpg|webp)`, la de cualquier momento. Si la ubicación trae `backdrop`
+## (LocationDB `from_phase`, p. ej. Colinas con la grieta), se prueba antes ese
+## nombre (también por franja); si aún no hay imagen, la de siempre.
 ## Si no, se genera un fondo PROVISIONAL por código: ciudad nocturna con la
 ## paleta de la ubicación (ver LocationDB). Sin imagen, la ubicación vacía o
 ## «casa» es negro.
@@ -25,7 +27,11 @@ func set_location(id: String) -> void:
 	_loc = LocationDB.get_location(id)
 	_texture = null
 	if id != "":
-		for name in [id + "_" + GameState.slot_id(), id]:
+		var names: Array[String] = []
+		if _loc.has("backdrop"):
+			names.append_array([str(_loc.backdrop) + "_" + GameState.slot_id(), str(_loc.backdrop)])
+		names.append_array([id + "_" + GameState.slot_id(), id])
+		for name in names:
 			for ext in ["png", "jpg", "webp"]:
 				var path := "%s%s.%s" % [BACKGROUND_DIR, name, ext]
 				if _texture == null and ResourceLoader.exists(path):
