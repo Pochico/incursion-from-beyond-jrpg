@@ -161,6 +161,9 @@
 		return c.raw || "";
 	}
 
+	/** «# titulo: …»: nombre legible de la escena (solo lo usa el editor; el juego lo ignora). */
+	const TITLE_PREFIX = "# titulo:";
+
 	/** «# cuando: momento, cond, cond». Devuelve {moment, criteria, errors}. */
 	function parseRuleLine(line, cfg) {
 		const parts = line.trim().substring(9).split(",");
@@ -219,6 +222,8 @@
 				const r = parseRuleLine(t, cfg);
 				r.rawLine = t;
 				cue.rules.push(r);
+			} else if (t.startsWith(TITLE_PREFIX) && !cue.title) {
+				cue.title = t.slice(TITLE_PREFIX.length).trim();   // nombre legible (editor de escenas)
 			} else {
 				bodyLines.push(cue.lines[i]);
 			}
@@ -231,6 +236,7 @@
 	function cueToText(cue) {
 		if (!cue.dirty && cue.raw !== undefined) return cue.raw;
 		const out = ["~ " + cue.name];
+		if (cue.title) out.push(TITLE_PREFIX + " " + cue.title);
 		for (const r of cue.rules) out.push(r.rawLine && !r.dirty ? r.rawLine : ruleToLine(r));
 		if (cue.body !== "") out.push(cue.body);
 		return out.join("\n");

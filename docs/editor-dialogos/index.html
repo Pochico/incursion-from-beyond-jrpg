@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0b0b0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Diálogos">
-<title>Editor de diálogos · Incursion From Beyond</title>
+<meta name="apple-mobile-web-app-title" content="Escenas">
+<title>Editor de escenas · Incursion From Beyond</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icono-180.png">
@@ -196,6 +196,62 @@ input[type=range] { width: 100%; accent-color: var(--lime); }
 .fform .row .btn { flex: none; }
 .fadd { display: flex; justify-content: center; margin-top: 4px; }
 
+/* --- Escenas: lista, cabecera, bloques --- */
+.sgroup { font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--violet); font-weight: 700; margin: 16px 2px 8px; }
+.sgroup .muted { letter-spacing: 0; }
+.cue-item .name { word-break: normal; font-size: 15px; }
+.savs { display: inline-flex; flex: none; }
+.sav { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid var(--panel); margin-right: -8px; }
+.savs:not(:empty) { margin-right: 12px; }
+.swhen { margin-top: 4px; font-size: 12px; color: var(--lime); opacity: .85; }
+.ssnip { margin-top: 3px; font-size: 12.5px; color: var(--gray); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.chipav { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; margin-left: -5px; }
+.shead { border-left: 4px solid var(--c, var(--lime)); padding: 2px 0 2px 12px; margin-bottom: 6px; }
+.stitle { font-size: 19px; font-weight: 800; font-style: italic; background: none; border-color: transparent; padding-left: 0; }
+.stitle:hover { border-color: var(--line); padding-left: 10px; }
+.stitle:focus { padding-left: 10px; }
+.card.when { display: flex; gap: 10px; align-items: flex-start; }
+.card.when .sentence { flex: 1; }
+.cast { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.castp { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--c, var(--line2)); border-radius: 999px; padding: 3px 10px 3px 3px; font-size: 13px; }
+.castp.place { padding-left: 10px; border-color: rgba(39,180,245,.5); color: #9fdcff; }
+.castav { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.fscene { align-self: center; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 5px 14px; cursor: pointer; background: rgba(155,92,240,.16); color: #e3d4ff; border: 1px solid rgba(155,92,240,.55); }
+.fscene:hover { border-color: var(--lime); }
+.addbar { position: sticky; bottom: calc(var(--nav-h) + 4px + var(--safe-b)); margin-top: 12px; background: rgba(18,18,32,.96); border: 1px solid var(--line2); border-radius: 14px; padding: 8px 10px 10px; backdrop-filter: blur(6px); z-index: 5; }
+@media (min-width: 1100px) { .addbar { bottom: 8px; } }
+.addbtns { display: flex; gap: 6px; overflow-x: auto; padding-top: 6px; scrollbar-width: thin; }
+.addbtns .btn { flex: none; }
+details.adv { margin-top: 22px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+details.adv summary { cursor: pointer; color: var(--gray); font-weight: 600; }
+details.adv[open] summary { margin-bottom: 12px; }
+/* --- Ver escena --- */
+#player { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; flex-direction: column; }
+#player .pstage { position: relative; flex: 1; overflow: hidden; background: linear-gradient(180deg, #1b1838, #0b0b0d); }
+#player .pbg { position: absolute; inset: -12px; background-size: cover; background-position: center; transition: background-image .3s; }
+#player .pport { position: absolute; bottom: 0; height: 92%; max-width: 48%; object-fit: contain; object-position: bottom; transition: filter .2s, opacity .2s; }
+#player .pport.l { left: 2%; } #player .pport.r { right: 2%; }
+#player .pport.dim { filter: brightness(.45); }
+#player .pflash { position: absolute; inset: 0; background: #fff; opacity: 0; transition: opacity .35s; pointer-events: none; }
+#player .pflash.on { opacity: .85; transition: opacity .05s; }
+#player .pblack { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .6s; pointer-events: none; }
+#player .pblack.on { opacity: 1; }
+#player .pstage.shake { animation: shake .7s; }
+@keyframes shake { 0%,100% { transform: none; } 10% { transform: translate(-14px, 6px); } 20% { transform: translate(12px, -8px); } 30% { transform: translate(-10px, -4px); }
+	40% { transform: translate(9px, 7px); } 55% { transform: translate(-6px, 3px); } 70% { transform: translate(4px, -3px); } 85% { transform: translate(-2px, 2px); } }
+#player .ptop { position: absolute; top: calc(8px + var(--safe-t)); left: 10px; right: 10px; display: flex; gap: 8px; align-items: center; z-index: 2; }
+#player .ptitle { flex: 1; min-width: 0; font-weight: 800; font-style: italic; text-shadow: 0 1px 6px #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#player .ptop select { width: auto; max-width: 42vw; padding: 6px 30px 6px 10px; background-color: rgba(11,11,13,.8); }
+#player .pbox { position: relative; min-height: 30vh; background: rgba(18,18,32,.97); border-top: 2px solid var(--violet); padding: 14px 18px calc(18px + var(--safe-b)); cursor: pointer; }
+#player .pname { font-weight: 800; font-style: italic; font-size: 18px; margin-bottom: 6px; min-height: 22px; }
+#player .ptext { font-size: 17px; line-height: 1.45; white-space: pre-wrap; }
+#player .ptext.narr { font-style: italic; color: #cfcfd8; }
+#player .pchoices { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+#player .pchoices .btn { text-align: left; }
+#player .pnext { position: absolute; right: 18px; bottom: calc(12px + var(--safe-b)); color: var(--lime); animation: s2 1s infinite alternate; }
+@keyframes s2 { to { transform: translateY(4px); } }
+@media (orientation: landscape) and (max-height: 560px) { #player .pbox { min-height: 36vh; } }
 #toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 18px + var(--safe-b)); transform: translateX(-50%); background: var(--night); border: 1px solid var(--lime); color: var(--white); padding: 10px 16px; border-radius: 12px; z-index: 60; display: none; max-width: 92vw; font-size: 14px; }
 #toast.err { border-color: var(--red); }
 #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; background: var(--ink); z-index: 50; }
@@ -208,7 +264,7 @@ input[type=range] { width: 100%; accent-color: var(--lime); }
 	<div class="brand">
 		<div class="bar"></div>
 		<div style="min-width:0">
-			<h1>Editor de diálogos</h1>
+			<h1>Editor de escenas</h1>
 			<small id="src-label">Incursion From Beyond</small>
 		</div>
 	</div>
@@ -224,15 +280,15 @@ input[type=range] { width: 100%; accent-color: var(--lime); }
 </main>
 
 <nav>
-	<button data-v="lista" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Diálogos</button>
-	<button data-v="editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>Editar</button>
+	<button data-v="lista" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Escenas</button>
+	<button data-v="editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>Escena</button>
 	<button data-v="simular"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16l13-8z"/></svg>Simular</button>
 	<button data-v="guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11l3 3v13H5z M8 4v5h8V4 M8 20v-6h8v6"/></svg>Guardar<span id="badge-nav"></span></button>
 </nav>
 
 <div class="sheet-bg" id="sheet-bg"><div class="sheet" id="sheet"></div></div>
 <div id="toast"></div>
-<div id="loading"><div class="spin"></div><div class="muted" id="loading-text">Cargando diálogos…</div></div>
+<div id="loading"><div class="spin"></div><div class="muted" id="loading-text">Cargando escenas…</div></div>
 
 <script src="motor.js"></script>
 <script src="flujo.js"></script>

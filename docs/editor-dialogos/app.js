@@ -41,6 +41,10 @@
 		view: "lista",
 		sim: null,
 		save: null,                 // partida importada (opcional)
+		places: [],                 // ubicaciones del juego [{id, name}] (bloque «Fondo»)
+		backgrounds: [],            // archivos de assets/backgrounds (vista previa)
+		effects: ["temblor", "destello", "negro", "vuelve"],   // Story.SCENE_EFFECTS (se lee de story.gd)
+		whenOpen: false, advOpen: false,
 	};
 
 	// --- Utilidades ---------------------------------------------------------------------------
@@ -124,6 +128,9 @@
 			try { src[k] = (await ghFile(p)).text; } catch (e) { src[k] = ""; }
 		}));
 		S.cfg = M.configFromSources(src);
+		const fx = (src.story || "").match(/SCENE_EFFECTS[^=]*=\s*\[([^\]]*)\]/);
+		if (fx) S.effects = [...fx[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+		loadPlaces();   // en segundo plano: ubicaciones y fondos para los bloques de escena
 		setLoading("Leyendo " + dialogueFiles.length + " diálogos…");
 		const files = await Promise.all(dialogueFiles.map(async (e) => {
 			const f = await ghFile(e.path);
@@ -323,29 +330,258 @@
 		return out;
 	}
 
+	// --- Escenas: nombres legibles, grupos, lugares y comandos de escena ----------------------------
+
+	const STORY = "__historia";   // filtro de la lista: escenas que no son de un personaje
+	const MOMENT_LABEL = {
+		hablar: "Al hablar", ligar: "Al ligar", luchar: "Al retarle", luchar_fin: "Tras la pelea",
+		harto_hablar: "Harto de hablar", harto_ligar: "Harto de que ligue", harto_luchar: "Harto de pelear",
+		no_quiere: "Si no quiere hablar", alarma: "Al empezar una incursión", tras_incursion: "Tras una incursión",
+		movil: "Por el móvil", cita_pide: "Al pedirle una cita", cita: "En una cita", deja_a_ren: "Al dejar a Ren",
+	};
+	const momentLabel = (m) => MOMENT_LABEL[m] || (m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, " "));
+	const WORDS = {
+		incursion: "incursión", reunion: "reunión", movil: "móvil", despues: "después", presentacion: "presentación",
+		mama: "Mamá", dia: "día", primera: "primera vez", clase: "clase", fundido: "fundido", examinar: "examinar", rutina: "rutina",
+	};
+
+	/** Nombre legible a partir del interno: «dia1_clase» → «Día 1 · clase». */
+	function humanize(name, file) {
+		let s = name;
+		if (charInfo(file) && s.startsWith(file + "_")) s = s.slice(file.length + 1);
+		const out = [];
+		for (const part of s.split("_")) {
+			const d = part.match(/^dia(\d+)$/);
+			if (d) { out.push("Día " + d[1] + " ·"); continue; }
+			out.push(WORDS[part] || part);
+		}
+		const t = out.join(" ").replace(/ ·$/, "");
+		return t.charAt(0).toUpperCase() + t.slice(1);
+	}
+	const sceneTitle = (c) => c.title || humanize(c.name, c.file);
+
+	/** Nombre del archivo para personas: «Kenji», «Historia · capítulo 1»… */
+	function fileLabel(name) {
+		if (charInfo(name)) return charName(name);
+		const m = name.match(/^capitulo(\d+)$/);
+		if (m) return "Historia · capítulo " + m[1];
+		if (name === S.cfg.general) return "General (con cualquiera)";
+		if (name === "mazmorra") return "Mazmorra (comentarios del compañero)";
+		return name;
+	}
+
+	/** Sección de la lista en la que va una escena. */
+	function sceneGroup(c) {
+		if (charInfo(c.file)) {
+			const m = (c.rules[0] || {}).moment || "";
+			if (m === "movil" || /_movil/.test(c.name)) return "Móvil";
+			if (/presentacion|_charla|amistad/.test(c.name)) return "Conocerse";
+			if (/^(cita|cita_pide|deja_a_ren|ligar|harto_ligar)$/.test(m)) return "Citas y ligar";
+			if (/^(luchar|luchar_fin|harto_luchar)$/.test(m)) return "Peleas";
+			if (/^(alarma|tras_incursion)$/.test(m)) return "Incursiones";
+			if (/_plan|quedar|quedada|plantado|invita/.test(c.name)) return "Planes";
+			return "Charlas";
+		}
+		const d = c.name.match(/^dia(\d+)/);
+		if (d) return "Día " + d[1];
+		if (/incursion|reunion|temblor|aparece|derrota/.test(c.name)) return "Incursiones";
+		if (c.file === "mazmorra") return "Mazmorra";
+		if (c.file === S.cfg.general) return "Generales";
+		return "Otras";
+	}
+
+	/** Quién habla en la escena (ids con ficha, sin Ren), por orden de aparición. */
+	function speakersOf(c) {
+		const out = [];
+		for (const raw of c.body.split("\n")) {
+			const t = raw.trim();
+			const k = F.kind(t);
+			let id = "";
+			if (k === "line" || k === "variant") { const ch = charByName(F.parseLine(t).speaker); id = ch ? ch.id : ""; }
+			else if (k === "mutation") { const sc = sceneCmd(t); if (sc && sc.cmd === "entra" && charInfo(sc.arg)) id = sc.arg; }
+			if (id && id !== S.cfg.protagonist && !out.includes(id)) out.push(id);
+		}
+		if (!out.length && charInfo(c.file) && c.file !== S.cfg.protagonist) out.push(c.file);
+		return out;
+	}
+	const placesOf = (c) => [...new Set([...c.body.matchAll(/Story\.fondo\("([^"]+)"\)/g)].map((m) => m[1]))];
+
+	/** Primera frase de la escena, para reconocerla en la lista. */
+	function snippetOf(c) {
+		for (const raw of c.body.split("\n")) {
+			const t = raw.trim();
+			if (F.kind(t) !== "line") continue;
+			const p = F.parseLine(t);
+			const txt = F.unescape(p.body).replace(/\{\{Story\.speaker\}\}/g, "…").replace(/\{\{[^}]*\}\}/g, "…");
+			return (p.speaker && !p.speaker.includes("{{") ? p.speaker + ": " : "") + (txt.length > 90 ? txt.slice(0, 88) + "…" : txt);
+		}
+		return "";
+	}
+
+	function ruleSentence(c, r) {
+		const nm = names();
+		const who = charInfo(c.file) ? " con <b>" + esc(charName(c.file)) + "</b>" : c.file === S.cfg.general ? " (con cualquiera)" : "";
+		return `<b>${esc(momentLabel(r.moment))}</b>${who}` + (r.criteria.length ? ", " + r.criteria.map((x) => esc(M.describeCriterion(x, S.cfg, nm))).join(", ") : "") + ".";
+	}
+	function whenHTML(c) {
+		if (!c.rules.length) return "<b>La lanza la historia</b> o la abre otra escena (no tiene regla).";
+		return c.rules.map((r) => ruleSentence(c, r)).join("<br>O bien: ");
+	}
+	function whenShort(c) {
+		if (!c.rules.length) return "La lanza la historia";
+		return c.rules.map((r) => momentLabel(r.moment) + (r.criteria.length ? " · " + r.criteria.map((x) => M.describeCriterion(x, S.cfg, names())).join(", ") : "")).join(" | ");
+	}
+
+	function avatarImg(id, cls) {
+		const c = charInfo(id);
+		return c && c.portrait ? `<img class="${cls}" src="${esc(thumbOf(c.portrait))}" alt="" loading="lazy" onerror="this.remove()">` : "";
+	}
+
+	/** Ubicaciones (LocationDB y los nombres del mapa 3D) y fondos que existen. */
+	async function loadPlaces() {
+		try {
+			const src = (await ghFile("src/data/location_db.gd")).text;
+			const out = [];
+			for (const m of src.matchAll(/^\t"([a-z_]+)": \{\n\t\t"name": "([^"]+)"/gm)) out.push({ id: m[1], name: m[2] });
+			try {
+				const res = await fetch(rawUrl("src/data/mapa3d.json"), { cache: "no-store" });
+				const map = await res.json();
+				for (const pl of out) if (map.names && map.names[pl.id]) pl.name = map.names[pl.id];
+			} catch (e) { /* sin nombres del mapa */ }
+			S.places = out;
+		} catch (e) { S.places = []; }
+		try {
+			const list = await gh("/contents/assets/backgrounds?ref=" + encodeURIComponent(S.repo.branch));
+			S.backgrounds = list.map((e) => e.name).filter((n) => /\.(png|jpe?g|webp)$/.test(n));
+		} catch (e) { S.backgrounds = []; }
+		if (S.view === "editar") renderEditor();
+	}
+	const placeName = (id) => { const pl = S.places.find((x) => x.id === id); return pl ? pl.name : id; };
+	const rawUrl = (path) => `https://raw.githubusercontent.com/${S.repo.owner}/${S.repo.repo}/${S.repo.branch}/${path}`;
+
+	// Comandos de escena: `$> Story.fondo("lago")`, entra, sale, efecto, esperar (ver Story en el juego).
+	const SCENE_CMDS = ["fondo", "entra", "sale", "efecto", "esperar"];
+	const EFFECT_LABEL = { temblor: "Tiembla todo", destello: "Destello", negro: "Fundido a negro", vuelve: "Vuelve la imagen" };
+	const SCENE_HELP = {
+		fondo: "Cambia el fondo mientras dura la conversación (al terminar, vuelve el del sitio).",
+		entra: "Entra un personaje: su retrato ocupa el de la derecha.",
+		sale: "Sale el personaje de la derecha.",
+		efecto: "Efecto de pantalla. «Fundido a negro» se deshace con «Vuelve la imagen».",
+		esperar: "Pausa, en segundos.",
+	};
+	function sceneCmd(text) {
+		const m = text.match(/^\$>\s*Story\.(fondo|entra|sale|efecto|esperar)\((.*)\)\s*$/);
+		if (!m) return null;
+		return { cmd: m[1], arg: m[2].trim().replace(/^"(.*)"$/, "$1") };
+	}
+	function sceneLabel(sc) {
+		switch (sc.cmd) {
+			case "fondo": return "🖼  Fondo: " + (sc.arg ? placeName(sc.arg) : "vuelve el del sitio");
+			case "entra": return "→  Entra " + charName(sc.arg);
+			case "sale": return "←  Sale " + charName(sc.arg);
+			case "efecto": return "⚡  " + (EFFECT_LABEL[sc.arg] || sc.arg);
+			default: return "⏱  Pausa de " + String(sc.arg).replace(".", ",") + " s";
+		}
+	}
+	function sceneFieldHTML(sc) {
+		const opt = (v, label, on) => `<option value="${esc(v)}" ${on ? "selected" : ""}>${esc(label)}</option>`;
+		switch (sc.cmd) {
+			case "entra": case "sale":
+				return `<select class="input" name="arg">${people().map((c) => opt(c.id, c.name, c.id === sc.arg)).join("")}</select>`;
+			case "efecto":
+				return `<select class="input" name="arg">${S.effects.map((e) => opt(e, EFFECT_LABEL[e] || e, e === sc.arg)).join("")}</select>`;
+			case "fondo":
+				if (!S.places.length) return `<input class="input" name="arg" value="${esc(sc.arg)}" placeholder="id de la ubicación (p. ej. lago)">`;
+				return `<select class="input" name="arg">${opt("", "Vuelve el del sitio donde están", !sc.arg)}${S.places.map((pl) => opt(pl.id, pl.name, pl.id === sc.arg)).join("")}</select>`;
+			default:
+				return `<input class="input" type="number" name="arg" min="0.1" step="0.5" value="${esc(sc.arg)}">`;
+		}
+	}
+	function sceneText(cmd, arg) {
+		if (cmd === "esperar") return `$> Story.esperar(${(Math.max(+String(arg).replace(",", ".") || 1, 0.1)).toFixed(1)})`;
+		return `$> Story.${cmd}(${JSON.stringify(arg)})`;
+	}
+
+	/** Barra de bloques para añadir al final (o detrás del bloque que se está editando). */
+	function addBarHTML() {
+		const b = (k, label) => `<button class="btn sm" data-add="${k}">${label}</button>`;
+		return `<div class="addbar"><div class="small muted">Añadir ${S.sel && flowState(S.sel).edit ? "debajo del bloque abierto" : "al final"}</div><div class="addbtns">
+			${b("linea", "💬 Línea")}${b("narracion", "📝 Narración")}${b("ren", "🙂 Ren")}${b("opciones", "🔀 Ren elige")}
+			${b("entra", "→ Entra")}${b("sale", "← Sale")}${b("efecto", "⚡ Efecto")}${b("fondo", "🖼 Fondo")}${b("esperar", "⏱ Pausa")}${b("fin", "■ Fin")}</div></div>`;
+	}
+
+	function addBlock(c, kind) {
+		const st = flowState(c);
+		const tree = F.parse(c.body);
+		const mk = (text, indent, children) => ({ text, indent, dirty: true, children: children || [] });
+		let list = tree.children, at, indent = 0, base = [];
+		if (st.edit) {
+			const path = st.edit.split(".").map(Number);
+			const node = F.nodeAt(tree, path);
+			if (F.kind(node.text) === "option") { list = node.children; at = list.length; indent = node.indent + 1; base = path; }
+			else { list = path.length > 1 ? F.nodeAt(tree, path.slice(0, -1)).children : tree.children; at = path[path.length - 1] + 1; indent = node.indent; base = path.slice(0, -1); }
+		} else {
+			at = list.length;
+			while (at > 0 && list[at - 1].text === "") at--;
+			if (at > 0 && F.kind(list[at - 1].text) === "jump") at--;
+		}
+		const npc = npcName(c);
+		const who = charInfo(c.file) && c.file !== S.cfg.protagonist ? c.file : (people()[0] || {}).id || "";
+		const nodes = {
+			linea: () => [mk(npc + ": …", indent)],
+			narracion: () => [mk("…", indent)],
+			ren: () => [mk(renName() + ": …", indent)],
+			opciones: () => [mk("- Respuesta 1", indent, [mk(npc + ": …", indent + 1)]), mk("- Respuesta 2", indent, [mk(npc + ": …", indent + 1)])],
+			entra: () => [mk(sceneText("entra", who), indent)],
+			sale: () => [mk(sceneText("sale", who), indent)],
+			efecto: () => [mk(sceneText("efecto", S.effects[0]), indent)],
+			fondo: () => [mk(sceneText("fondo", (S.places[0] || {}).id || ""), indent)],
+			esperar: () => [mk(sceneText("esperar", 1), indent)],
+			fin: () => [mk("=> END", indent)],
+		}[kind]();
+		list.splice(at, 0, ...nodes);
+		st.edit = pkey(base.concat(at));
+		st.confirm = null;
+		c.body = F.serialize(tree);
+		c.dirty = true;
+		rebuildRules(); renderBadges(); renderList(); renderEditor();
+		const f = $("#e-body .fform");
+		if (f) f.scrollIntoView({ block: "center", behavior: "smooth" });
+	}
+
 	// --- Render: lista -------------------------------------------------------------------------
 
 	function renderList() {
 		const v = $("#v-lista");
 		const known = knownValues();
-		const fileNames = S.files.filter((f) => !f.deleted).map((f) => f.name);
 		const q = S.filter.q.toLowerCase();
 		const cues = allCues().filter((c) => !fileOf(c).deleted)
-			.filter((c) => !S.filter.file || c.file === S.filter.file)
+			.filter((c) => !S.filter.file || (S.filter.file === STORY ? !charInfo(c.file) : c.file === S.filter.file))
 			.filter((c) => !S.filter.moment || c.rules.some((r) => r.moment === S.filter.moment))
-			.filter((c) => !q || c.name.includes(q) || c.body.toLowerCase().includes(q));
-		const fileChips = ['<span class="chip ' + (S.filter.file ? "" : "on") + '" data-file="">Todos</span>']
-			.concat(fileNames.map((n) => `<span class="chip ${S.filter.file === n ? "on" : ""}" data-file="${esc(n)}" style="${S.filter.file === n ? "" : "border-color:" + charColor(n)}">${esc(charName(n))}</span>`)).join("");
+			.filter((c) => !q || c.name.includes(q) || sceneTitle(c).toLowerCase().includes(q) || c.body.toLowerCase().includes(q));
+		const chars = S.files.filter((f) => !f.deleted && charInfo(f.name)).map((f) => f.name);
+		const chip = (val, label, img) => `<span class="chip ${S.filter.file === val ? "on" : ""}" data-file="${esc(val)}">${img || ""}${esc(label)}</span>`;
+		const chips = chip("", "Todas") + chip(STORY, "Historia") + chars.map((id) => chip(id, charName(id), avatarImg(id, "chipav"))).join("");
+		// Secciones: la historia por días y en orden; cada personaje, por tipo de escena.
+		const groups = new Map();
+		for (const c of cues) {
+			const g = (charInfo(c.file) && S.filter.file !== c.file ? charName(c.file) + " · " : "") + sceneGroup(c);
+			if (!groups.has(g)) groups.set(g, []);
+			groups.get(g).push(c);
+		}
+		const rank = (g) => { const d = g.match(/^Día (\d+)$/); return d ? [0, +d[1]] : g.includes(" · ") ? [2, 0] : [1, 0]; };
+		const keys = [...groups.keys()].sort((a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || x[1] - y[1] || (x[0] === 2 ? a.localeCompare(b) : 0); });
+		const momentOpts = known.moments.map((m) => `<option value="${esc(m)}" ${S.filter.moment === m ? "selected" : ""}>${esc(momentLabel(m))}</option>`).join("");
 		v.innerHTML = `
-			<h2>Diálogos</h2>
-			<input class="input" id="q" placeholder="Buscar por nombre o texto…" value="${esc(S.filter.q)}" autocomplete="off">
-			<div class="chips" style="margin:10px 0">${fileChips}</div>
+			<h2>Escenas</h2>
+			<input class="input" id="q" placeholder="Buscar por título o por lo que se dice…" value="${esc(S.filter.q)}" autocomplete="off">
+			<div class="chips" style="margin:10px 0">${chips}</div>
 			<div class="row" style="margin-bottom:12px">
-				<select class="input grow" id="f-moment"><option value="">Todos los momentos</option>${known.moments.map((m) => `<option ${S.filter.moment === m ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>
-				<button class="btn" id="new-cue">+ Nuevo</button>
+				<select class="input grow" id="f-moment"><option value="">Cualquier momento</option>${momentOpts}</select>
+				<button class="btn lime" id="new-cue">+ Nueva escena</button>
 			</div>
-			<div class="muted small" style="margin-bottom:8px">${cues.length} cues</div>
-			${cues.map(cueItem).join("") || '<div class="empty">Nada coincide con el filtro.</div>'}`;
+			${keys.map((g) => `<div class="sgroup">${esc(g)} <span class="muted">${groups.get(g).length}</span></div>${groups.get(g).map(cueItem).join("")}`).join("")
+				|| '<div class="empty">Nada coincide con el filtro.</div>'}`;
 		$("#q", v).oninput = (e) => { S.filter.q = e.target.value; renderListKeepFocus(); };
 		v.querySelectorAll("[data-file]").forEach((el) => (el.onclick = () => { S.filter.file = el.dataset.file; renderList(); }));
 		$("#f-moment", v).onchange = (e) => { S.filter.moment = e.target.value; renderList(); };
@@ -364,11 +600,13 @@
 	function cueItem(c) {
 		const issues = validateCue(c);
 		const level = issues.some((i) => i[0] === "err") ? "err" : issues.some((i) => i[0] === "warn") ? "warn" : "";
-		const rules = c.rules.map((r) => `<span class="tag">${esc(r.moment)}${r.criteria.length ? " · " + r.criteria.map((x) => esc(x.dirty || !x.raw ? M.criterionToText(x) : x.raw)).join(" · ") : ""}</span>`).join("") || '<span class="tag muted">sin reglas</span>';
 		const sel = S.sel && S.sel.name === c.name && S.sel.file === c.file;
+		const faces = speakersOf(c).slice(0, 3).map((id) => avatarImg(id, "sav")).join("");
+		const snip = snippetOf(c);
 		return `<button class="cue-item ${sel ? "sel" : ""}" style="--c:${charColor(c.file)}" data-cue="${esc(c.name)}" data-file="${esc(c.file)}">
-			<div class="row"><span class="name grow">${esc(c.name)}</span>${c.dirty ? '<span class="dot" title="Modificado"></span>' : ""}${level ? `<span class="${level}">${level === "err" ? "✕" : "⚠"}</span>` : ""}</div>
-			<div class="meta"><span class="tag" style="color:${charColor(c.file)}">${esc(c.file)}</span>${rules}</div></button>`;
+			<div class="row" style="flex-wrap:nowrap"><span class="savs">${faces}</span><span class="name grow">${esc(sceneTitle(c))}</span>${c.dirty ? '<span class="dot" title="Modificada"></span>' : ""}${level ? `<span class="${level}">${level === "err" ? "✕" : "⚠"}</span>` : ""}</div>
+			<div class="swhen">${esc(whenShort(c))}</div>
+			${snip ? `<div class="ssnip">${esc(snip)}</div>` : ""}</button>`;
 	}
 
 	function selectCue(name, file, go) {
@@ -383,30 +621,50 @@
 	function renderEditor() {
 		const v = $("#v-editar");
 		const c = S.sel;
-		if (!c) { v.innerHTML = '<h2>Editar</h2><div class="empty">Elige un diálogo de la lista.</div>'; return; }
+		if (!c) { v.innerHTML = '<h2>Escena</h2><div class="empty">Elige una escena de la lista.</div>'; return; }
 		const known = knownValues();
 		const issues = validateCue(c);
-		const fileOpts = S.files.filter((f) => !f.deleted).map((f) => `<option ${f.name === c.file ? "selected" : ""}>${esc(f.name)}</option>`).join("");
+		const errs = issues.filter((i) => i[0] === "err").length, warns = issues.filter((i) => i[0] === "warn").length;
+		const fileOpts = S.files.filter((f) => !f.deleted).map((f) => `<option value="${esc(f.name)}" ${f.name === c.file ? "selected" : ""}>${esc(fileLabel(f.name))}</option>`).join("");
+		const cast = speakersOf(c), places = placesOf(c);
 		v.innerHTML = `
-			<h2>Editar</h2>
-			<div class="field"><label>Nombre del cue</label>
-				<div class="row"><input class="input grow" id="e-name" value="${esc(c.name)}" autocapitalize="off" autocomplete="off" spellcheck="false">
-				<select class="input" style="width:auto" id="e-file" title="Archivo">${fileOpts}</select></div></div>
-			<div class="row" style="margin-bottom:6px">
-				<button class="btn sm" id="e-sim">▶ Probar en el simulador</button>
-				<button class="btn sm danger" id="e-del">Borrar</button>
+			<div class="shead" style="--c:${charColor(c.file)}">
+				<div class="small muted">${esc(fileLabel(c.file))}</div>
+				<input class="input stitle" id="e-title" value="${esc(c.title || "")}" placeholder="${esc(humanize(c.name, c.file))}" autocomplete="off" title="Título de la escena (solo para el editor)">
+				<div class="row" style="margin-top:10px">
+					<button class="btn lime sm" id="e-play">▶ Ver escena</button>
+					<button class="btn sm" id="e-sim">Probar en el simulador</button>
+					${errs || warns ? `<span class="${errs ? "err" : "warn"} small">${errs ? "✕ " + errs + (errs > 1 ? " errores" : " error") : "⚠ " + warns + (warns > 1 ? " avisos" : " aviso")} · en Avanzado</span>` : ""}
+				</div>
 			</div>
 			<h2>Cuándo sale</h2>
-			<div id="e-rules"></div>
-			<button class="btn" id="e-add-rule">+ Otra regla</button>
-			<h2>Texto</h2>
-			<div class="row" style="margin-bottom:8px"><div class="seg"><button data-m="flujo" class="${S.bodyMode === "flujo" ? "on" : ""}">Conversación</button><button data-m="texto" class="${S.bodyMode === "texto" ? "on" : ""}">Texto</button></div>
-				<span class="muted small">${S.bodyMode === "flujo" ? "Toca una línea para editarla; elige opción para ver su rama." : ""}</span></div>
+			<div class="card when"><div class="sentence" id="e-when">${whenHTML(c)}</div>
+				<button class="btn sm" id="e-when-edit">${S.whenOpen ? "Listo" : "Cambiar"}</button></div>
+			<div id="e-when-box" style="${S.whenOpen ? "" : "display:none"}">
+				<div id="e-rules"></div>
+				<button class="btn" id="e-add-rule">+ Otra regla</button>
+			</div>
+			<h2>Escena</h2>
+			${cast.length || places.length ? `<div class="cast">${cast.map((id) => `<span class="castp" style="--c:${charColor(id)}">${avatarImg(id, "castav")}${esc(charName(id))}</span>`).join("")}${places.map((pl) => `<span class="castp place">🖼 ${esc(placeName(pl))}</span>`).join("")}</div>` : ""}
+			<div class="muted small" style="margin-bottom:8px">${S.bodyMode === "flujo" ? "Toca un bloque para editarlo. En «Ren elige», toca una respuesta para ver su rama." : "Texto completo de la escena (sintaxis de Dialogue Manager)."}</div>
 			<div id="e-body"></div>
-			<h2>Revisión</h2>
-			<div class="issues">${issues.length ? issues.map((i) => `<div class="${i[0] === "info" ? "muted" : i[0]}">${i[0] === "err" ? "✕" : i[0] === "warn" ? "⚠" : "ℹ"} ${esc(i[1])}</div>`).join("") : '<div class="ok">✓ Sin problemas.</div>'}</div>`;
+			${S.bodyMode === "flujo" ? addBarHTML() : ""}
+			<details class="adv" id="e-adv" ${S.advOpen ? "open" : ""}><summary>Avanzado</summary>
+				<div class="field"><label>Nombre interno (el que usa el juego) y archivo</label>
+					<div class="row"><input class="input grow" id="e-name" value="${esc(c.name)}" autocapitalize="off" autocomplete="off" spellcheck="false">
+					<select class="input" style="width:auto" id="e-file" title="Archivo">${fileOpts}</select></div></div>
+				<div class="row" style="margin-bottom:12px"><div class="seg"><button data-m="flujo" class="${S.bodyMode === "flujo" ? "on" : ""}">Bloques</button><button data-m="texto" class="${S.bodyMode === "texto" ? "on" : ""}">Texto</button></div>
+					<span class="muted small">«Texto» edita el .dialogue tal cual.</span></div>
+				<h2>Revisión</h2>
+				<div class="issues">${issues.length ? issues.map((i) => `<div class="${i[0] === "info" ? "muted" : i[0]}">${i[0] === "err" ? "✕" : i[0] === "warn" ? "⚠" : "ℹ"} ${esc(i[1])}</div>`).join("") : '<div class="ok">✓ Sin problemas.</div>'}</div>
+				<button class="btn sm danger" id="e-del" style="margin-top:10px">Borrar escena</button>
+			</details>`;
 		renderRules(known);
 		renderBody();
+		$("#e-title", v).onchange = (e) => { c.title = e.target.value.trim().replace(/\s+/g, " "); c.dirty = true; rebuildRules(); renderBadges(); renderList(); };
+		$("#e-play", v).onclick = () => openPlayer(c);
+		$("#e-when-edit", v).onclick = () => { S.whenOpen = !S.whenOpen; renderEditor(); };
+		$("#e-adv", v).ontoggle = (e) => { S.advOpen = e.target.open; };
 		$("#e-name", v).onchange = (e) => renameCue(c, e.target.value.trim());
 		$("#e-file", v).onchange = (e) => moveCue(c, e.target.value);
 		$("#e-sim", v).onclick = () => simulateCue(c);
@@ -416,6 +674,7 @@
 			touch(c); renderEditor();
 		};
 		v.querySelectorAll(".seg [data-m]").forEach((b) => (b.onclick = () => { S.bodyMode = b.dataset.m; renderEditor(); }));
+		v.querySelectorAll("[data-add]").forEach((b) => (b.onclick = () => addBlock(c, b.dataset.add)));
 	}
 
 	function renderRules(known) {
@@ -528,6 +787,8 @@
 		// Actualiza frases y revisión sin perder el foco del campo que se edita.
 		const c = S.sel;
 		const nm = names();
+		const w = $("#e-when");
+		if (w) w.innerHTML = whenHTML(c);
 		document.querySelectorAll("#e-rules .rule").forEach((el) => {
 			const r = c.rules[+el.dataset.ri];
 			const s = el.querySelector(".sentence");
@@ -733,6 +994,8 @@
 	}
 
 	function humanMutation(t) {
+		const sc = sceneCmd(t);
+		if (sc) return sceneLabel(sc);
 		const s = t.replace(/^\$>\s*/, "");
 		let m;
 		if ((m = s.match(/Story\.change\("([^"]+)",\s*"([^"]+)",\s*(-?[\d.]+)\)/))) return charName(m[1]) + " · " + m[2] + " " + (+m[3] > 0 ? "+" : "") + m[3];
@@ -753,7 +1016,10 @@
 			.replace(/\band\b/g, "y").replace(/\bor\b/g, "o").replace(/Story\.mood\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "ánimo de " + charName(w) + " = " + m)
 			.replace(/Story\.tier\("([^"]+)"\)\s*==\s*"([^"]+)"/g, (a, w, m) => "relación de " + charName(w) + " = " + m)
 			.replace(/Story\.knows\("([^"]+)",\s*"([^"]+)"\)/g, (a, w, e) => charName(w) + " sabe «" + e + "»")
-			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => "indicador «" + f + "»");
+			.replace(/Story\.flag\("([^"]+)"\)/g, (a, f) => "indicador «" + f + "»")
+			.replace(/not\s+Story\.is_friend\("([^"]+)"\)/g, (a, w) => "Ren aún no es amigo de " + charName(w))
+			.replace(/Story\.is_friend\("([^"]+)"\)/g, (a, w) => "Ren ya es amigo de " + charName(w))
+			.replace(/Story\.incursion_with\(\)\s*(==|!=)\s*"([^"]+)"/g, (a, op, w) => charName(w) + (op === "==" ? "" : " no") + " estaba con Ren en la incursión");
 	}
 
 	/** HTML del diagrama de un cue. */
@@ -763,7 +1029,7 @@
 		const ctx = { st, cue, step: 0, sim: sim || null, persona: null, lastSpeaker: "" };
 		const body = seqHTML(tree.children, [], ctx);
 		return `<div class="flow">${body || '<div class="empty">Este diálogo está vacío.</div>'}
-			<div class="fadd"><button class="btn sm" data-op="add-end">+ Línea al final</button></div></div>`;
+			${sim ? '<div class="fadd"><button class="btn sm" data-op="add-end">+ Línea al final</button></div>' : ""}</div>`;
 	}
 
 	function seqHTML(nodes, path, ctx) {
@@ -800,7 +1066,11 @@
 		let html = "";
 		switch (k) {
 			case "line": html = lineCard(n, key, ctx); break;
-			case "mutation": html = `<div class="fmut" data-path="${key}">⚙ ${esc(humanMutation(n.text))}</div>`; break;
+			case "mutation": {
+				const sc = sceneCmd(n.text);
+				html = sc ? `<div class="fscene" data-path="${key}">${esc(sceneLabel(sc))}</div>` : `<div class="fmut" data-path="${key}">⚙ ${esc(humanMutation(n.text))}</div>`;
+				break;
+			}
 			case "comment": html = `<div class="fcmt" data-path="${key}">${esc(n.text)}</div>`; break;
 			case "jump": {
 				const target = n.text.replace(/^=><?\s*/, "");
@@ -948,6 +1218,11 @@
 				<select class="input" name="jump"><option value="">No, sigue aquí</option>${["END"].concat(allCues().map((c) => c.name)).map((c) => `<option ${c === o.jump ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>`;
 			return `<div class="fform" data-path="${key}" data-kind="option">${fields}${reactHTML(o.body, true)}${buttons(
 				`<button class="btn sm" data-op="add-option">+ Otra opción</button><button class="btn sm" data-op="add-child">+ Línea en esta rama</button>`)}</div>`;
+		}
+		const sc = k === "mutation" ? sceneCmd(n.text) : null;
+		if (sc) {
+			return `<div class="fform" data-path="${key}" data-kind="scene"><input type="hidden" name="cmd" value="${sc.cmd}">
+				<div class="small muted">${esc(SCENE_HELP[sc.cmd])}</div>${sceneFieldHTML(sc)}${buttons('<button class="btn sm" data-op="add-after">+ Línea debajo</button>')}</div>`;
 		}
 		const help = { mutation: "Efecto (código, p. ej. $> Story.change(\"kenji\", \"afecto\", 2))", jump: "Salto: => END o => nombre_de_cue", cond: "Condición (if …, elif …, else)", variant: "Variante al azar (% …)", comment: "Comentario (# …)" }[k] || "Línea";
 		return `<div class="fform" data-path="${key}" data-kind="raw"><div class="small muted">${esc(help)}</div>
@@ -1097,6 +1372,8 @@
 				const mentions = val("mentions").split("|").filter(Boolean);
 				if (mentions.length) tags.push(MENTION + "=" + mentions.join("|"));
 				text = F.buildOption({ body: val("body") || "…", tags: F.tagsFromList(tags), cond: val("cond"), jump: val("jump") });
+			} else if (form.dataset.kind === "scene") {
+				text = sceneText(val("cmd"), val("arg"));
 			} else {
 				text = val("raw");
 			}
@@ -1214,6 +1491,190 @@
 		return n;
 	}
 
+	// --- Ver escena: vista previa con fondo, retratos, efectos y respuestas -------------------------
+
+	function bgUrl(place) {
+		if (!place) return "";
+		const f = S.backgrounds.find((n) => n.replace(/\.[a-z]+$/, "") === place) || S.backgrounds.find((n) => n.startsWith(place + "_"));
+		return f ? rawUrl("assets/backgrounds/" + f) : "";
+	}
+	function portraitUrl(id, face) {
+		const c = charInfo(id);
+		if (!c || !c.portrait) return "";
+		return rawUrl((face && c.faces && c.faces[face]) || c.portrait);
+	}
+	const shownText = (t) => F.unescape(t).replace(/\{\{Story\.speaker\}\}/g, "Compañero").replace(/\{\{[^}]*\}\}/g, "…");
+
+	function lineEvent(text) {
+		const p = F.parseLine(text);
+		const face = splitFace(F.tagList(p.tags)).face;
+		const ch = charByName(p.speaker);
+		return { type: "line", speaker: p.speaker, id: ch ? ch.id : "", text: p.body, face };
+	}
+
+	/** Recorre la escena como el juego: produce líneas, comandos y elecciones (recibe la elegida). */
+	function* walkScene(nodes, ctx) {
+		let i = 0;
+		while (i < nodes.length && !ctx.stop) {
+			const n = nodes[i];
+			const k = F.kind(n.text);
+			if (k === "blank" || k === "comment") { i++; continue; }
+			if (k === "option" || k === "variant" || k === "cond") {
+				const grp = [];
+				let j = i;
+				while (j < nodes.length) {
+					const kk = F.kind(nodes[j].text);
+					if (kk === "blank" || kk === "comment") { j++; continue; }
+					if (kk !== k) break;
+					if (k === "cond" && grp.length && (/^if\b/.test(nodes[j].text) || grp[grp.length - 1].text.startsWith("else"))) break;
+					grp.push(nodes[j]);
+					j++;
+				}
+				i = j;
+				if (k === "option") {
+					const opts = grp.map((o) => F.parseOption(o.text));
+					const pick = yield { type: "choice", options: opts.map((o) => o.body) };
+					if (opts[pick].jump) { yield { type: "jump", target: /^END/.test(opts[pick].jump) ? "" : opts[pick].jump }; ctx.stop = true; return; }
+					yield* walkScene(grp[pick].children, ctx);
+				} else if (k === "variant") {
+					const v = grp[Math.floor(Math.random() * grp.length)];
+					yield lineEvent(v.text);
+					yield* walkScene(v.children, ctx);
+				} else {
+					const hit = grp.find((g) => evalCond(g.text, S.sim) === true) || grp.find((g) => g.text.startsWith("else"));
+					if (hit) yield* walkScene(hit.children, ctx);
+				}
+				continue;
+			}
+			i++;
+			if (k === "jump") {
+				const t = n.text.replace(/^=><?\s*/, "");
+				yield { type: "jump", target: /^END/.test(t) ? "" : t };
+				ctx.stop = true;
+				return;
+			}
+			if (k === "mutation") { const sc = sceneCmd(n.text); if (sc) yield Object.assign({ type: "scene" }, sc); }
+			else if (k === "line") yield lineEvent(n.text);
+			yield* walkScene(n.children, ctx);
+		}
+	}
+
+	function closePlayer(fromHistory) {
+		const el = $("#player");
+		if (!el) return;
+		clearTimeout(el._timer);
+		el.remove();
+		if (fromHistory !== true && history.state && history.state.player) history.back();
+	}
+
+	function openPlayer(cue) {
+		const reopen = !!$("#player");
+		closePlayer(true);
+		const el = document.createElement("div");
+		el.id = "player";
+		const place = loadStr("vista-lugar") || (S.places.find((pl) => bgUrl(pl.id)) || {}).id || "";
+		el.innerHTML = `<div class="pstage"><div class="pbg"></div><img class="pport l" alt=""><img class="pport r" alt=""><div class="pflash"></div><div class="pblack"></div></div>
+			<div class="ptop"><span class="ptitle">${esc(sceneTitle(cue))}</span>
+				<select class="input" id="p-place" title="Dónde ocurre">${'<option value="">Sin fondo</option>' + S.places.map((pl) => `<option value="${esc(pl.id)}" ${pl.id === place ? "selected" : ""}>${esc(pl.name)}</option>`).join("")}</select>
+				<button class="btn sm" id="p-again">↺</button><button class="btn sm" id="p-close">✕</button></div>
+			<div class="pbox"><div class="pname"></div><div class="ptext"></div><div class="pchoices"></div><div class="pnext">▼</div></div>`;
+		document.body.appendChild(el);
+		if (!reopen) history.pushState({ player: true }, "", location.hash || "#editar");
+		const P = { place, right: speakersOf(cue)[0] || "", face: "", waiting: false };
+		const q = (sel) => el.querySelector(sel);
+		const setBg = (pl) => { const u = bgUrl(pl); q(".pbg").style.backgroundImage = u ? `url("${u}")` : ""; };
+		const portraits = () => {
+			const l = q(".pport.l"), r = q(".pport.r");
+			const lu = portraitUrl(S.cfg.protagonist);
+			if (l.getAttribute("src") !== lu) l.src = lu;
+			l.style.display = lu ? "" : "none";
+			const ru = P.right ? portraitUrl(P.right, P.face) : "";
+			if (r.getAttribute("src") !== ru) r.src = ru;
+			r.style.display = ru ? "" : "none";
+		};
+		const focus = (who) => { q(".pport.l").classList.toggle("dim", who !== S.cfg.protagonist); q(".pport.r").classList.toggle("dim", who !== P.right); };
+		const fx = (name) => {
+			const stage = q(".pstage");
+			if (name === "temblor") { stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake"); }
+			else if (name === "destello") { const f = q(".pflash"); f.classList.add("on"); setTimeout(() => f.classList.remove("on"), 90); }
+			else if (name === "negro") q(".pblack").classList.add("on");
+			else if (name === "vuelve") q(".pblack").classList.remove("on");
+		};
+		const end = (target) => {
+			P.waiting = false;
+			q(".pname").textContent = "";
+			q(".pnext").style.display = "none";
+			const next = target && allCues().find((x) => x.name === target);
+			q(".ptext").innerHTML = '<span class="muted">Fin de la escena.</span>';
+			q(".pchoices").innerHTML = (next ? `<button class="btn lime" data-next>Sigue en «${esc(sceneTitle(next))}» ▶</button>` : "") +
+				'<button class="btn" data-again>Ver otra vez</button><button class="btn ghost" data-close>Cerrar</button>';
+			const b = q("[data-next]");
+			if (b) b.onclick = () => openPlayer(next);
+			q("[data-again]").onclick = start;
+			q("[data-close]").onclick = () => closePlayer();
+		};
+		function step(value) {
+			clearTimeout(el._timer);
+			q(".pchoices").innerHTML = "";
+			q(".pnext").style.display = "none";
+			let r = P.gen.next(value);
+			while (!r.done) {
+				const ev = r.value;
+				if (ev.type === "scene") {
+					if (ev.cmd === "fondo") setBg(ev.arg || P.place);
+					else if (ev.cmd === "entra") { P.right = ev.arg; P.face = ""; portraits(); }
+					else if (ev.cmd === "sale") { if (P.right === ev.arg) { P.right = ""; portraits(); } }
+					else if (ev.cmd === "efecto") fx(ev.arg);
+					else if (ev.cmd === "esperar") { el._timer = setTimeout(() => step(), Math.min(+ev.arg || 1, 5) * 1000); P.waiting = false; return; }
+					r = P.gen.next();
+					continue;
+				}
+				if (ev.type === "line") {
+					const isRen = ev.id === S.cfg.protagonist;
+					if (ev.id && !isRen) { P.right = ev.id; P.face = ev.face; }
+					portraits();
+					focus(ev.id);
+					const name = ev.speaker ? shownText(ev.speaker) : "";
+					q(".pname").textContent = name;
+					q(".pname").style.color = ev.id ? charColor(ev.id) : "var(--lime)";
+					q(".ptext").textContent = shownText(ev.text);
+					q(".ptext").classList.toggle("narr", !ev.speaker);
+					q(".pnext").style.display = "";
+					P.waiting = true;
+					return;
+				}
+				if (ev.type === "choice") {
+					focus(S.cfg.protagonist);
+					q(".pname").textContent = renName() + " responde";
+					q(".pname").style.color = "var(--lime)";
+					q(".ptext").textContent = "";
+					q(".pchoices").innerHTML = ev.options.map((o, i) => `<button class="btn" data-i="${i}">${esc(shownText(o))}</button>`).join("");
+					q(".pchoices").querySelectorAll("[data-i]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); step(+b.dataset.i); }));
+					P.waiting = false;
+					return;
+				}
+				if (ev.type === "jump") { end(ev.target); return; }
+			}
+			end("");
+		}
+		function start() {
+			P.right = speakersOf(cue)[0] || "";
+			P.face = "";
+			q(".pblack").classList.remove("on");
+			setBg(P.place);
+			portraits();
+			P.gen = walkScene(F.parse(cue.body).children, { stop: false });
+			step();
+		}
+		const advance = () => { if (P.waiting) step(); };
+		q(".pstage").onclick = advance;
+		q(".pbox").onclick = (e) => { if (!e.target.closest("button")) advance(); };
+		q("#p-place").onchange = (e) => { P.place = e.target.value; saveStr("vista-lugar", P.place); setBg(P.place); };
+		q("#p-again").onclick = start;
+		q("#p-close").onclick = () => closePlayer();
+		start();
+	}
+
 	// --- Operaciones sobre cues ----------------------------------------------------------------
 
 	function renameCue(c, name) {
@@ -1246,30 +1707,46 @@
 		toast("Movido a " + to.name);
 	}
 
+	/** «Un día en el parque» → «un_dia_en_el_parque». */
+	const slug = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+
 	function newCueSheet() {
 		const files = S.files.filter((f) => !f.deleted);
-		const def = S.filter.file || (S.sel ? S.sel.file : files[0].name);
-		openSheet(`<h3>Nuevo diálogo</h3>
-			<div class="field"><label>Archivo (personaje)</label><select class="input" id="n-file">${files.map((f) => `<option ${f.name === def ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></div>
-			<div class="field"><label>Nombre del cue</label><input class="input" id="n-name" placeholder="p. ej. kenji_hablar_lluvia" autocapitalize="off" spellcheck="false"></div>
-			<div class="field"><label>Momento</label><select class="input" id="n-moment">${MOMENTS.map((m) => `<option>${m}</option>`).join("")}</select></div>
+		const def = S.filter.file && S.filter.file !== STORY ? S.filter.file : S.sel ? S.sel.file : (files.find((f) => /^capitulo/.test(f.name)) || files[0]).name;
+		const moments = knownValues().moments;
+		openSheet(`<h3>Nueva escena</h3>
+			<div class="field"><label>Título</label><input class="input" id="n-title" placeholder="p. ej. Kenji se pica con el voley" autocomplete="off"></div>
+			<div class="field"><label>¿De quién es?</label><select class="input" id="n-file">${files.map((f) => `<option value="${esc(f.name)}" ${f.name === def ? "selected" : ""}>${esc(fileLabel(f.name))}</option>`).join("")}</select></div>
+			<div class="field"><label>¿Cuándo sale?</label><select class="input" id="n-moment"><option value="">La lanza la historia o la abre otra escena</option>${moments.map((m) => `<option value="${esc(m)}">${esc(momentLabel(m))}</option>`).join("")}</select>
+				<div class="small muted" style="margin-top:5px">Las condiciones (día, fase, relación…) se ponen luego en «Cuándo sale».</div></div>
+			<details class="adv"><summary>Avanzado</summary>
+				<div class="field"><label>Nombre interno</label><input class="input" id="n-name" placeholder="se genera del título" autocapitalize="off" spellcheck="false"></div></details>
 			<div class="row"><button class="btn lime" id="n-ok">Crear</button><button class="btn ghost" id="n-cancel">Cancelar</button></div>`);
-		const upd = () => { const n = $("#n-name"); if (!n.value) n.placeholder = $("#n-file").value + "_" + $("#n-moment").value + "_"; };
-		$("#n-file").onchange = upd; $("#n-moment").onchange = upd; upd();
+		const auto = () => {
+			const file = $("#n-file").value;
+			let base = slug($("#n-title").value) || "escena";
+			if (charInfo(file) && !base.startsWith(file + "_")) base = file + "_" + base;
+			let name = base, k = 2;
+			while (allCues().some((x) => x.name === name)) name = base + "_" + k++;
+			return name;
+		};
+		const upd = () => { $("#n-name").placeholder = auto(); };
+		$("#n-title").oninput = upd; $("#n-file").onchange = upd; upd();
 		$("#n-cancel").onclick = closeSheet;
 		$("#n-ok").onclick = () => {
-			const name = $("#n-name").value.trim();
+			const name = $("#n-name").value.trim() || auto();
 			const file = S.files.find((f) => f.name === $("#n-file").value);
-			if (!/^[a-z0-9_]+$/.test(name)) { toast("Nombre: solo minúsculas, números y _", true); return; }
-			if (allCues().some((x) => x.name === name)) { toast("Ya existe ese nombre", true); return; }
+			if (!/^[a-z0-9_]+$/.test(name)) { toast("Nombre interno: solo minúsculas, números y _", true); return; }
+			if (allCues().some((x) => x.name === name)) { toast("Ya existe ese nombre interno", true); return; }
+			const moment = $("#n-moment").value;
 			const speaker = charInfo(file.name) ? charName(file.name) : "{{Story.speaker}}";
-			const cue = { name, file: file.name, rules: [{ moment: $("#n-moment").value, criteria: [], errors: [], dirty: true }],
-				body: speaker + ": ...\n=> END\n", dirty: true };
+			const cue = { name, file: file.name, title: $("#n-title").value.trim(), rules: moment ? [{ moment, criteria: [], errors: [], dirty: true }] : [],
+				body: speaker + ": …\n=> END\n", dirty: true };
 			file.cues.push(cue);
 			rebuildRules();
 			closeSheet();
 			selectCue(name, file.name, true);
-			toast("Creado " + name);
+			toast("Escena creada");
 		};
 	}
 
@@ -1744,6 +2221,7 @@
 
 	document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => setView(b.dataset.v)));
 	window.addEventListener("popstate", (e) => {
+		if ($("#player")) { closePlayer(true); return; }
 		if ($("#sheet-bg").classList.contains("open")) { closeSheet(true); if (e.state && e.state.sheet) return; }
 		setView(location.hash.slice(1) || "lista", true);
 	});
@@ -1751,7 +2229,7 @@
 	const brand = $(".brand");
 	brand.style.cursor = "pointer";
 	brand.setAttribute("role", "button");
-	brand.title = "Ir a la lista de diálogos";
+	brand.title = "Ir a la lista de escenas";
 	brand.onclick = () => {
 		closeSheet();
 		S.filter = { file: "", moment: "", q: "" };
@@ -1784,7 +2262,7 @@
 	}
 
 	// Para pruebas automáticas.
-	window.__editor = { S, M, start, selectCue, setView, renderAll, loadLocal, changedFiles, validateCue };
+	window.__editor = { S, M, start, selectCue, setView, renderAll, loadLocal, changedFiles, validateCue, openPlayer, addBlock, sceneTitle };
 
 	if (!window.__EDITOR_NO_AUTOSTART) start();
 })();
