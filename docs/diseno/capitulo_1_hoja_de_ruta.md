@@ -173,6 +173,14 @@ incursión ya existían para los cuatro.
 
 ### Fase 4 — La grieta
 
+> **Hecho**: plan `investigacion_colinas` (Shiori lo propone por mensaje al día
+> siguiente de la incursión 3; no caduca), escenas `investigacion_colinas`,
+> `grieta_aparece`, `grieta_asomarse` y `grieta_fin` en `capitulo1.dialogue`
+> con la puesta en escena en comandos `Story.efecto`; fase `grieta` al acabar.
+> Colinas cambia con la fase (`LocationDB` `from_phase`: descripción, fondo
+> `plaza_grieta[_franja]` si existe, `rift`) y tiene «La grieta» (tecla G, cue
+> `grieta_mirar`). Falta la imagen del usuario del fondo con la grieta.
+
 - **Investigación**: un plan obligatorio tras la incursión 3 (paso de guion,
   como el día 1) que junta las pistas y apunta a un sitio apartado del barrio.
 - **La grieta está en Colinas** [DEFINIDO] (la ubicación `plaza`, que el editor

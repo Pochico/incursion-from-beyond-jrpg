@@ -68,6 +68,7 @@ static func step(id: String) -> Dictionary:
 # escenas, como en los pasos del guion. Cada plan se hace una vez.
 #   phase / before_phase  solo desde esa fase / antes de esa fase
 #   min_day               solo desde ese día (los planes sin `day`)
+#   days_after_phase      solo al menos N días después de empezar `phase`
 #   Un plan con `invite` de alguien que aún no es amigo de Ren (Acquaintance) no sale.
 #   invite                quién lo propone y cómo (ver Invites):
 #                           from, text  mensaje que lo propone
@@ -315,6 +316,23 @@ const PLANS := {
 		"advance_time": true,
 		"sets_phase": "reunion",
 	},
+	# Fase 4: tras la incursión 3, Shiori junta las pistas (el barro, las brújulas)
+	# y quedan en Colinas. Encuentran la grieta, se asoman y salen corriendo.
+	# Como la reunión, no caduca: cualquier día desde el siguiente, menos de noche.
+	"investigacion_colinas": {
+		"title": "Buscar en Colinas", "target": "plaza",
+		"phase": "incursion_3", "before_phase": "grieta", "days_after_phase": 1,
+		"cast": ["shiori", "kenji", "rika", "yuna", "akane"],
+		"scenes": [
+			{"cue": "investigacion_colinas", "npc": "shiori"},
+			{"cue": "grieta_aparece", "npc": "kenji"},
+			{"cue": "grieta_asomarse", "npc": "kenji"},
+			{"cue": "grieta_fin", "black": true},
+		],
+		"invite": {"from": "shiori", "text": "Lo he mirado bien. El barro, las brújulas, todo da a Colinas, a la parte de atrás, pasadas las pistas. Os espero allí. Cuando podáis, pero hoy mejor que mañana."},
+		"advance_time": true,
+		"sets_phase": "grieta",
+	},
 }
 
 ## Sucesos de guion (StoryBeats): saltan solos cuando se cumplen sus condiciones.
@@ -429,6 +447,10 @@ static func plan_available(id: String) -> bool:
 		return false   # quien no tiene el número de Ren no le invita
 	if p.has("min_day") and GameState.day_number() < int(p.min_day):
 		return false
+	if p.has("days_after_phase"):
+		var since: int = int(GameState.get_flag(GameState.PHASE_DAY + p.phase, 0))
+		if GameState.day_number() - since < int(p.days_after_phase):
+			return false
 	return true
 
 

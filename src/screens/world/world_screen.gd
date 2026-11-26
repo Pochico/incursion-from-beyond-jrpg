@@ -173,7 +173,27 @@ func _refresh_hints() -> void:
 	]
 	if LocationDB.is_dungeon(GameState.location_id):
 		items.append({"id": "dungeon", "key": "E", "label": "Entrar"})
+	if _has_rift():
+		items.append({"id": "rift", "key": "G", "label": "La grieta"})
 	_hint_bar.set_items(items)
+
+
+## Colinas desde la fase `grieta` (LocationDB `from_phase` → `rift`).
+func _has_rift() -> bool:
+	return LocationDB.get_location(GameState.location_id).get("rift", false)
+
+
+## «La grieta»: por ahora solo mirarla (cue `grieta_mirar`); entrar llega en la fase 6.
+func _look_at_rift() -> void:
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	await _conversation.play(Story.cue("grieta_mirar"), "")
+	_fade_cast(true, 0.25)
+	_show_hud(true)
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
 
 
 func _on_hint_pressed(id: String) -> void:
@@ -182,6 +202,8 @@ func _on_hint_pressed(id: String) -> void:
 	match id:
 		"dungeon":
 			_dungeon_entrance()
+		"rift":
+			_look_at_rift()
 		"map":
 			_open_map()
 		"phone":
@@ -204,6 +226,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event is InputEventKey and event.pressed and not event.echo \
 					and (event as InputEventKey).physical_keycode == KEY_E and LocationDB.is_dungeon(GameState.location_id):
 				_dungeon_entrance()
+			elif event is InputEventKey and event.pressed and not event.echo \
+					and (event as InputEventKey).physical_keycode == KEY_G and _has_rift():
+				_look_at_rift()
 			elif (event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")) \
 					and get_viewport().gui_get_focus_owner() == null:
 				_focus_character(_first_character())
@@ -364,6 +389,8 @@ func _play_plan(plan_id: String) -> void:
 			await _run_beat(beat, cast[0], "")
 	if plan.has("sets_phase"):
 		GameState.set_phase(plan.sets_phase)
+		_backdrop.set_location(GameState.location_id)   # la ubicación puede cambiar con la fase
+		_refresh_hints()
 	if plan.get("advance_time", false) and GameState.slot_id() != "noche":
 		_pass_time()
 	_spawn_cast()

@@ -586,6 +586,91 @@ $> Story.text("shiori", "Ya lo he visto en el grupo. El barro de la otra vez, la
 => END
 
 
+# --- La grieta (fase 4; plan investigacion_colinas de ChapterDB.PLANS) ------------------
+# Al día siguiente de la incursión 3, Shiori cita al grupo en Colinas. Encuentran
+# la grieta, Ren y Kenji se asoman y salen corriendo. Después, la fase es «grieta».
+# La puesta en escena (negro, temblor, destello) va en los comandos Story.efecto.
+
+~ investigacion_colinas
+# titulo: Buscar en Colinas
+Colinas. Pasadas las pistas de vóley, el césped sube hasta una fila de pinos. Detrás ya no hay farolas.
+Shiori: Aquí. Las dos marcas dan aquí.
+Kenji: Aquí no hay nada, loco. Hierba y una papelera.
+Rika: ¿Y si nos vamos? Lo digo en serio.
+Yuna: Kenji, no te separes.
+if Story.is_friend("akane")
+	Akane: Callaos un momento.
+Shiori: Mirad el suelo.
+Hay barro. El mismo barro oscuro de la otra vez, con la hierba aplastada en círculo.
+Ren: Va hacia los pinos.
+- (Ir delante.) [#decidido, #protector]
+	Ren: Quedaos detrás de mí.
+	Kenji: Ni de broma te dejo ir solo.
+- Esperad aquí. Miro yo y vuelvo. [#prudente]
+	Shiori: No. Vamos todos o no va nadie.
+- ¿Tú qué dices, Shiori? [#reservado]
+	Shiori: Que si nos damos la vuelta ahora, mañana estamos igual.
+Echáis a andar hacia los pinos.
+=> END
+
+~ grieta_aparece
+# titulo: La grieta
+$> Story.efecto("negro")
+Entre los dos pinos, el aire hace un ruido. Como una tela que se rasga muy despacio.
+$> Story.efecto("temblor")
+$> Story.efecto("vuelve")
+Ahí está. Una raja en el aire, de arriba abajo, más alta que una persona. Por dentro es violeta y se mueve, como si respirara.
+Rika: ¿Qué es eso? ¿Eso qué es?
+Kenji: No me jodas.
+Yuna: Kenji. Kenji, vámonos.
+Shiori: No la toquéis. Nadie la toque.
+if Story.is_friend("akane")
+	Akane: Es como lo de la máquina. Igual.
+Del otro lado sale aire frío. Huele a hierro.
+Kenji: Yo me asomo. Un segundo y salgo.
+- Voy contigo. [#decidido]
+	Kenji: Eso, my brodel. Los dos.
+- Echa el freno, magdaleno. [#prudente, #bromista]
+	Kenji: Si no miramos, no sabemos qué hay.
+	Kenji: Un segundo, Ren. Uno.
+	Ren: Pues voy contigo.
+=> END
+
+~ grieta_asomarse
+# titulo: Asomarse a la grieta
+Pasáis los dos. Detrás, Shiori os agarra de la mochila.
+$> Story.efecto("destello")
+$> Story.efecto("negro")
+Del otro lado no hay pinos. Hay un pasillo que no acaba, con paredes que parecen de carne y de cable a la vez.
+Algo gotea. Algo más lejos contesta.
+Kenji: Ren... ¿eso son ojos?
+Al fondo se encienden una docena de luces. Todas a la vez. Todas os miran.
+Ren: Fuera. ¡Fuera!
+$> Story.efecto("temblor")
+$> Story.efecto("vuelve")
+Caéis de espaldas en la hierba. La grieta sigue ahí, quieta, como si no hubiera pasado nada.
+Rika: ¿Qué habéis visto? ¿Qué había?
+Kenji: No lo sé. No lo sé, tía.
+Shiori: Vale. Nos vamos. Ya.
+Yuna le coge la mano a Kenji y no se la suelta.
+=> END
+
+~ grieta_fin
+# titulo: Vuelta a casa tras la grieta
+Nadie habla en todo el camino de vuelta.
+En el grupo, Shiori escribe lo único que dice nadie esa noche.
+$> Story.text("shiori", "Nadie vuelve allí solo. Mañana lo hablamos.")
+$> Story.set_flag("grieta_vista")
+=> END
+
+~ grieta_mirar
+# titulo: Mirar la grieta
+La grieta sigue entre los dos pinos. Se abre y se cierra muy despacio, como si respirara.
+Sale aire frío. Huele a hierro.
+Ren: Todavía no.
+=> END
+
+
 # =====================================================================================
 # DÍA 4 (jueves). Ver ChapterDB.PLANS: a mediodía, por la tarde y por la noche
 # coinciden dos planes. Unos se proponen en persona (opciones con

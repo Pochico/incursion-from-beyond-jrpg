@@ -48,6 +48,9 @@ const ALL := {
 	"plaza": {
 		"name": "Plaza Mayor", "desc": "Centro del distrito. Siempre hay alguien con quien hablar.",
 		"on_map": true, "pos": Vector2(0.46, 0.46), "cast": ["kenji", "rika", "yuna"],
+		# La grieta (fase 4): fondo propio cuando exista la imagen (plaza_grieta[_franja]).
+		"from_phase": {"grieta": {"desc": "Pasadas las pistas, entre dos pinos, el aire está rajado. Nadie más parece verlo.",
+				"backdrop": "plaza_grieta", "rift": true}},
 		"sky_top": Color("15112a"), "sky_bottom": Color("7a64b4"), "trees": true, "tower": true,
 	},
 	"estacion": {
@@ -116,6 +119,12 @@ static func get_location(id: String) -> Dictionary:
 		loc.desc = cfg.descs[id]
 	if cfg.get("capacity", {}).has(id):
 		loc.capacity = int(cfg.capacity[id])
+	# Cambios por fase de la historia (`from_phase`: {fase: {clave: valor}}), los
+	# últimos: p. ej. Colinas con la grieta (descripción, fondo `backdrop`, `rift`).
+	var by_phase: Dictionary = loc.get("from_phase", {})
+	for phase: String in by_phase:
+		if GameState.phase_at_least(phase):
+			loc.merge(by_phase[phase], true)
 	return loc
 
 
