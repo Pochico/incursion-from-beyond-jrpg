@@ -50,6 +50,14 @@ const PHASES: Array[String] = [
 	"rutina",         ## Día normal: nadie sabe nada de las criaturas.
 	"incursion_1",    ## Tras la primera incursión.
 	"reunion",        ## Tras la reunión del grupo en las Cloacas (ChapterDB.PLANS).
+	# Resto del capítulo 1 (ver docs/diseno/capitulo_1_hoja_de_ruta.md); aún sin contenido.
+	"incursion_2",    ## Tras la segunda incursión.
+	"incursion_3",    ## Tras la tercera incursión.
+	"grieta",         ## Han encontrado la grieta y se han asomado: preparación.
+	"exploracion_1",  ## Tras la primera exploración (retirada forzada).
+	"escaner",        ## Tienen el escáner; se abre el Pidl.
+	"captura",        ## Tienen el dispositivo de captura.
+	"jefe_1",         ## Jefe de la primera mazmorra vencido: fin del capítulo 1.
 ]
 
 ## Franjas del día. Las actividades (ir a clase, las camas elásticas, una
@@ -84,17 +92,16 @@ var story_step := ""
 ## reaccionen a las opciones de Ren (Social.present). No se guarda.
 var scene_cast: Array = []
 
-## Primera incursión: al hablar con el segundo personaje distinto aparece una
-## de estas criaturas, elegida al azar al empezar cada partida.
+## Primera incursión (suceso `incursion_1` de ChapterDB.BEATS): aparece una de
+## estas criaturas, elegida al azar al empezar cada partida.
 const INCURSION_ENEMIES: Array[String] = ["tiranosaurio", "oni"]
-const INCURSION_AT_CHARACTER := 2
 
 var incursion_enemy := ""
 var incursion_done := false
 ## El primer combate contra una criatura se hace con un compañero.
 var first_creature_fight_done := false
-## Personajes distintos con los que se ha hablado, en orden.
-var talked_to: Array[String] = []
+## Gente que Ren va conociendo: id -> "presentado" | "amigo" (ver Acquaintance).
+var acquaintance: Dictionary = {}
 
 
 func _ready() -> void:
@@ -125,6 +132,7 @@ func new_game() -> void:
 	for a: String in partners:
 		if a < partners[a]:
 			RelationEvents.record_couple(a, partners[a], CharacterDB.with_profile())
+	acquaintance = {}
 	intro_done = false
 	story_step = ChapterDB.FIRST_STEP
 	_reset_incursion()
@@ -135,16 +143,6 @@ func _reset_incursion() -> void:
 	incursion_enemy = INCURSION_ENEMIES.pick_random()
 	incursion_done = false
 	first_creature_fight_done = false
-	talked_to = []
-
-
-## Registra que se empieza una conversación con `character_id`. Devuelve true
-## si esta conversación desencadena la incursión.
-func register_conversation(character_id: String) -> bool:
-	if character_id in talked_to:
-		return false
-	talked_to.append(character_id)
-	return not incursion_done and talked_to.size() == INCURSION_AT_CHARACTER
 
 
 func set_location(id: String) -> void:
@@ -193,6 +191,11 @@ func add_xp(id: String, amount: int) -> Dictionary:
 	levels[id] = {"level": lv, "xp": xp}
 	changed.emit()
 	return {"id": id, "xp": amount, "from": from, "to": lv}
+
+
+## Sube a `id` justo al nivel siguiente (la primera incursión).
+func level_up(id: String) -> Dictionary:
+	return add_xp(id, ProgressionDB.xp_to_next(level_of(id)) - xp_of(id))
 
 
 ## Reparte `amount` a quienes participan (`ids`) y BENCH_SHARE al resto de los que
@@ -265,6 +268,9 @@ func add_money(amount: int) -> void:
 
 
 func add_message(contact: String, from: String, text: String) -> void:
+	# Quien no tiene el número de Ren no le escribe (ver Acquaintance).
+	if not Acquaintance.is_friend(contact):
+		return
 	var t := Time.get_time_dict_from_system()
 	if not messages.has(contact):
 		messages[contact] = []
@@ -345,7 +351,8 @@ func save_game() -> void:
 		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
 		"incursion": {"enemy": incursion_enemy, "done": incursion_done,
-			"first_creature_fight_done": first_creature_fight_done, "talked_to": talked_to},
+			"first_creature_fight_done": first_creature_fight_done},
+		"acquaintance": acquaintance,
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
@@ -397,7 +404,7 @@ func load_game() -> bool:
 	incursion_enemy = inc.get("enemy", incursion_enemy)
 	incursion_done = inc.get("done", false)
 	first_creature_fight_done = inc.get("first_creature_fight_done", false)
-	talked_to.assign(inc.get("talked_to", []))
+	acquaintance = data.get("acquaintance", {})
 	changed.emit()
 	return true
 

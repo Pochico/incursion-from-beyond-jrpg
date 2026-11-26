@@ -30,7 +30,7 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 	Kenji: Uhhh ¿y eso? ¿Hiciste algo en especial?
 	- Sí, bueno. Más o menos. [#reservado]
 		Kenji: ¿Qué fue? Cuenta, cuenta.
-	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|akane|rika|yuna|madre_kenji, #atrevido, #franco]
+	- Pues sí la verdad. Tuve una cita con {persona}. [#persona, #afecto>=15, #entre=shiori|rika|yuna|madre_kenji, #atrevido, #franco]
 		if Story.persona == "yuna"
 			$> Story.set_flag("dia1_cita_yuna")
 			Kenji: ...
@@ -63,11 +63,6 @@ Kenji: ¡Ren! ¡My brodel! Desde el viernes sin contestar un mensaje, loco. ¿Qu
 				Kenji: ¿Shiori? ¿La que habla como un diccionario?
 				Kenji: Ren, tú y yo nos conocemos desde los seis años. Eso no te lo crees ni tú.
 				Kenji: ¿Qué hicisteis, leer en silencio en la biblioteca? Porque eso no cuenta como cita.
-			elif Story.persona == "akane"
-				$> Story.set_flag("dia1_cita_akane")
-				Kenji: ¿Akane? ¿La de las recreativas? ¿La de la banda punk?
-				Kenji: Tío, esa te come vivo. Bueno, ya me contarás si sobreviviste. Por lo visto, sí.
-				Kenji: Esta tarde en Parquesur pasamos por las recreativas y se lo pregunto a ella.
 - Meh, un poco mierdolo, pero no terrible. [#franco]
 	Kenji: ¿Y eso? ¿Ha pasado algo?
 	- No, simplemente un poco rollo. [#evasivo]
@@ -185,12 +180,7 @@ Rika: ¡Ren, salta conmigo! ¡A la de tres!
 	Al tercer salto se te escapa la risa. Aquí es imposible hacerse el serio.
 Shiori: Kenji, Ren salta más alto que tú.
 Kenji: Porque yo cargo con el peso del arte. Es otra liga.
-if Story.flag("dia1_cita_akane")
-	Kenji: Por cierto, he pasado por las recreativas a preguntarle a Akane por vuestra «cita».
-	Kenji: Me ha mirado tres segundos sin pestañear y me ha dicho: «¿Y a ti qué te importa?». [#cara=sorpresa]
-	Kenji: Eso es un sí, tío. No me jodas. [#cara=sorpresa]
-	Rika: ¿Ren y Akane? ¿La punki? ¿Pero me estáis vacilando? [#cara=sorpresa]
-elif Story.flag("dia1_cita_madre_kenji")
+if Story.flag("dia1_cita_madre_kenji")
 	Kenji: Le he contado a mi madre lo de vuestra «cita».
 	Kenji: Me ha mandado tres corazones y un «ay, mi niño».
 	Yuna: Tu madre es la mejor, cielo.
@@ -330,16 +320,19 @@ Kenji: ¡Ren! ¡Socio! Ya estamos todos. Bueno, todos los importantes.
 Yuna: Apuntado. Hola, Ren. Hay bocadillos de tortilla. Si no comes, se los come él y luego le duele la tripa.
 Kenji: Eso era una vez.
 Yuna: Eran tres.
-Al fondo, alguien con una chupa llena de chapas baja la rampa grande sin frenar. Es Akane.
-Akane: (Parando de golpe a vuestro lado.) Anda. El de las recreativas, el del bajo y la novia del del bajo. Qué plan más raro.
+Al fondo, una chica con una chupa llena de chapas baja la rampa grande sin frenar.
+Akane: (Parando de golpe a vuestro lado.) Anda. El del bajo y la novia del del bajo.
 Kenji: ¡Akane! ¿Patinas?
 Akane: No. Estoy haciendo la compra. Claro que patino.
+Kenji: Ren, esta es Akane. Curra en las recres de Parquesur, en el turno de noche.
+$> Story.introduce("akane")
+Akane: Ya. Te he visto alguna vez por allí. Mirando, nunca jugando.
 - ¿Me enseñas? [#curioso, #atrevido]
 	Akane: Te enseño a caerte. Lo demás viene solo.
 	Te caes cuatro veces. A la quinta, bajas la rampa pequeña de pie. Akane asiente una vez. Viniendo de ella, es una ovación.
 	$> Story.change("akane", "respeto", 2)
 - Yo miro, que se me da mejor. [#reservado, #bromista]
-	Akane: Típico. Mirar también cuenta, ¿no? Eso dijiste una vez.
+	Akane: Típico.
 	Akane: Pues mira bien.
 	Baja la rampa grande de espaldas. Kenji grita como si fuera un gol.
 - Kenji va a intentar el mortal otra vez. [#bromista, #provocador, #alude=kenji]
@@ -1033,6 +1026,7 @@ Kenji: Y le habrían echado. Jajaja.
 La terraza de Westlake de noche. Guirnaldas de luces, un altavoz con más bajos que canciones y gente del grupo de Rika que no conoces.
 Rika: ¡Has venido! Mira, mira. Esta es Mio, esta es Natsuki, este es el primo de Natsuki que nadie sabe cómo se llama.
 Rika: Y esa de ahí apoyada en la barandilla, con cara de querer estar en otro sitio, es Akane. La he invitado yo. No preguntes.
+$> Story.introduce("akane")
 Akane: Me ha invitado. No me ha preguntado si quería.
 Rika: ¡Porque sabía que sí!
 - (Bailar con Rika.) [#desenfadado, #atrevido]
@@ -1140,4 +1134,25 @@ Mamá: Ha sido buena semana, ¿no? Te he visto mucho por ahí. Con tus amigos. R
 	$> Story.change("madre_ren", "afecto", 2)
 Mamá apoya la cabeza en tu hombro. A los diez minutos ronca un poquito.
 No apagas la tele. Te quedas un rato más, viendo cómo el cirujano descubre que la gemela no es gemela. Total, ya no hay prisa.
+=> END
+
+# --- A solas con Kenji (si la primera incursión no ha saltado antes) -------------------
+# Plan `kenji_a_solas` (desde el día 10). Al terminar salta la incursión (ChapterDB.BEATS).
+
+~ kenji_a_solas
+Bowls, a última hora. No queda nadie en las rampas. Kenji está sentado en el bordillo con el altavoz en las rodillas.
+Kenji: ¡Socio! Siéntate, siéntate. Esto lo tienes que oír con calma.
+Kenji: Tres noches con ella. Mi madre ya me ha amenazado con quitarme el enchufe.
+- Dale. [#decidido]
+- ¿Es la del final raro? [#curioso]
+	Kenji: Esa parte la he quitado. Me daba mal rollo.
+Kenji le da al play. Es buena. Más que buena.
+Kenji: ¿Y? Sé sincero.
+- Es lo mejor que has hecho. [#cariñoso, #franco]
+	Kenji: ¿Sí? ¿De verdad? No me lo digas por decir, loco.
+	$> Story.change("kenji", "afecto", 2)
+- Le sobra el último minuto. [#franco]
+	Kenji: Ya... Lo sabía. Lo sabía y no lo quería quitar.
+	$> Story.change("kenji", "respeto", 2)
+Kenji: Se la voy a mandar a mi padre. Cuando esté terminada del todo.
 => END

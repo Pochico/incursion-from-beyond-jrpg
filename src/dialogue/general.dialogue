@@ -107,7 +107,7 @@ Ren: ¡Atrás! ¡Ponte a cubierto!
 => END
 
 ~ aparece_oni
-La temperatura cae de golpe. Entre la gente aparece una figura altísima, descalza, que nadie ha visto llegar.
+La temperatura cae de golpe. Delante de vosotros hay una figura altísima, descalza. No la habéis visto llegar.
 Melena azul, un cuerno, una sonrisa que no le cabe en la cara. Las cuentas de su cintura tintinean sin que se mueva.
 Oni: Qué ciudad tan ruidosa... y tan llena de gente que ya no cree en nada. Hacía siglos que no cenaba tan bien.
 Ren: No vas a tocar a nadie.
@@ -178,6 +178,27 @@ Ren: ¿Echamos un combate?
 # cuando: alarma
 {{Story.speaker}}: ¡¿Qué ha sido eso?!
 Ren: Algo viene.
+=> END
+
+# --- Gente que Ren aún no conoce (Acquaintance), si no tiene sus propios cues ---
+
+~ conocido_presentacion
+Ren: Hola. Soy Ren.
+{{Story.speaker}}: Hola.
+=> END
+
+~ conocido_charla
+%
+	{{Story.speaker}}: ¿Qué tal?
+	Ren: Bien. ¿Y tú?
+	{{Story.speaker}}: Bien.
+%
+	{{Story.speaker}}: Ey.
+=> END
+
+~ conocido_amistad
+Ren: ¿Me das tu número?
+{{Story.speaker}}: Sí, claro. Apunta.
 => END
 
 ~ generico_tras_incursion

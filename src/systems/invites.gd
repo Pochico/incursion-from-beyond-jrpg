@@ -174,6 +174,8 @@ static func deliver_due() -> Array[String]:
 			continue
 		if (m.has("if") and not GameState.get_flag(m["if"])) or (m.has("unless") and GameState.get_flag(m.unless)):
 			continue
+		if not Acquaintance.is_friend(m.from):
+			continue
 		GameState.set_flag(key)
 		GameState.add_message(m.from, m.from, m.text)
 		if not senders.has(m.from):

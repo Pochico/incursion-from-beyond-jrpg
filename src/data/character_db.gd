@@ -76,6 +76,7 @@ const ALL := {
 	},
 	"akane": {
 		"name": "Akane", "color": Color("ff3d5a"),
+		"stranger_name": "Tía punki",   # hasta que Ren se presenta (Acquaintance)
 		"portrait": "res://assets/characters/akane.png",
 		"faces": {"enfado": "res://assets/characters/akane_enfado.png", "sorpresa": "res://assets/characters/akane_sorpresa.png"},
 		"scene": {"height": 770.0},
@@ -273,13 +274,22 @@ static func with_profile() -> Array[String]:
 ## Id a partir del nombre visible ("Rika" -> "rika"); "" si no existe.
 static func id_from_name(character_name: String) -> String:
 	for id: String in ALL:
-		if ALL[id].name == character_name:
+		if ALL[id].name == character_name or ALL[id].get("stranger_name", "") == character_name:
 			return id
 	return ""
 
 
+## Nombre visible: el genérico (`stranger_name`) mientras Ren no le conoce
+## (Acquaintance). GameState se busca en el árbol para que este archivo de datos
+## no dependa del autoload (herramientas y scripts sueltos).
 static func display_name(id: String) -> String:
-	return get_character(id).get("name", "")
+	var data := get_character(id)
+	if data.has("stranger_name"):
+		var tree := Engine.get_main_loop() as SceneTree
+		var gs: Node = tree.root.get_node_or_null(^"GameState") if tree else null
+		if gs and not gs.acquaintance.has(id):
+			return data.stranger_name
+	return data.get("name", "")
 
 
 ## Altura (m) a la que flota una criatura voladora en la mazmorra; 0 = de pie.

@@ -2,6 +2,51 @@
 # Ficha: src/data/characters/akane.json
 
 # =====================================================================================
+# CONOCERLA — hasta que Ren tiene su número (Acquaintance; los lanza el menú)
+# =====================================================================================
+
+~ akane_presentacion
+Una chica con una chupa llena de chapas. Te mira de arriba abajo.
+Ren: Hola. Soy Ren.
+Akane: Ya. Te he visto por las recres. Siempre mirando, nunca jugando.
+Akane: Akane.
+- ¿Trabajas allí? [#curioso]
+	Akane: Turno de noche. Cambio monedas y echo a los pesados.
+- Un día de estos juego. [#bromista]
+	Akane: Eso dicen todos.
+- Encantado. [#reservado]
+	Akane: Vale.
+=> END
+
+~ akane_charla
+%
+	Akane: ¿Qué pasa?
+	Ren: Nada. Pasaba por aquí.
+	Akane: Vale.
+%
+	Akane: Hoy hay poca gente. Mejor.
+%
+	Akane: Ey. ¿Otra vez por aquí?
+	Ren: Eso parece.
+%
+	Akane: Estoy esperando a alguien. Bueno, a nadie. Pero estoy esperando.
+=> END
+
+~ akane_amistad
+Ren: Oye, ¿me das tu número?
+Akane: ¿Para qué?
+- Por si un día voy a veros tocar. [#cariñoso]
+	Akane: ¿Cómo sabes que tengo banda? ...Kenji. Qué bocazas.
+- Para hablar, sin más. [#franco]
+	Akane: Vale. Pero no me mandes audios.
+- Por si necesitas a alguien que mire mientras juegas. [#bromista]
+	Akane: Qué gracioso.
+Akane te quita el móvil, se apunta ella misma y se hace una perdida.
+Akane: Ya está.
+$> Story.change("akane", "afecto", 2)
+=> END
+
+# =====================================================================================
 # HABLAR — antes de la incursión
 # =====================================================================================
 

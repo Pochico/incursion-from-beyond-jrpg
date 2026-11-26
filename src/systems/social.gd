@@ -243,8 +243,8 @@ static func is_person_filter(tag: String) -> bool:
 static func person_candidates(filters: Array, exclude: Array = []) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in CharacterDB.with_profile():
-		if id == CharacterDB.PROTAGONIST or id in exclude:
-			continue
+		if id == CharacterDB.PROTAGONIST or id in exclude or Acquaintance.is_stranger(id):
+			continue   # a quien no conoce, Ren no lo nombra
 		var ok := true
 		for f: String in filters:
 			if not _person_matches(id, f):

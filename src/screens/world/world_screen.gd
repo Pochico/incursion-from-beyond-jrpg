@@ -337,9 +337,15 @@ func _play_plan(plan_id: String) -> void:
 			await _black_scene(Story.cue(scene.cue))
 		else:
 			await _conversation.play(Story.cue(scene.cue), scene.get("npc", ""))
+	var cast: Array = plan.get("cast", [])
 	GameState.scene_cast = []
 	GameState.set_flag(ChapterDB.PLAN_DONE + plan_id)
-	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, plan.get("cast", []))
+	GameState.record("plan", CharacterDB.PROTAGONIST, plan_id, {}, cast)
+	# A solas con alguien al acabar el plan: puede saltar un suceso (la incursión).
+	if cast.size() == 1:
+		var beat := StoryBeats.check("plan_end", cast[0], cast)
+		if beat != "":
+			await _run_beat(beat, cast[0], "")
 	if plan.has("sets_phase"):
 		GameState.set_phase(plan.sets_phase)
 	if plan.get("advance_time", false) and GameState.slot_id() != "noche":
@@ -676,7 +682,9 @@ func _on_character_activated(id: String) -> void:
 	var sprite: CharacterSprite = _sprites[id]
 	var img := sprite.image_rect()
 	var actions: Array = InteractionMenu.ACTIONS
-	if CharacterDB.get_character(id).get("talk_only", false):
+	if not Acquaintance.is_friend(id):
+		actions = Acquaintance.menu_actions(id)   # saludar / charla corta / pedir el número
+	elif CharacterDB.get_character(id).get("talk_only", false):
 		actions = actions.filter(func(a: Dictionary) -> bool: return a.id in ["talk", "plan"])
 	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "", Color(0, 0, 0, 0), actions)
 
@@ -715,9 +723,11 @@ func _on_action_chosen(id: String, action: String) -> void:
 	if action == "examine":
 		GameState.record("examine", CharacterDB.PROTAGONIST, id)
 		await _conversation.play(Story.cue("examinar_" + id), "")
-	elif GameState.register_conversation(id):
+	elif not Acquaintance.is_friend(id):
+		await _talk_to_acquaintance(id, action)
+	elif action == "talk" and StoryBeats.check("talk", id, _cast(GameState.location_id)) != "":
 		Social.begin_interaction(id, action, true)
-		await _run_incursion(id, action)
+		await _run_beat(StoryBeats.check("talk", id, _cast(GameState.location_id)), id, action)
 	else:
 		var result := Social.begin_interaction(id, action)
 		if result != Social.OK:
@@ -742,6 +752,23 @@ func _on_action_chosen(id: String, action: String) -> void:
 	mode = Mode.EXPLORE
 	_set_cast_interactive(true)
 	_focus_character(id)
+
+
+## Charla con alguien que aún no es amigo de Ren (Acquaintance): presentarse, una
+## charla corta o pedirle el número. Sin cue escrito, una línea genérica.
+func _talk_to_acquaintance(id: String, action: String) -> void:
+	var was := Acquaintance.state(id)
+	var cue := Acquaintance.cue_for(id, action)
+	if Story.has_cue(cue):
+		await _conversation.play(Story.cue(cue), id)
+	else:
+		await _conversation.play(Story.cue("conocido_" + cue.trim_prefix(id + "_")), id)
+	if was == Acquaintance.STRANGER:
+		Acquaintance.introduce(id)
+	elif action == "befriend":
+		Acquaintance.befriend(id)
+		Toast.show_in(self, "%s ya está en tus contactos" % CharacterDB.display_name(id), UIStyle.LIME, 3.0, 170.0)
+	_spawn_cast()   # su nombre en la etiqueta
 
 
 # --- Citas (Romance) -------------------------------------------------------------------
@@ -902,11 +929,14 @@ func _use_bed(id: String, action: String) -> void:
 ## Fundido → combate → fundido. Devuelve si ha ganado el grupo.
 ## En el primer combate contra una criatura lucha también un compañero
 ## (`ally_hint` o uno al azar) con habilidades al azar de todo el catálogo.
-func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
+func _run_combat(enemy_id: String, ally_hint: String = "", rules: Dictionary = {}) -> bool:
 	mode = Mode.COMBAT
 	var ally := ""
 	var ally_skills: Array = []
-	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
+	if rules.get("basic_only", false):
+		ally = ally_hint   # la primera incursión: quien estaba con Ren, sin habilidades
+		GameState.first_creature_fight_done = true
+	elif CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
 		ally = ally_hint if ally_hint in CharacterDB.COMPANIONS else CharacterDB.COMPANIONS.pick_random()
 		ally_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(ally), CharacterDB.get_character(ally).get("nature", ""))
@@ -914,7 +944,7 @@ func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
 	# Criaturas en la calle: al nivel de Ren (ver ProgressionDB). Las personas, al suyo.
 	var level := ProgressionDB.street_creature_level(GameState.level_of(CharacterDB.PROTAGONIST)) \
 			if CharacterDB.is_enemy(enemy_id) else 0
-	_combat.setup(enemy_id, ally, ally_skills, {}, level)
+	_combat.setup(enemy_id, ally, ally_skills, {}, level, false, rules)
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
@@ -929,16 +959,39 @@ func _run_combat(enemy_id: String, ally_hint: String = "") -> bool:
 
 # --- Incursión ---------------------------------------------------------------------------
 
-## La conversación con `npc_id` se corta de golpe: temblor, aparece la criatura
-## de esta partida y hay que combatirla.
+## Reproduce el suceso de guion `beat` (ChapterDB.BEATS) con `npc_id`.
+## `action`: lo que Ren iba a hacer con él ("" si salta al acabar un plan).
+func _run_beat(beat: String, npc_id: String, action: String) -> void:
+	StoryBeats.mark_done(beat)
+	match beat:
+		"incursion_1":
+			await _run_incursion(npc_id, action)
+
+
+## Primera incursión: la conversación con `npc_id` (si la hay) se corta de golpe,
+## tiembla todo, aparece la criatura de esta partida y hay que combatirla los dos
+## solos, sin habilidades ni objetos. Si ganan, los dos suben un nivel.
 func _run_incursion(npc_id: String, action: String) -> void:
 	var enemy_id := GameState.incursion_enemy
-	await _conversation.play(Story.pick(npc_id, Story.moment_for(action)), npc_id, true, true, INCURSION_CUT_AFTER)
+	_fade_cast(false, 0.25)
+	_show_hud(false)
+	if action != "":
+		await _conversation.play(Story.pick(npc_id, Story.moment_for(action)), npc_id, true, true, INCURSION_CUT_AFTER)
 	await _quake()
 	await _conversation.play(Story.cue("temblor"), npc_id, true, true)
 	await _conversation.play(Story.pick(npc_id, "alarma"), npc_id, true, true)
 	await _conversation.play(Story.cue("aparece_" + enemy_id), enemy_id, true)
-	var won := await _run_combat(enemy_id, npc_id)
+	var pair := [CharacterDB.PROTAGONIST, npc_id]
+	var before := pair.map(func(w: String) -> int: return GameState.level_of(w))
+	var won := await _run_combat(enemy_id, npc_id, {"basic_only": true})
+	if won:
+		# Suben un nivel (si la EXP del combate no les ha subido ya).
+		var up: Array[String] = []
+		for i in pair.size():
+			if GameState.level_of(pair[i]) == before[i]:
+				GameState.level_up(pair[i])
+			up.append(CharacterDB.display_name(pair[i]))
+		Toast.show_in(self, "%s suben al nivel %d" % [" y ".join(up), GameState.level_of(npc_id)], UIStyle.LIME, 4.0, 170.0)
 	GameState.incursion_done = true
 	# Todos los presentes lo han visto: a partir de aquí saben que existen las criaturas.
 	GameState.record("incursion", enemy_id, npc_id, {"won": won}, Social.present(), "incursion_1")
@@ -948,7 +1001,8 @@ func _run_incursion(npc_id: String, action: String) -> void:
 	var result := {"resultado": "gana" if won else "pierde"}
 	await _conversation.play(Story.cue("derrota_%s_%s" % [enemy_id, result.resultado]), npc_id, true, true)
 	await _conversation.play(Story.pick(npc_id, "tras_incursion", result), npc_id)
-	_announce_plans()   # el grupo convoca la reunión en las Cloacas
+	if action != "":
+		_announce_plans()   # el grupo convoca la reunión (tras un plan, ya avisa _play_plan)
 
 
 ## Temblor de cámara: sacudida fuerte con destello, réplica y una más pequeña.

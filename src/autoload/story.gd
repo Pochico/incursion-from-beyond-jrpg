@@ -212,6 +212,21 @@ func knows_couple(who: String, a: String, b: String) -> bool:
 	return RelationEvents.knows_last(who, "couple", a, b)
 
 
+## Ren se presenta a alguien que no conocía (Acquaintance): desde ya sale su nombre.
+func introduce(who: String) -> void:
+	Acquaintance.introduce(who)
+
+
+## Ren y `who` se dan el número: ya sale en el móvil (Acquaintance).
+func befriend(who: String) -> void:
+	Acquaintance.befriend(who)
+
+
+## ¿Tiene Ren el número de `who`? (los de siempre, sí)
+func is_friend(who: String) -> bool:
+	return Acquaintance.is_friend(who)
+
+
 func day() -> int:
 	return GameState.day_number()
 

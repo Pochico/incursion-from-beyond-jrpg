@@ -22,7 +22,8 @@ extends Control
 
 signal finished(player_won: bool)
 
-enum State { IDLE, COMMAND, OPTION, ANIMATING, RESULT, STATUS }
+## TARGET: eligiendo rival con el marco lima (ver `_start_targeting`).
+enum State { IDLE, COMMAND, OPTION, TARGET, ANIMATING, RESULT, STATUS }
 
 const VIEWPORT_RECT := Rect2(10, 96, 1418, 782)
 const COMMAND_Y := 898.0
@@ -45,8 +46,12 @@ var backdrop_override: Texture2D
 var _actor := Battle.PLAYER       # miembro del grupo al que le toca elegir
 var _state := State.IDLE
 var _enemy_id := ""
+## Reglas de este combate (setup): `basic_only` = solo Atacar, Defender y Huir
+## (la primera incursión).
+var rules: Dictionary = {}
 var _pending_item := ""       ## objeto elegido mientras se escoge sobre quién usarlo
 var _pending_action := ""     ## acción elegida mientras se escoge a qué rival va
+var _target_foe := ""         ## rival enmarcado mientras se elige (State.TARGET)
 var _current_command := 0
 var _info_text := ""
 var _log_text := ""             # última acción del combate (registro)
@@ -218,7 +223,8 @@ const DEFAULT_ENEMY_SIZE := Vector2(560, 600)
 ## máximo); al acabar, `party_vitals()`. `enemy_level` > 0 fija el nivel de las
 ## criaturas (ver ProgressionDB). `boss`: el primero es el jefe de la zona.
 func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vitals: Dictionary = {},
-		enemy_level: int = 0, boss: bool = false) -> void:
+		enemy_level: int = 0, boss: bool = false, combat_rules: Dictionary = {}) -> void:
+	rules = combat_rules
 	var ids: Array = enemy_ids if enemy_ids is Array else [enemy_ids]
 	_enemy_id = ids[0]
 	_battle = Battle.new(CharacterDB.PROTAGONIST, ids, ally_id, ally_skills, enemy_level, boss)
@@ -252,6 +258,8 @@ func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vi
 		else:
 			_cards[i].setup("", i + 1)
 
+	for i in COMMANDS.size():
+		_commands[i].modulate.a = 0.4 if _blocked(COMMANDS[i].id) else 1.0
 	_build_options(0)
 	var who := _foe_names()
 	var verb := "te cierran" if _battle.foes.size() > 1 else "te cierra"
@@ -356,7 +364,7 @@ func begin() -> void:
 # --- Estados y entrada ---------------------------------------------------------------------
 
 func _enter_command_state(index: int) -> void:
-	_pending_action = ""
+	_clear_target()
 	for i in _battle.party.size():
 		_cards[i].active = _battle.party.size() > 1 and _battle.party[i] == _actor
 	_state = State.COMMAND
@@ -374,9 +382,10 @@ func _set_commands_enabled(on: bool) -> void:
 
 
 func _on_command_focused(index: int) -> void:
-	if _state != State.COMMAND and _state != State.OPTION:
+	if not _choosing():
 		return
 	# Volver a la fila de comandos (con ↑ o el ratón) sale de la de opciones.
+	_clear_target()
 	_state = State.COMMAND
 	_current_command = index
 	for i in _commands.size():
@@ -386,15 +395,14 @@ func _on_command_focused(index: int) -> void:
 
 
 func _on_command_pressed(index: int) -> void:
-	if _state != State.COMMAND:
+	if not _choosing():
 		return
-	_current_command = index
-	# Un toque basta: si el comando tiene una sola opción (Atacar, Defender,
-	# Analizar, Huir), se hace ya; con varios rivales, Atacar pasa a elegir a quién.
-	var opts := _options_for(COMMANDS[index].id)
-	if opts.size() == 1 and opts[0].has("action") and not opts[0].get("disabled", false):
-		_execute(opts[0].action)
-		return
+	# Si el botón ya tenía el foco no llega focus_entered: se vuelve aquí a su
+	# fila de opciones (si no, el toque se perdía).
+	if _state != State.COMMAND or index != _current_command:
+		_on_command_focused(index)
+	# El comando solo abre sus opciones (queda marcado); lo que se hace se elige
+	# siempre abajo, también con una sola opción, para que un toque no actúe solo.
 	var first := _first_enabled_option()
 	if first:
 		_state = State.OPTION
@@ -408,9 +416,17 @@ func _first_enabled_option() -> PillButton:
 	return null
 
 
+## ¿Está el comando cerrado por las reglas de este combate?
+func _blocked(command_id: String) -> bool:
+	return rules.get("basic_only", false) and command_id in ["skill", "item", "analyze"]
+
+
 ## Opciones de cada comando.
 func _options_for(command_id: String) -> Array:
 	var p := _battle.fighter(_actor)
+	if _blocked(command_id):
+		return [{"label": "Ahora no", "icon": "lock", "disabled": true,
+			"desc": "No hay tiempo para nada más: atacar, cubrirse o huir."}]
 	match command_id:
 		"attack":
 			var can := _battle.can_attack(_actor)
@@ -516,6 +532,7 @@ func _build_options(index: int) -> void:
 			b.modulate.a = 0.45
 		b.focus_entered.connect(func() -> void: _set_info(b.description))
 		if opt.has("action"):
+			b.set_meta("action", opt.action)
 			b.pressed.connect(_execute.bind(opt.action))
 		_options.add_child(b)
 
@@ -523,7 +540,7 @@ func _build_options(index: int) -> void:
 ## Abre la pantalla de estado del miembro del grupo de la ficha `slot`.
 ## Solo mientras el jugador está eligiendo acción.
 func _open_status(slot: int) -> void:
-	if _state != State.COMMAND and _state != State.OPTION:
+	if not _choosing():
 		return
 	if slot >= _battle.party.size():
 		return
@@ -540,9 +557,23 @@ func _on_status_closed() -> void:
 func _input(event: InputEvent) -> void:
 	# Tab: estado de quien está eligiendo. En _input porque, si no, Tab lo
 	# gasta antes el sistema de foco de los botones.
-	if visible and (_state == State.COMMAND or _state == State.OPTION) and event.is_action_pressed("ui_focus_next"):
+	if visible and _choosing() and event.is_action_pressed("ui_focus_next"):
 		_open_status(_battle.party.find(_actor))
 		get_viewport().set_input_as_handled()
+	# Eligiendo rival: ←/→ mueven el marco, Enter confirma, Esc vuelve. Aquí
+	# antes de que el foco de los botones se lleve las flechas.
+	elif visible and _state == State.TARGET:
+		var step := -1 if event.is_action_pressed("ui_left") else (1 if event.is_action_pressed("ui_right") else 0)
+		if step != 0:
+			var alive := _battle.alive_foes()
+			_set_target(alive[wrapi(alive.find(_target_foe) + step, 0, alive.size())])
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("ui_accept"):
+			get_viewport().set_input_as_handled()
+			_confirm_target()
+		elif event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
+			_cancel_target()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -564,27 +595,33 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		finished.emit(_battle.player_won())
 		return
-	# Tocar a un rival: si se está eligiendo contra quién, va contra él; si no,
-	# lo ataca directamente.
-	if (_state == State.COMMAND or _state == State.OPTION) and event is InputEventMouseButton \
+	# Tocar a un rival lo enmarca (si no se estaba eligiendo, para atacarle) y
+	# tocar al ya enmarcado confirma: nunca se actúa con un solo toque.
+	if _choosing() and event is InputEventMouseButton \
 			and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var who := _foe_at(event.position)
 		if who == "":
 			return
 		accept_event()
-		var action := _pending_action if _pending_action != "" else "attack"
-		if action == "attack" and not _battle.can_attack(_actor):
-			return
-		_highlight_foe(who)
-		_execute("%s@%s" % [action, who])
+		if _state == State.TARGET:
+			if who == _target_foe:
+				_confirm_target()
+			else:
+				_set_target(who)
+		elif _battle.can_attack(_actor):
+			_current_command = 0
+			for i in _commands.size():
+				_commands[i].active = i == 0
+			_build_options(0)
+			_start_targeting("attack", who)
 
 
 ## Rival en pie bajo el punto `p` (coordenadas de la vista), o "".
 func _foe_at(p: Vector2) -> String:
 	var best := ""
 	for who in _battle.alive_foes():
-		var s := _sprite(who)
-		var r := Rect2(_viewport.position + s.position, s.size)
+		var r := _foe_rect(who).grow(30)
+		r.position += _viewport.position
 		if r.has_point(p):
 			best = who   # el último de la fila manda si se solapan
 	return best
@@ -593,7 +630,11 @@ func _foe_at(p: Vector2) -> String:
 # --- Ejecución de turnos ---------------------------------------------------------------------
 
 func _execute(action: String) -> void:
-	if _state != State.COMMAND and _state != State.OPTION:
+	if not _choosing():
+		return
+	# Con el marco puesto, volver a pulsar la misma opción confirma.
+	if _state == State.TARGET and action == _pending_action:
+		_confirm_target()
 		return
 	# Objeto con más de uno en el grupo: antes, elegir sobre quién.
 	var parts := action.split(":")
@@ -601,11 +642,11 @@ func _execute(action: String) -> void:
 		_pending_item = parts[1]
 		_show_item_targets()
 		return
-	# Con varios rivales en pie, las acciones contra uno solo piden a cuál.
-	if not action.contains("@") and _battle.alive_foes().size() > 1 and _needs_foe_target(action):
-		_show_foe_targets(action)
+	# Las acciones contra un rival piden a cuál con el marco (también con uno solo).
+	if not action.contains("@") and _needs_foe_target(action):
+		_start_targeting(action, _target_foe if _state == State.TARGET else "")
 		return
-	_pending_action = ""
+	_clear_target()
 	await _run_action(action)
 	await _prompt()
 
@@ -622,28 +663,70 @@ func _needs_foe_target(action: String) -> bool:
 	return false
 
 
-## Cambia las opciones por los rivales en pie: «Imp · 23 PV».
-func _show_foe_targets(action: String) -> void:
+## ¿Está el jugador eligiendo qué hacer (comando, opción o rival)?
+func _choosing() -> bool:
+	return _state == State.COMMAND or _state == State.OPTION or _state == State.TARGET
+
+
+## Pasa a elegir rival para `action`: marco lima sobre `who` (o el primero en pie
+## por la izquierda). La opción elegida queda marcada abajo; se confirma tocando
+## al rival enmarcado, volviendo a pulsar la opción o con Enter.
+func _start_targeting(action: String, who: String = "") -> void:
 	_pending_action = action
+	_state = State.TARGET
 	for c in _options.get_children():
-		c.queue_free()
-	for who in _battle.alive_foes():
-		var f := _battle.fighter(who)
-		var b := PillButton.new()
-		b.label = f.name + ("  %d PV" % f.pv if _plate_of(who).analyzed else "")
-		b.icon_name = "slash"
-		b.selectable = true
-		b.description = "Contra %s (puesto %d)." % [f.name, Battle.FOES.find(who) + 1]
-		b.font_size = 24
-		b.custom_minimum_size = Vector2(250, 50)
-		b.focus_entered.connect(func() -> void:
-			_set_info(b.description)
-			_highlight_foe(who))
-		b.pressed.connect(_execute.bind("%s@%s" % [action, who]))
-		_options.add_child(b)
-	_log("¿Contra quién? Toca al rival o elige abajo.")
+		if c.get_meta("action", "") == action:
+			(c as Control).grab_focus()
+	_set_target(who if who != "" else _battle.alive_foes()[0])
+	if App.is_touch():
+		_log("¿Contra quién? Toca al marcado para confirmar, o a otro.")
+	else:
+		_log("¿Contra quién? ←/→ cambia · Enter o clic confirma · Esc vuelve.")
+
+
+func _set_target(who: String) -> void:
+	_target_foe = who
+	_highlight_foe(who)
+	_fx.queue_redraw()
+
+
+func _confirm_target() -> void:
+	if _state == State.TARGET and _target_foe != "":
+		_execute("%s@%s" % [_pending_action, _target_foe])
+
+
+## Esc eligiendo rival: vuelve a la fila de opciones, con la elegida marcada.
+func _cancel_target() -> void:
+	_clear_target()
 	_state = State.OPTION
-	(_options.get_child(0) as Control).grab_focus.call_deferred()
+	_set_info(COMMANDS[_current_command].desc)
+
+
+func _clear_target() -> void:
+	_pending_action = ""
+	if _target_foe == "":
+		return
+	_target_foe = ""
+	if _battle:
+		for w in _battle.foes:
+			_sprite(w).glow_idle = 0.9 if _battle.is_alive(w) else 0.0
+	_fx.queue_redraw()
+
+
+## Parte visible del rival `who` en el visor (sin el aire transparente de su imagen).
+func _foe_rect(who: String) -> Rect2:
+	var s := _sprite(who)
+	var r := s.content_rect()
+	return Rect2(s.position + r.position, r.size)
+
+
+## Nombre de la acción para la etiqueta del marco: «Atacar», «Golpe psíquico»...
+func _action_name(action: String) -> String:
+	if action.begins_with("skill:"):
+		return SkillDB.display_name(action.substr(6))
+	if action.begins_with("item:"):
+		return ItemDB.display_name(action.split(":")[1])
+	return "Atacar"
 
 
 ## Resalta un momento al rival que se está señalando.
@@ -1067,9 +1150,10 @@ func _show_result() -> void:
 			_cards[i].setup(f.id, i + 1, f)
 	_result_sub = "   ·   ".join(gains)
 	if won:
-		var t := create_tween().set_parallel(true)
-		for who in _battle.foes:
-			if _sprite(who).modulate.a > 0.0:
+		var visible_foes := _battle.foes.filter(func(w: String) -> bool: return _sprite(w).modulate.a > 0.0)
+		if not visible_foes.is_empty():   # un Tween sin pasos da error
+			var t := create_tween().set_parallel(true)
+			for who: String in visible_foes:
 				t.tween_property(_sprite(who), "modulate", Color(0.35, 0.35, 0.4, 1.0), 0.5)
 	_set_info("Pulsa Enter para continuar.")
 	var tw := create_tween()
@@ -1157,6 +1241,27 @@ func _draw() -> void:
 
 
 
+## Esquinas lima alrededor de `rect` y una etiqueta encima (sin tapar las placas).
+func _draw_target(rect: Rect2, label: String) -> void:
+	var vs := _fx.size
+	var r := rect.grow(14).intersection(Rect2(Vector2(8, 150), vs - Vector2(16, 210)))
+	var col := UIStyle.LIME
+	var k := minf(40.0, minf(r.size.x, r.size.y) * 0.3)
+	for corner in [[r.position, Vector2(1, 0), Vector2(0, 1)], [Vector2(r.end.x, r.position.y), Vector2(-1, 0), Vector2(0, 1)],
+			[r.end, Vector2(-1, 0), Vector2(0, -1)], [Vector2(r.position.x, r.end.y), Vector2(1, 0), Vector2(0, -1)]]:
+		_fx.draw_line(corner[0], corner[0] + corner[1] * k, col, 4.0)
+		_fx.draw_line(corner[0], corner[0] + corner[2] * k, col, 4.0)
+	var font := UIStyle.FONT_BOLD_ITALIC
+	var fs := 26
+	var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var tag_pos := Vector2(clampf(r.get_center().x - tw * 0.5 - 24, 10, vs.x - tw - 60), maxf(r.position.y - 54, 150))
+	var tag := UIStyle.slanted_rect(Rect2(tag_pos, Vector2(tw + 48, 44)), 12)
+	_fx.draw_colored_polygon(tag, Color(UIStyle.INK, 0.85))
+	UIStyle.draw_outline(_fx, tag, col, 1.5)
+	_fx.draw_colored_polygon(UIStyle.slanted_rect(Rect2(tag_pos + Vector2(14, 10), Vector2(7, 24)), 5), UIStyle.RED)
+	_fx.draw_string(font, tag_pos + Vector2(30, 32), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UIStyle.WHITE)
+
+
 func _draw_info() -> void:
 	var r := Rect2(Vector2.ZERO, _info.size)
 	var shape := PackedVector2Array([
@@ -1174,6 +1279,9 @@ func _draw_info() -> void:
 
 func _draw_fx() -> void:
 	var vs := _fx.size
+	# Rival elegido: esquinas lima y etiqueta con la acción (como lo de delante en la mazmorra).
+	if _state == State.TARGET and _target_foe != "":
+		_draw_target(_foe_rect(_target_foe), "%s  ·  %s" % [_action_name(_pending_action), _battle.fighter(_target_foe).name])
 	# Medidor de Tensión (abajo a la izquierda del visor).
 	var ty := vs.y - 50
 	var tshape := PackedVector2Array([Vector2(0, ty), Vector2(460, ty), Vector2(508, vs.y), Vector2(0, vs.y)])
