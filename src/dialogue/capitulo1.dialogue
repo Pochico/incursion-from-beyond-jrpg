@@ -12,7 +12,7 @@ Lunes, siete y veinte.
 La alarma suena por tercera vez. La apagas sin abrir los ojos.
 Ren: Ay no...
 Mamá: ¡Ren! ¡Que son y veinte! ¡Que llegas tarde!
-Ren: Ya voy, mamá...
+Ren: Ya voooooy...
 Mamá: Te he dejado el desayuno en la mesa. ¡Y abrígate, que hace frío! Yo ya me voy a trabajar.
 $> Story.text("kenji", "¿Vienes hoy o te doy por muerto? Te espero en mates.")
 El móvil vibra encima de la mesilla. Es Kenji.
@@ -81,12 +81,12 @@ Kenji: Un Chocopolvo, pero con eso ya cuenta.
 Yuna: ¿Pero cómo va a contar un Chocopolvo a tu edad? Toma anda, te he guardado media napolitana. [#cara=enfado]
 Kenji: ¿Lo ves, Ren? Por esto me voy a casar con ella.
 Yuna: Hola, Ren. Este no ha parado en todo el finde con que no le contestabas.
-- Lo siento, se me pasó. [#franco]
-	Yuna: A mí no me lo digas. Díselo a él, que estaba preocupado.
-	Kenji: No estaba preocupado. Estaba... atento.
+- Kenji no exageres,que si me escribes 90 veces tampoco voy a contestar a todas. [#franco, #bromista, #alude=kenji]
+	Yuna: ¿Ves? Te dije que igual te estabas pasando de insistente...
+	Kenji: Cómo no voy a insistir, si acaba de salir el GTA viladrau. Tiene unas gráficas muy potentes. [#cara=sorpresa]
 - Le estaba poniendo a prueba. [#bromista]
 	Yuna: Pues casi suspende. Ha mirado el móvil cuarenta veces.
-- Gracias por cuidar de él. [#cariñoso]
+- Mucho lío, perdona. [#independiente, #desenfadado]
 	Yuna: Alguien tiene que hacerlo. Tú también, ¿eh?
 if Story.flag("dia1_cita_yuna")
 	Kenji: Amor. Que sepas que Ren va diciendo por ahí que el finde tuvisteis una cita.
@@ -107,25 +107,27 @@ if Story.flag("dia1_cita_rika")
 	- Y si fuese así ¿qué dirías? [#atrevido, #coqueto]
 		Rika: Eh, eh, echa el freno magdaleno. Somos amigos. Lo dices de coña, ¿no?
 		$> Story.change("rika", "atraccion", 2)
-	- Fue un bubble tea, Kenji. Tampoco te emociones. [#reservado]
-		Rika: Eso, eso. Un bubble tea. ...Muy rico, por cierto.
+	- Sólo estuvimos estudiando, ¿te hubieses venido? [#evasivo, #alude=kenji]
+		Rika: Eso, nunca te vienes a estudiar. Igual así no te perdías tantas cosas.
+		if Story.present("kenji")
+			Kenji: Cómo os gusta quedar para estudiar...
 Rika: Ren, ¿hiciste los ejercicios del viernes? Dime que sí y que me los dejas.
 - Sí, toma. [#cariñoso]
-	Rika: ¡Te quiero! Bueno, quiero tus ejercicios, pero para ti también hay un poquito
+	Rika: ¡Te quiero! Bueno, quiero tus ejercicios, pero ya me entiendes.
 - No los hice. [#franco]
 	Rika: ¿Tú tampoco? Pues ya somos dos. Tres, que Kenji seguro que tampoco.
 	Kenji: Me ofende que lo des por hecho. Aunque aciertas.
 - Pídeselos a Shiori. [#bromista]
-	Rika: ¿A Shiori? Me cobra intereses.
-Shiori: Buenos días. Los ejercicios del viernes estaban en el libro, Rika. Con las soluciones al final.
-Rika: ¿Al final? ¿Desde cuándo? [#cara=sorpresa]
-Shiori: Desde siempre.
+	Rika: ¿A Shiori? No me los va a dejar...
+Shiori: Buenos días. Los ejercicios del viernes estaban en el libro, Rika.
+Rika: El problema no es encontrarlos, el problema es hacerlos yo sola... Qué pereza [#cara=sorpresa]
+Shiori: Yo no te los voy a hacer, que si no no aprendes.
 if Story.flag("dia1_cita_shiori")
 	Kenji: Shiori, una pregunta rápida. ¿Es verdad que el finde tuviste una cita con Ren?
 	Shiori: No.
-	Shiori: El sábado estuve en la biblioteca municipal de diez a dos y después en casa. Si alguien dice otra cosa, que lo demuestre.
+	Shiori: El sábado estuve en la biblioteca.
 	Rika: Uy, qué frío ha hecho de repente. ¿Y por qué lo dice Ren, entonces?
-	Shiori: Pregúntaselo a él. Aunque, si lo dice para que lo dejéis en paz, entiendo la estrategia.
+	Shiori: Pregúntaselo a él.
 Se abre la puerta. Entra la profesora con una pila de fotocopias y el café a medio terminar.
 Profesora: Buenos días. Sentaos, que hoy empezamos tema nuevo.
 Profesora: Toca aprender a derivar. Id abriendo los libros por la página ciento doce.
@@ -134,7 +136,7 @@ Shiori: Espabila, Kenji. Que al final no llegas a selectividad. [#cara=enfado]
 Kenji: ¿Así me animas? Qué solo estoy...¡QUÉ SOLO! [#cara=sorpresa]
 Yuna: (Bajito.) Venga, osito, que tú puedes. Luego te lo explico yo.
 Profesora: ¿Algún comentario que queráis compartir con la clase?
-Kenji: No, no. Le decía que me encantan las derivadas. [#cara=sorpresa]
+Kenji: No, no. Me callo, me callo... [#cara=sorpresa]
 => END
 
 ~ dia1_clase_fundido
