@@ -715,3 +715,31 @@ if Story.other_plan_title() != ""
 	Shiori: Lo apunto.
 	$> Story.change("shiori", "confianza", -1)
 => END
+
+# --- La grieta: presión (fase 5) ------------------------------------------------------
+
+~ shiori_hablar_grieta_1
+# titulo: Shiori, días después de la grieta
+# cuando: hablar, flag grieta_etapa_1, una vez
+Shiori: He apuntado todo lo que vimos. El olor, el frío, las luces.
+Shiori: Doce. Siempre doce. No creo que sea casualidad.
+=> END
+
+~ shiori_hablar_grieta_2
+# titulo: Shiori, curiosa pero prudente
+# cuando: hablar, flag grieta_etapa_2, una vez
+Shiori: Quiero entrar. Lo reconozco.
+Shiori: Pero no a lo loco. Agua, linternas, algo para defendernos. Y salir antes de que se haga de noche.
+- Hazme una lista. [#pragmático]
+	Shiori: Ya está hecha. Te la mando.
+	$> Story.change("shiori", "respeto", 2)
+- Kenji no va a esperar a la lista. [#franco]
+	Shiori: Lo sé. Por eso la tengo hecha.
+=> END
+
+~ shiori_hablar_grieta_3
+# titulo: Shiori, casi una semana
+# cuando: hablar, flag grieta_etapa_3, una vez
+Shiori: Mañana o pasado entramos. Ya no lo para nadie.
+Shiori: Prefiero que estemos todos. Y que vayas descansado.
+=> END

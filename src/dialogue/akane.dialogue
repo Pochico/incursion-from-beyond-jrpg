@@ -745,3 +745,32 @@ if Story.other_plan_title() != ""
 	Akane: Relájate tú. Lejos de mí.
 	$> Story.change("akane", "confianza", -2)
 => END
+
+# --- La grieta: presión (fase 5) ------------------------------------------------------
+
+~ akane_hablar_grieta_1
+# titulo: Akane, días después de la grieta
+# cuando: hablar, flag grieta_etapa_1, una vez
+Akane: ¿Lo de la grieta sigue ahí?
+Ren: Sí.
+Akane: Vale. Solo quería saberlo.
+=> END
+
+~ akane_hablar_grieta_2
+# titulo: Akane se impacienta
+# cuando: hablar, flag grieta_etapa_2, una vez
+Akane: Estoy harta de esperar.
+Akane: En el curro no me concentro. Se me ha caído una bandeja entera.
+- Pronto. [#conciliador]
+	Akane: «Pronto» no es un día.
+- Yo también estoy harto. [#franco]
+	Akane: Pues ya está. Díselo a los demás.
+	$> Story.change("akane", "afecto", 2)
+=> END
+
+~ akane_hablar_grieta_3
+# titulo: Akane, al límite
+# cuando: hablar, flag grieta_etapa_3, una vez
+Akane: Una semana el domingo.
+Akane: Si no entráis, entro yo. No es una amenaza. Es lo que va a pasar.
+=> END

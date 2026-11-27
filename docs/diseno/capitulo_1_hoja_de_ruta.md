@@ -200,6 +200,20 @@ incursión ya existían para los cuatro.
 
 ### Fase 5 — Preparación: estadísticas y presión del grupo
 
+> **Hecho**: `TrainingDB` + `Training` (actividades del usuario: FUE vóley en
+> Colinas, AGI camas elásticas en el Parquesur, RES «La mazmorra de lo
+> grotesco» en casa, INT leer en Egaleo, TEC guerra de nerf en Bowls, VOL
+> zombis en tinieblas en las Cloacas; los sitios de nerf y zombis son
+> provisionales). La primera vez de cada una solo se descubre (cue
+> `entreno_<id>_descubre`, sin subir nada); después sube +1 una vez por semana
+> por estadística (`entreno_<id>`). Solo o con alguien del grupo («Entrenar
+> juntos» en su menú: sube lo mismo y +2 de afecto). Tecla F en el sitio. En el
+> panel de estado, triángulo lima en lo entrenado esta semana. `Pressure`:
+> etapas `grieta_etapa_1..3` (días 1, 3 y 5) como flags exclusivos, ánimos por
+> carácter, tres charlas por personaje y mensajes con `phase_day`. El día 7, el
+> grupo se planta en casa (`grieta_ultimatum`); antes, desde «La grieta» Ren
+> puede decidir entrar. La entrada en sí es la fase 6 (por ahora, aviso).
+
 - **Subir estadísticas** [DEFINIDO]: cada estadística, una vez por semana,
   haciendo una actividad disponible.
   - Sistema `Training` + datos `TrainingDB`: actividad → estadística, sitio,

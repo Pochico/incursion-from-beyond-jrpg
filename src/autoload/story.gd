@@ -105,6 +105,20 @@ func persona_name() -> String:
 	return CharacterDB.display_name(persona) if persona != "" else ""
 
 
+## Quien entrena con Ren ahora ("" si va solo; ver Training). En los diálogos:
+## if Story.companion != "" y {{Story.companion_name()}}: … para que hable.
+var companion := ""
+
+
+func companion_name() -> String:
+	return CharacterDB.display_name(companion) if companion != "" else ""
+
+
+## Días desde que encontraron la grieta (-1 si aún no; ver Pressure).
+func days_since_rift() -> int:
+	return Pressure.days_since()
+
+
 ## Dónde fue la primera incursión («Colinas», «Bowls»...), para los diálogos.
 func incursion_place() -> String:
 	return str(GameState.get_flag("lugar_incursion", "la calle"))

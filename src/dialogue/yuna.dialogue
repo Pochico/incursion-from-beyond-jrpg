@@ -547,3 +547,35 @@ Yuna: No grito, ya lo sabes. Pero me sentó mal.
 	Yuna: Ah. Vale.
 	$> Story.change("yuna", "afecto", -1)
 => END
+
+# --- La grieta: presión (fase 5) ------------------------------------------------------
+
+~ yuna_hablar_grieta_1
+# titulo: Yuna, días después de la grieta
+# cuando: hablar, flag grieta_etapa_1, una vez
+Yuna: Kenji no para de hablar de la grieta.
+Yuna: Yo prefiero no pensar en ella. ¿Está mal?
+- No. [#empático]
+	Yuna: Vale. Gracias.
+	$> Story.change("yuna", "afecto", 2)
+- Algo habrá que hacer. [#pragmático]
+	Yuna: Ya. Lo sé.
+=> END
+
+~ yuna_hablar_grieta_2
+# titulo: Yuna tiene miedo
+# cuando: hablar, flag grieta_etapa_2, una vez
+Yuna: He vuelto al gimnasio de taekwondo. Por si acaso.
+Yuna: Pero tengo miedo, Ren. Por Kenji, sobre todo. Él no tiene miedo y eso me da más miedo.
+- Yo le vigilo. [#protector]
+	Yuna: Os vigiláis los dos. Prométemelo.
+- Es normal tener miedo. [#empático]
+	Yuna: Ya.
+=> END
+
+~ yuna_hablar_grieta_3
+# titulo: Yuna, casi una semana
+# cuando: hablar, flag grieta_etapa_3, una vez
+Yuna: Kenji va a entrar el domingo. Con o sin nosotros.
+Yuna: Así que voy. Y tú también, ¿verdad?
+=> END

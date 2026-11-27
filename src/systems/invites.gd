@@ -170,7 +170,12 @@ static func deliver_due() -> Array[String]:
 	for i in ChapterDB.MESSAGES.size():
 		var m: Dictionary = ChapterDB.MESSAGES[i]
 		var key := "mensaje_dia:%d" % i
-		if GameState.get_flag(key) or int(m.day) != GameState.day_number() or _slot_index(m.slot) > GameState.time_slot:
+		# `day` = día de la partida; o `phase` + `phase_day` = días después de empezar esa fase.
+		var day := int(m.get("day", -1))
+		if m.has("phase_day"):
+			day = -1 if not GameState.phase_at_least(m.phase) else \
+					int(GameState.get_flag(GameState.PHASE_DAY + m.phase, 0)) + int(m.phase_day)
+		if GameState.get_flag(key) or day != GameState.day_number() or _slot_index(m.slot) > GameState.time_slot:
 			continue
 		if (m.has("if") and not GameState.get_flag(m["if"])) or (m.has("unless") and GameState.get_flag(m.unless)):
 			continue

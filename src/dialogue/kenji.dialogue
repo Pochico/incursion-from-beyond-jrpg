@@ -757,3 +757,40 @@ if Story.other_plan_title() != ""
 	Kenji: Ya. Siempre se te cruza algo.
 	$> Story.change("kenji", "confianza", -1)
 => END
+
+# --- La grieta: presión (fase 5; Pressure pone grieta_etapa_N cada mañana) ------------
+
+~ kenji_hablar_grieta_1
+# titulo: Kenji, días después de la grieta
+# cuando: hablar, flag grieta_etapa_1, una vez
+Kenji: No pego ojo, tío. Cierro los ojos y estoy otra vez en el pasillo ese.
+Kenji: Pero no de miedo, ¿eh? Es que quiero saber qué hay al fondo.
+- Yo también. [#franco]
+	Kenji: Lo sabía. Tú y yo, socio.
+	$> Story.change("kenji", "afecto", 2)
+- Echa el freno, magdaleno. [#prudente, #bromista]
+	Kenji: Ya, ya. Shiori me ha dicho lo mismo. Con menos gracia.
+=> END
+
+~ kenji_hablar_grieta_2
+# titulo: Kenji se impacienta
+# cuando: hablar, flag grieta_etapa_2, una vez
+Kenji: ¿A qué estamos esperando, loco?
+Kenji: Cada día que pasa, eso sigue ahí. Y la voz de las 3\:33 también.
+- A estar preparados. [#decidido, #pragmático]
+	Kenji: Vale. Pero preparados no es «nunca».
+- No lo sé. [#franco]
+	Kenji: Pues ya somos dos.
+=> END
+
+~ kenji_hablar_grieta_3
+# titulo: Kenji, al límite
+# cuando: hablar, flag grieta_etapa_3, una vez
+Kenji: Te lo digo ya para que no te pille de sorpresa.
+Kenji: Si el domingo no hemos entrado, entro yo. Con Yuna o sin Yuna.
+- No vas a ir solo. [#protector]
+	Kenji: Por eso te lo digo, my brodel.
+	$> Story.change("kenji", "confianza", 2)
+- No me jodas, Kenji. [#franco]
+	Kenji: Lo digo en serio.
+=> END

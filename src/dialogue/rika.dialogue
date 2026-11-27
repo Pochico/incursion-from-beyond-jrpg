@@ -752,3 +752,37 @@ Rika: ¡Ren! Esta noche, fiesta en la terraza de Westlake. Una de mi grupo. Vien
 	$> Story.plan_answer("fiesta_rika", "no")
 	Rika: Vale. Pero que sepas que te lo pierdes.
 => END
+
+# --- La grieta: presión (fase 5) ------------------------------------------------------
+
+~ rika_hablar_grieta_1
+# titulo: Rika, días después de la grieta
+# cuando: hablar, flag grieta_etapa_1, una vez
+Rika: ¿Tú has dormido? Yo no.
+Rika: Cada vez que cierro los ojos veo las luces esas. Las doce.
+- Yo tampoco duermo bien. [#franco, #empático]
+	Rika: ¿Sí? Vale. Me alivia un poco. Qué mal suena eso.
+	$> Story.change("rika", "afecto", 2)
+- Aquí no te va a pasar nada. [#protector]
+	Rika: Eso no lo sabes.
+=> END
+
+~ rika_hablar_grieta_2
+# titulo: Rika tiene miedo
+# cuando: hablar, flag grieta_etapa_2, una vez
+Rika: Kenji quiere entrar. Akane también.
+Rika: ¿Y si no salimos? ¿Lo habéis pensado?
+- Saldremos. Juntos. [#protector]
+	Rika: Vale. Si lo dices tú.
+- Sí. Lo he pensado. [#franco]
+	Rika: ¿Y?
+	Ren: Y no lo sé.
+	Rika: Pues por lo menos eres sincero.
+=> END
+
+~ rika_hablar_grieta_3
+# titulo: Rika, casi una semana
+# cuando: hablar, flag grieta_etapa_3, una vez
+Rika: Si vais a entrar, voy.
+Rika: No porque quiera. Porque no os voy a dejar solos.
+=> END

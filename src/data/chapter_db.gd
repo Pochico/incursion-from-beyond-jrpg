@@ -409,6 +409,19 @@ const MESSAGES := [
 		"text": "Tío. Mi padre me ha escrito. Ha escuchado las canciones. Dice que la tercera le ha gustado. LA TERCERA, REN."},
 	{"day": 7, "slot": "tarde", "from": "rika",
 		"text": "Domingo de bajón. ¿Por qué los domingos por la tarde son tan tristes? Mándame un meme o algo, cielo."},
+	# Tras la grieta (fase 5): `phase_day` = días después de encontrarla. Presión del grupo.
+	{"phase": "grieta", "phase_day": 1, "slot": "manana", "from": "shiori",
+		"text": "He apuntado todo lo que vimos. Si alguien se acuerda de algo más, que me lo diga. Lo que sea."},
+	{"phase": "grieta", "phase_day": 2, "slot": "tarde", "from": "kenji",
+		"text": "¿Y si entramos ya? Con palos, linternas y lo que sea. Lo digo en serio, loco."},
+	{"phase": "grieta", "phase_day": 3, "slot": "noche", "from": "rika",
+		"text": "No puedo dormir. Cada vez que cierro los ojos veo las luces esas. ¿Tú duermes?"},
+	{"phase": "grieta", "phase_day": 4, "slot": "dia", "from": "akane",
+		"text": "Estoy harta de esperar. O entramos o lo dejo. Bueno, no lo dejo. Pero entramos."},
+	{"phase": "grieta", "phase_day": 5, "slot": "tarde", "from": "yuna",
+		"text": "Kenji quiere entrar ya. Yo no sé. Ren, ¿tú qué piensas? Dímelo a mí, no al grupo."},
+	{"phase": "grieta", "phase_day": 6, "slot": "noche", "from": "shiori",
+		"text": "Mañana se cumple una semana. Kenji y Akane van a ir sí o sí. Mejor ir juntos y preparados. Descansa."},
 ]
 
 const PLAN_DONE := "plan_hecho:"

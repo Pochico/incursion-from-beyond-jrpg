@@ -175,6 +175,9 @@ func _refresh_hints() -> void:
 		items.append({"id": "dungeon", "key": "E", "label": "Entrar"})
 	if _has_rift():
 		items.append({"id": "rift", "key": "G", "label": "La grieta"})
+	var activity := Training.available_at(GameState.location_id)
+	if activity != "":
+		items.append({"id": "train", "key": "F", "label": TrainingDB.activity(activity).name})
 	_hint_bar.set_items(items)
 
 
@@ -183,17 +186,77 @@ func _has_rift() -> bool:
 	return LocationDB.get_location(GameState.location_id).get("rift", false)
 
 
-## «La grieta»: por ahora solo mirarla (cue `grieta_mirar`); entrar llega en la fase 6.
+## «La grieta»: mirarla (cue `grieta_mirar`). Si Ren decide entrar (flag
+## Pressure.DECIDED en la escena), avisa al grupo: _enter_rift.
 func _look_at_rift() -> void:
 	mode = Mode.TALK
 	_set_cast_interactive(false)
 	_fade_cast(false, 0.25)
 	_show_hud(false)
 	await _conversation.play(Story.cue("grieta_mirar"), "")
+	if GameState.get_flag(Pressure.DECIDED):
+		await _enter_rift()
+		return
 	_fade_cast(true, 0.25)
 	_show_hud(true)
 	mode = Mode.EXPLORE
 	_set_cast_interactive(true)
+
+
+## Entrar en la grieta con el grupo. La exploración (elegir equipo, mazmorra)
+## es la fase 6: por ahora se queda decidido y se avisa.
+func _enter_rift() -> void:
+	_rift_decided()
+	GameState.save_game()
+	_fade_cast(true, 0.25)
+	_show_hud(true)
+	_refresh_hints()
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+
+
+func _rift_decided() -> void:
+	GameState.set_flag(Pressure.DECIDED)
+	Toast.show_in(self, "Continuará: la primera exploración llega en la fase 6", UIStyle.VIOLET, 5.0, 250.0)
+
+
+# --- Entrenamiento (Training) ----------------------------------------------------------
+
+## Hace la actividad del sitio, solo o con `partner`: su escena (la primera vez,
+## la de descubrirla) y lo que sube.
+func _run_training(activity_id: String, partner: String = "") -> void:
+	var a := TrainingDB.activity(activity_id)
+	mode = Mode.TALK
+	_set_cast_interactive(false)
+	_empty_hint.visible = false
+	_show_hud(false)
+	var first := not Training.discovered(activity_id)
+	var cue: String = a.cue + ("_descubre" if first else "")
+	Story.companion = partner
+	GameState.scene_cast = [partner] if partner != "" else []
+	_fade_cast(false, 0.25)   # quien entrena con Ren sale en el retrato de la conversación
+	await _conversation.play(Story.cue(cue), partner)
+	GameState.scene_cast = []
+	Story.companion = ""
+	var result := Training.perform(activity_id, partner)
+	var stat: String = TrainingDB.STAT_NAMES[a.stat]
+	if result.first:
+		Toast.show_in(self, "Lo tendrás en cuenta: %s puede subir tu %s (una vez por semana)" % [a.name, stat], UIStyle.VIOLET, 5.0, 250.0)
+	elif result.repeated:
+		Toast.show_in(self, "Esta semana ya has entrenado %s" % stat, UIStyle.VIOLET, 4.0, 250.0)
+	else:
+		var names: Array = result.gained.keys().map(func(w: String) -> String: return CharacterDB.display_name(w))
+		Toast.show_in(self, "%s +%d · %s" % [stat, TrainingDB.STAT_GAIN, ", ".join(names)], UIStyle.LIME, 5.0, 250.0)
+	if GameState.slot_id() != "noche":
+		_pass_time()
+	_spawn_cast()
+	_fade_cast(true, 0.25)
+	GameState.save_game()
+	_show_hud(true)
+	_refresh_hints()
+	mode = Mode.EXPLORE
+	_set_cast_interactive(true)
+	_update_empty_hint()
 
 
 func _on_hint_pressed(id: String) -> void:
@@ -204,6 +267,8 @@ func _on_hint_pressed(id: String) -> void:
 			_dungeon_entrance()
 		"rift":
 			_look_at_rift()
+		"train":
+			_run_training(Training.available_at(GameState.location_id))
 		"map":
 			_open_map()
 		"phone":
@@ -229,6 +294,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event is InputEventKey and event.pressed and not event.echo \
 					and (event as InputEventKey).physical_keycode == KEY_G and _has_rift():
 				_look_at_rift()
+			elif event is InputEventKey and event.pressed and not event.echo \
+					and (event as InputEventKey).physical_keycode == KEY_F and Training.available_at(GameState.location_id) != "":
+				_run_training(Training.available_at(GameState.location_id))
 			elif (event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")) \
 					and get_viewport().gui_get_focus_owner() == null:
 				_focus_character(_first_character())
@@ -490,6 +558,7 @@ func _go_to_next_morning(narration: String = "") -> void:
 		await _conversation.play(Story.cue(narration), "", false)
 		await SceneRouter.fade_out(0.5)
 	GameState.wake_up_next_day()
+	Pressure.on_new_day()
 	_backdrop.set_location(GameState.location_id)
 	_spawn_cast()
 	var transition := DayTransition.new()
@@ -509,6 +578,15 @@ func _go_to_next_morning(narration: String = "") -> void:
 		GameState.scene_cast = [morning.npc]
 		await _conversation.play(Story.cue(morning.cue), morning.npc)
 		GameState.scene_cast = []
+	# El día límite tras la grieta: el grupo se planta en casa y entráis.
+	if Pressure.forced_today():
+		await SceneRouter.fade_out(0.3)
+		_fade_room(true)
+		await SceneRouter.fade_in(0.4)
+		GameState.scene_cast = Pressure.TEMPERS.keys().filter(func(w: String) -> bool: return Acquaintance.is_friend(w))
+		await _conversation.play(Story.cue("grieta_ultimatum"), "kenji")
+		GameState.scene_cast = []
+		_rift_decided()
 	GameState.save_game()
 	_enter_explore()
 	await _check_partner()
@@ -729,6 +807,11 @@ func _on_character_activated(id: String) -> void:
 		actions = Acquaintance.menu_actions(id)   # saludar / charla corta / pedir el número
 	elif CharacterDB.get_character(id).get("talk_only", false):
 		actions = actions.filter(func(a: Dictionary) -> bool: return a.id in ["talk", "plan"])
+	# Entrenar juntos: si en este sitio hay actividad ahora y es del grupo.
+	var activity := Training.available_at(GameState.location_id)
+	if activity != "" and Training.can_partner(id) and not CharacterDB.get_character(id).get("talk_only", false):
+		actions = actions + [{"id": "entrenar", "label": "Entrenar juntos", "icon": "run",
+				"desc": "%s (%s)." % [TrainingDB.activity(activity).name, TrainingDB.STAT_NAMES[TrainingDB.activity(activity).stat]]}]
 	_interaction.open(id, Rect2(sprite.position + img.position, img.size), "", Color(0, 0, 0, 0), actions)
 
 
@@ -748,6 +831,9 @@ func _on_action_chosen(id: String, action: String) -> void:
 		return
 	if action == "plan":
 		_open_plan_activities(id)
+		return
+	if action == "entrenar":
+		await _run_training(Training.available_at(GameState.location_id), id)
 		return
 	if action.begins_with(InteractionMenu.PLAN_PREFIX):
 		_open_plan_slots(id, action.trim_prefix(InteractionMenu.PLAN_PREFIX))

@@ -670,8 +670,152 @@ $> Story.set_flag("grieta_vista")
 # titulo: Mirar la grieta
 La grieta sigue entre los dos pinos. Se abre y se cierra muy despacio, como si respirara.
 Sale aire frío. Huele a hierro.
-Ren: Todavía no.
+- Todavía no. [#prudente]
+	Ren: Todavía no.
+- Escribir al grupo: hoy entramos. [#decidido]
+	Ren: Vale. Se acabó esperar.
+	Escribes en el grupo\: «Hoy entramos. Os espero en Colinas, junto a los pinos».
+	$> Story.text("kenji", "Vamos. Voy para allá.")
+	$> Story.set_flag("grieta_entrar")
 => END
+
+~ grieta_ultimatum
+# titulo: El grupo se planta en casa
+Llaman al timbre a las nueve y cuarto. Tres veces seguidas.
+Kenji: Buenos días, socio. Una semana. Ni un día más.
+Yuna: Le he dicho que esperara a las diez. No ha querido.
+Rika: Yo no he dormido. Así que me da igual la hora.
+if Story.is_friend("akane")
+	Akane: Si no entráis vosotros, entro yo.
+Shiori: Hemos hablado. Si lo seguimos dejando, cualquier día entra alguien que no sabe lo que hay. Mejor nosotros.
+- Vale. Vamos. [#decidido]
+	Kenji: Eso, my brodel.
+- ¿Y si nos esperamos un poco más? [#prudente]
+	Kenji: Ren. Una semana.
+	Shiori: No es una votación. Bueno, sí lo era. Y has perdido.
+	Ren: Vale. Vale. Vamos.
+Rika: Voy a coger una sudadera. Allí dentro hacía frío.
+=> END
+
+# --- Entrenamiento (fase 5; TrainingDB): la primera vez, descubrirlo; luego, entrenar ---
+# La primera vez Ren solo cae en que le puede venir bien. Si entrena con alguien,
+# Story.companion es quién (habla con {{Story.companion_name()}}).
+
+~ entreno_voley_descubre
+# titulo: Vóley en Colinas (descubrirlo)
+En Colinas hay un partido a medias. Les falta uno y te hacen señas.
+Juegas una hora. Al final te tiemblan los brazos y te arden los hombros.
+Te acuerdas del pasillo de la grieta. De lo que había al fondo.
+Ren: Igual no me viene mal estar más fuerte. Por si acaso.
+=> END
+
+~ entreno_voley
+# titulo: Vóley en Colinas
+Colinas. La red, la arena llena de hojas y el mismo grupo de siempre buscando gente.
+if Story.companion != ""
+	{{Story.companion_name()}}: Yo saco. Tú remata y no pienses.
+	Jugáis en el mismo equipo. Perdéis el primer set y ganáis los otros dos.
+	{{Story.companion_name()}}: Mañana no voy a poder levantar los brazos.
+else
+	Juegas hasta que se va la luz. Cada remate, un poco más fuerte.
+Ren: Esto se nota.
+=> END
+
+~ entreno_camas_descubre
+# titulo: Camas elásticas (descubrirlo)
+Westfield Parquesur. Calcetines antideslizantes y el mismo monitor de las normas.
+Saltas, giras, caes de lado y te levantas antes de pensarlo.
+Te das cuenta de que has esquivado al crío de al lado sin mirar.
+Ren: Pues igual esto sirve. Para moverme rápido. Para quitarme de en medio.
+=> END
+
+~ entreno_camas
+# titulo: Camas elásticas
+Las camas elásticas del Parquesur. Hoy casi no hay nadie.
+if Story.companion != ""
+	{{Story.companion_name()}}: El que toque el suelo pierde. A la de tres.
+	Os pasáis la hora esquivándoos. Nadie gana. Acabáis tirados en la colchoneta.
+	{{Story.companion_name()}}: Echa el freno, magdaleno. Me muero.
+else
+	Repites el mismo giro hasta que te sale sin pensar.
+Ren: Más rápido que ayer.
+=> END
+
+~ entreno_grotesco_descubre
+# titulo: La mazmorra de lo grotesco (descubrirlo)
+En la tele ponen «La mazmorra de lo grotesco». Gente comiendo cosas que no se deberían comer.
+Al principio apartas la vista. Al rato ya no.
+Ren: Si lo de la grieta es así por dentro... Más vale que me acostumbre.
+=> END
+
+~ entreno_grotesco
+# titulo: La mazmorra de lo grotesco
+Otra noche de «La mazmorra de lo grotesco». Hoy toca un concurso de ojos de cordero.
+if Story.companion != ""
+	{{Story.companion_name()}}: No. No, no, no. ¿Cómo puedes ver eso cenando?
+	Ren: Entrenamiento.
+	{{Story.companion_name()}}: Vale. Pues me quedo. Pero no me mires.
+else
+	Aguantas el programa entero sin cambiar de canal. Hasta el final.
+Ren: Ya casi ni me da asco.
+=> END
+
+~ entreno_egaleo_descubre
+# titulo: Leer en Egaleo (descubrirlo)
+Egaleo está en silencio. Coges un libro de leyendas de por aquí que nadie ha sacado en años.
+Hay un capítulo sobre «puertas» en el sur de Madrid. Lo lees dos veces.
+Ren: Saber más no me va a hacer daño. Igual me salva el pellejo.
+=> END
+
+~ entreno_egaleo
+# titulo: Leer en Egaleo
+Egaleo. La mesa del fondo, la de la ventana.
+if Story.companion != ""
+	{{Story.companion_name()}}: ¿Esto lo lees por gusto?
+	Ren: Por si acaso.
+	Os pasáis la tarde subrayando. {{Story.companion_name()}} encuentra un mapa viejo de Colinas.
+else
+	Lees hasta que te echan. Apuntas tres cosas en el móvil.
+Ren: Poco a poco.
+=> END
+
+~ entreno_nerf_descubre
+# titulo: Guerra de nerf (descubrirlo)
+En Bowls hay una guerra de nerf. Chavales de quince años con pistolas de espuma y muchas ganas.
+Te prestan una. Al principio fallas todo. Luego le pillas el truco al gatillo y a recargar sin mirar.
+Ren: Apuntar, recargar, no quedarse quieto. Esto me sirve.
+=> END
+
+~ entreno_nerf
+# titulo: Guerra de nerf
+Bowls. Hoy la guerra de nerf es por equipos.
+if Story.companion != ""
+	{{Story.companion_name()}}: Cúbreme. Voy a por la bandera.
+	{{Story.companion_name()}} cae a los diez segundos. Tú llegas.
+	{{Story.companion_name()}}: Ha sido estrategia. Te he abierto camino.
+else
+	Te toca el equipo que va perdiendo. Remontáis.
+Ren: Cada vez recargo más rápido.
+=> END
+
+~ entreno_zombis_descubre
+# titulo: Zombis en tinieblas (descubrirlo)
+En las Cloacas, unos chavales juegan a los zombis en tinieblas. Luces apagadas y uno persigue a los demás.
+Te toca de vivo. Oyes pasos detrás. Se te acelera el pulso, pero no sales corriendo.
+Ren: Si allí dentro se va la luz, no puedo quedarme bloqueado.
+=> END
+
+~ entreno_zombis
+# titulo: Zombis en tinieblas
+Las Cloacas, de noche. Alguien apaga la última linterna.
+if Story.companion != ""
+	{{Story.companion_name()}}: Si me agarras, grito. Te lo advierto.
+	Al final grita igual. Y tú no.
+else
+	Te quedas quieto en la oscuridad, escuchando, hasta que pasan de largo.
+Ren: Ya no me tiembla el pulso.
+=> END
+
 
 
 # =====================================================================================

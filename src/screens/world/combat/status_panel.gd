@@ -404,6 +404,9 @@ func _draw_stats(c: Control, f: Dictionary) -> void:
 			UIIcons.draw_named(c, stat[2], Vector2(x + 14, y - 8), 22, UIStyle.WHITE)
 			c.draw_string(UIStyle.FONT_MEDIUM, Vector2(x + 40, y), stat[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UIStyle.WHITE)
 			c.draw_string(UIStyle.FONT_SEMIBOLD, Vector2(x + 40, y), str(int(f.stats.get(stat[0], 0))), HORIZONTAL_ALIGNMENT_RIGHT, 220, 24, UIStyle.WHITE)
+			# Entrenada esta semana (Training): marca lima junto al valor.
+			if f.get("id", "") == CharacterDB.PROTAGONIST and Training.trained_this_week(stat[0]):
+				c.draw_colored_polygon(PackedVector2Array([Vector2(x + 232, y - 2), Vector2(x + 246, y - 2), Vector2(x + 239, y - 16)]), UIStyle.LIME)
 			if row < 2:
 				c.draw_line(Vector2(x, y + 12), Vector2(x + 260, y + 12), Color(UIStyle.WHITE, 0.12), 1.0)
 
