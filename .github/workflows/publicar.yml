@@ -2,6 +2,7 @@
 #   /                    docs/ de main (portada, juego web de pruebas, capturas…)
 #   /editor-dialogos/    rama herramientas/editor-dialogos
 #   /editor-mazmorras/   rama herramientas/editor-mazmorras, exportada con Godot
+#   /captura-movimiento/ rama herramientas/captura-movimiento, compilada con Node (Vite)
 # Cada herramienta se junta con el código y los datos de main antes de publicar.
 # Se lanza al subir a main (también los guardados de los editores web, que son
 # commits en main) y desde las ramas de herramientas (su avisar.yml).
@@ -31,6 +32,8 @@ jobs:
         with: { ref: herramientas/editor-dialogos, path: rama-dialogos }
       - uses: actions/checkout@v4
         with: { ref: herramientas/editor-mazmorras, path: rama-mazmorras }
+      - uses: actions/checkout@v4
+        with: { ref: herramientas/captura-movimiento, path: rama-captura }
 
       - name: Juntar las herramientas con main
         run: |
@@ -79,6 +82,19 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/_site/editor-mazmorras"
           ~/godot/godot --headless --export-release "Editor de mazmorras" "$GITHUB_WORKSPACE/_site/editor-mazmorras/index.html"
           test -s "$GITHUB_WORKSPACE/_site/editor-mazmorras/index.pck"
+
+      # Captura de movimiento: dependencias fijadas en package-lock.json, sin
+      # scripts de instalación; el modelo de MediaPipe se comprueba por SHA-256.
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Compilar la captura de movimiento
+        working-directory: rama-captura/tools/captura-movimiento
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run setup:assets
+          npm test
+          npx vite build --base="/${{ github.event.repository.name }}/captura-movimiento/" --outDir "$GITHUB_WORKSPACE/_site/captura-movimiento"
+          test -s "$GITHUB_WORKSPACE/_site/captura-movimiento/models/holistic_landmarker.task"
 
       - name: Montar la web
         run: |

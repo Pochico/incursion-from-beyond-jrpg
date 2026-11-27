@@ -301,10 +301,19 @@ Da un poco de volumen a una textura, como en los juegos antiguos: marcas qué zo
 
 ### Herramientas en el móvil (sin Godot ni PC)
 
-Portada: `https://pochico.github.io/incursion-from-beyond-jrpg/`, con el editor de diálogos, el de mazmorras y el juego de pruebas. Cada herramienta vive en su rama (`herramientas/editor-dialogos`, `herramientas/editor-mazmorras`); al subir a ellas o a `main`, la pipeline `.github/workflows/publicar.yml` las junta con el juego de `main` y las publica en GitHub Pages en unos minutos. Lo que se guarda desde los editores va directo a `main`, así que el juego lo tiene en cuanto se hace `git pull`.
+Portada: `https://pochico.github.io/incursion-from-beyond-jrpg/`, con el editor de escenas, el de mazmorras, la captura de movimiento y el juego de pruebas. Cada herramienta vive en su rama (`herramientas/editor-dialogos`, `herramientas/editor-mazmorras`, `herramientas/captura-movimiento`); al subir a ellas o a `main`, la pipeline `.github/workflows/publicar.yml` las junta con el juego de `main` y las publica en GitHub Pages en unos minutos. Lo que se guarda desde los editores va directo a `main`, así que el juego lo tiene en cuanto se hace `git pull`.
 
-- Tenerlas en local: `tools/herramientas/traer.sh`. Subir cambios hechos en local: `tools/herramientas/llevar.sh editor-mazmorras|editor-dialogos "mensaje"`.
+- Tenerlas en local: `tools/herramientas/traer.sh`. Subir cambios hechos en local: `tools/herramientas/llevar.sh editor-mazmorras|editor-dialogos|captura-movimiento "mensaje"`.
 - Requisito, una sola vez: en GitHub, *Settings → Pages → Build and deployment → Source: GitHub Actions*.
+
+### Captura de movimiento (web, también en el móvil)
+
+`https://pochico.github.io/incursion-from-beyond-jrpg/captura-movimiento/` (rama `herramientas/captura-movimiento`, carpeta `tools/captura-movimiento/`; basada en [MotionBridge](https://github.com/adonisglobal/motionbridge), MIT).
+
+- **Vídeo**: *Grabar* abre la cámara del móvil; *Elegir vídeo*, la galería (MP4, MOV, WebM; hasta 60 s). Mejor con el cuerpo entero a la vista, el móvil quieto y 1–2 s al principio con los brazos en cruz.
+- **Análisis** en el propio dispositivo con MediaPipe (el vídeo no se sube; la primera vez descarga el modelo, ~14 MB). La vista 3D se pausa mientras tanto.
+- **Personaje**: un `.glb`/`.fbx` propio. Si tiene esqueleto, los huesos se asignan solos y se corrigen a mano. Si no lo tiene (como los enemigos de `assets/modelos/`), o con *Rig automático*, se le pone un esqueleto aproximado y se abre el modo **Esqueleto**: tocar y arrastrar cada articulación (simetría izquierda/derecha, vistas de frente y de lado); al soltar, el esqueleto y la piel se recalculan.
+- **Exportar**: *Descargar GLB animado* (modelo, esqueleto y animación, para `assets/` y su `AnimationPlayer` en Godot), BVH para Blender y JSON del movimiento.
 
 ### Editor de escenas (web, también en el móvil)
 

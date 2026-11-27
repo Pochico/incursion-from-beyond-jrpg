@@ -86,9 +86,24 @@ El usuario guarda material de referencia local en `/context/` y `/refs/`
 ## Herramientas en ramas y publicación (móvil, sin Godot ni PC)
 
 - Cada herramienta con versión web vive **sola** en su rama:
-  `herramientas/editor-dialogos` (`docs/editor-dialogos/`) y
-  `herramientas/editor-mazmorras` (`src/tools/editor_mazmorras/`). En `main`
+  `herramientas/editor-dialogos` (`docs/editor-dialogos/`),
+  `herramientas/editor-mazmorras` (`src/tools/editor_mazmorras/`) y
+  `herramientas/captura-movimiento` (`tools/captura-movimiento/`). En `main`
   esas carpetas están en `.gitignore`.
+- **Captura de movimiento** (`tools/captura-movimiento/`): app web en
+  TypeScript + React + three.js + MediaPipe Holistic, basada en
+  [MotionBridge](https://github.com/adonisglobal/motionbridge) (MIT: conservar
+  `LICENSE` y `THIRD_PARTY_NOTICES.md`). Vídeo del móvil (grabar o galería) →
+  esqueleto 3D → modelo `.glb`/`.fbx` con su esqueleto o con **rig automático**
+  (`src/character3d/autorig.ts`: esqueleto estimado por la forma, pesos por
+  distancia a los huesos, articulaciones editables en el modo «Esqueleto» de
+  `src/ui3d/CharacterPreview3D.tsx`) → GLB animado para Godot. Solo el espacio
+  3D de MotionBridge (`src/app/Workspace.tsx`). En local: `npm ci
+  --ignore-scripts`, `npm run setup:assets`, `npm test`, `npm run dev`
+  (`node_modules`, `dist` y el modelo no se suben; `EXCLUIR` en `lista.sh`).
+  Dependencias revisadas (`npm audit` limpio, todo del registro de npm con
+  integridad): si se añaden, revisarlas igual y no ejecutar scripts de
+  instalación. La publicación la compila con Node 24 y pasa sus pruebas.
 - **No se tocan en `main`**. Para tenerlas en local: `tools/herramientas/traer.sh`
   (no pisa cambios locales sin `--forzar`). Para subir cambios hechos en local:
   `tools/herramientas/llevar.sh <herramienta> "mensaje"` (commit y push a su

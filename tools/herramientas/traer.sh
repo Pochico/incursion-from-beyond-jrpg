@@ -14,13 +14,13 @@ for h in "${HERRAMIENTAS[@]}"; do
 	git fetch -q origin "$rama"
 	tmp=$(mktemp -d)
 	git archive "origin/$rama" "$dir" | tar -x -C "$tmp"
-	if [ -d "$dir" ] && [ "$forzar" != "--forzar" ] && ! diff -rq -x .DS_Store "$tmp/$dir" "$dir" >/dev/null; then
+	if [ -d "$dir" ] && [ "$forzar" != "--forzar" ] && ! diff -rq -x .DS_Store -x node_modules -x dist -x mediapipe -x "*.task" "$tmp/$dir" "$dir" >/dev/null; then
 		echo "$dir tiene cambios que no están en $rama: no se toca (llevar.sh para subirlos, --forzar para descartarlos)."
-		diff -rq -x .DS_Store "$tmp/$dir" "$dir" | sed 's/^/  /' | head -10
+		diff -rq -x .DS_Store -x node_modules -x dist -x mediapipe -x "*.task" "$tmp/$dir" "$dir" | sed 's/^/  /' | head -10
 	else
-		rm -rf "$dir"
-		mkdir -p "$(dirname "$dir")"
-		mv "$tmp/$dir" "$dir"
+		# Conserva lo generado en local (node_modules, dist…): solo se sustituye lo versionado.
+		mkdir -p "$dir"
+		rsync -a --delete "${EXCLUIR[@]}" "$tmp/$dir/" "$dir/"
 		echo "$dir ← $rama"
 	fi
 	rm -rf "$tmp"
