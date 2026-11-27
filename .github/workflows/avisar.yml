@@ -1,0 +1,15 @@
+# Al subir a esta rama de herramienta, relanza la publicación de main
+# (.github/workflows/publicar.yml), que junta el juego y todas las herramientas
+# y las publica en GitHub Pages.
+name: Avisar a la publicación
+on:
+  push:
+permissions:
+  actions: write
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run publicar.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
