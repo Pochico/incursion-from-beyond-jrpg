@@ -166,26 +166,27 @@ Rika: ¡Pues quedamos allí después de clase! ¡No lleguéis tarde!
 # --- Westfield Parquesur --------------------------------------------------------------
 
 ~ dia1_camas
-Westfield Parquesur. Música alta, calcetines antideslizantes y un monitor que repite las normas sin mucha fe.
+Westfield Parquesur. Lugar de sueños e ilusiones. Un centro comercial con camas elásticas, y los best friendos del grupo. El rumano y el chinomoro.
 Kenji: Atención, público. Lo que vais a ver a continuación no lo intentéis en casa. Esto va por ti, mi amor.
 Yuna: Te estoy grabando, cielo. Sin presión.
-Kenji intenta un mortal. Aterriza de espaldas, rebota dos veces y se queda mirando el techo.
+Kenji intenta un mortal pero se va de morros a la madera y se come la caja de los zapatos.
 Shiori: Lo he grabado. Para la posteridad.
-Yuna: Yo también. Desde dos ángulos.
-Kenji: Ha sido intencionado. Es arte contemporáneo.
+Yuna: ¿Pero qué haces Kenji? ¿Estás bien?
+Kenji: Ossstia terrible... [#cara=sorpresa]
 Rika: ¡Ren, salta conmigo! ¡A la de tres!
 - (Saltar con todas tus fuerzas.) [#decidido, #desenfadado]
 	Saltas tan alto que, durante un segundo, no piensas en nada. Te acuerdas de tu padre lanzándote a la piscina de pequeño. Por una vez, el recuerdo te hace sonreír.
-	Rika: ¡Eso! ¡Así se hace!
+	Rika: ¡Espera, para! Para, para. Que se me sale una teta. [#cara=sorpresa]
 - (Saltar sin muchas ganas.) [#reservado]
-	Rika: ¡Venga ya, que no muerde! ¡Más alto!
+	Rika: Vamos hombre ¡Dale con ganas!
 	Al tercer salto se te escapa la risa. Aquí es imposible hacerse el serio.
 Shiori: Kenji, Ren salta más alto que tú.
-Kenji: Porque yo cargo con el peso del arte. Es otra liga.
+Kenji: Porque a mí me pesa LA PO...
+Shiori: Qué tonto eres, macho.
 if Story.flag("dia1_cita_madre_kenji")
 	Kenji: Le he contado a mi madre lo de vuestra «cita».
 	Kenji: Me ha mandado tres corazones y un «ay, mi niño».
-	Yuna: Tu madre es la mejor, cielo.
+	Yuna: A ver si tú al final no vas a ser su favorito...
 => END
 
 ~ dia1_camas_fundido
