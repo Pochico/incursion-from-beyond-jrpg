@@ -31,7 +31,7 @@ nivel y EXP guardados en `GameState.levels`; reparto en `GameState.grant_xp`.
 | Quién | Cómo | Estado |
 |---|---|---|
 | Ren | EXP propia | [PROPUESTA] |
-| Kenji, Shiori, Akane, Rika (`CharacterDB.COMPANIONS`) | EXP propia; si no participan, el 50 % (`BENCH_SHARE`) | [PROPUESTA] |
+| Kenji, Shiori, Akane, Rika, Yuna (`CharacterDB.COMPANIONS`) | EXP propia; si no participan, hasta el 50 % según su afecto por Ren (`BENCH_MAX_SHARE` × afecto/100, `ProgressionDB.bench_share`); si caen en el combate, el 60 % (`FALLEN_SHARE`) | [DEFINIDO] |
 | Yuna, madres, profesora… | No combaten: sin nivel | [DEFINIDO] (hoy) |
 | Criaturas | Sin EXP: su nivel lo pone la zona (sección 6) | [PROPUESTA] |
 
@@ -197,7 +197,7 @@ Todos son provisionales y están en `ProgressionDB`:
 - la curva (`3·L² + 30·L + 27`);
 - la EXP de combate (`XP_BASE` 20, `XP_PER_LEVEL` 10, `XP_LEVEL_STEP` 0,15, límites 0,2–2,0);
 - los extras de jefe ×1,5 y duelo ×0,5;
-- `BENCH_SHARE` 0,5;
+- `BENCH_MAX_SHARE` 0,5 (por afecto) y `FALLEN_SHARE` 0,6;
 - la EXP de exploración;
 - el paso de nivel por planta (`FLOOR_LEVEL_STEP` 2).
 

@@ -50,7 +50,8 @@ const ALL := {
 		"on_map": true, "pos": Vector2(0.46, 0.46), "cast": ["kenji", "rika", "yuna"],
 		# La grieta (fase 4): fondo propio cuando exista la imagen (plaza_grieta[_franja]).
 		"from_phase": {"grieta": {"desc": "Pasadas las pistas, entre dos pinos, el aire está rajado. Nadie más parece verlo.",
-				"backdrop": "plaza_grieta", "rift": true}},
+				"backdrop": "plaza_grieta", "rift": true, "dungeon_map": "grieta",
+				"battle_background": "res://assets/backgrounds/grieta_combate.png"}},
 		"sky_top": Color("15112a"), "sky_bottom": Color("7a64b4"), "trees": true, "tower": true,
 	},
 	"estacion": {

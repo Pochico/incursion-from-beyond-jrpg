@@ -4,7 +4,8 @@ extends RefCounted
 ## interfaz: cada acción modifica el estado y devuelve una lista de eventos que la
 ## vista (CombatView) anima en orden.
 ##
-## El grupo es el protagonista ("player") y, opcionalmente, un compañero ("ally").
+## El grupo es el protagonista ("player") y hasta tres compañeros (ALLIES:
+## "ally", "ally2", "ally3").
 ## Los rivales son "enemy", "enemy2" y "enemy3" (FOES). Cada ronda actúan los
 ## miembros del grupo en pie, en orden, y después cada rival en pie (`enemy_turn`
 ## de cada uno y `end_round`). Se gana cuando caen todos los rivales.
@@ -42,10 +43,17 @@ extends RefCounted
 ##   {type: "defend", target}
 ##   {type: "analyze"}
 ##   {type: "surrender", target}
-## `source` y `target` son "player", "ally" o uno de FOES. `skill` vacío = ataque básico.
+##   {type: "retreat", target}                        — el grupo se retira (ver should_retreat)
+## `source` y `target` son "player", uno de ALLIES o uno de FOES. `skill` vacío = ataque básico.
 
 const PLAYER := "player"
 const ALLY := "ally"
+## Puestos de los compañeros, en orden de turno (el grupo es de hasta 4 con Ren).
+const ALLIES: Array[String] = ["ally", "ally2", "ally3"]
+## Retirada forzada (reglas `retreat` del combate): el grupo se va cuando le
+## quedan menos de este porcentaje de PV entre todos o alguno baja de RETREAT_ONE.
+const RETREAT_GROUP := 0.35
+const RETREAT_ONE := 0.15
 const ENEMY := "enemy"
 ## Puestos de los rivales, en orden de turno (el primero es el líder).
 const FOES: Array[String] = ["enemy", "enemy2", "enemy3"]
@@ -65,16 +73,18 @@ var foes: Array[String] = []  ## rivales de este combate (puestos de FOES)
 var analyzed := false        ## El jugador ha analizado al rival (se muestran sus PV)
 var tension := 0.0           ## 0..1, solo visual por ahora
 var surrendered := false
+var retreated := false       ## Retirada forzada: acaba sin victoria ni derrota.
 var rng := RandomNumberGenerator.new()
 var _acting := ""            ## quien está actuando (sus estados nuevos no cuentan este turno)
 
 
-## `enemy_ids`: un id o una lista de hasta tres (el primero, el líder). `ally_id`
-## vacío = combate en solitario. `ally_skills` sustituye las habilidades del
-## compañero (si está vacío, usa las suyas de CharacterDB). `enemy_level` > 0 fija
+## `enemy_ids`: un id o una lista de hasta tres (el primero, el líder). `ally_ids`:
+## un id o una lista de hasta tres compañeros (vacío = combate en solitario).
+## `ally_skills` sustituye las habilidades del primero (si está vacío, usa las
+## suyas de CharacterDB). `enemy_level` > 0 fija
 ## el nivel de las criaturas (según dónde aparecen; ver ProgressionDB). `boss`:
 ## el líder es el jefe de la zona.
-func _init(player_id: String, enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [],
+func _init(player_id: String, enemy_ids: Variant, ally_ids: Variant = "", ally_skills: Array = [],
 		enemy_level: int = 0, boss: bool = false) -> void:
 	rng.randomize()
 	fighters[PLAYER] = _make_fighter(player_id)
@@ -92,11 +102,12 @@ func _init(player_id: String, enemy_ids: Variant, ally_id: String = "", ally_ski
 		f.pv_max = maxi(roundi(f.pv_max * float(scale.pv)), 1)
 		f.pv = f.pv_max
 		f.dmg_scale *= float(scale.dmg)
-	if ally_id != "":
-		fighters[ALLY] = _make_fighter(ally_id)
-		if not ally_skills.is_empty():
-			fighters[ALLY].skills = ally_skills.duplicate()
-		party.append(ALLY)
+	var allies: Array = ally_ids if ally_ids is Array else ([ally_ids] if ally_ids != "" else [])
+	for i in mini(allies.size(), ALLIES.size()):
+		fighters[ALLIES[i]] = _make_fighter(allies[i])
+		party.append(ALLIES[i])
+	if not allies.is_empty() and not ally_skills.is_empty():
+		fighters[ALLY].skills = ally_skills.duplicate()
 
 
 ## PV y PM máximos por fórmula (nivel y atributos). Los enemigos pueden llevar
@@ -186,11 +197,41 @@ func alive_party() -> Array[String]:
 
 
 func is_over() -> bool:
-	return surrendered or alive_foes().is_empty() or alive_party().is_empty()
+	return surrendered or retreated or alive_foes().is_empty() or alive_party().is_empty()
 
 
 func player_won() -> bool:
-	return not surrendered and alive_foes().is_empty() and not alive_party().is_empty()
+	return not surrendered and not retreated and alive_foes().is_empty() and not alive_party().is_empty()
+
+
+## ¿Va tan mal que toca retirarse? Menos de RETREAT_GROUP de los PV de todos, o
+## alguien por debajo de RETREAT_ONE de los suyos (también si ha caído).
+func should_retreat() -> bool:
+	var pv := 0
+	var pv_max := 0
+	for who in party:
+		var f: Dictionary = fighters[who]
+		pv += maxi(f.pv, 0)
+		pv_max += f.pv_max
+		if float(f.pv) < f.pv_max * RETREAT_ONE:
+			return true
+	return pv_max > 0 and float(pv) < pv_max * RETREAT_GROUP
+
+
+## Retirada: el combate acaba sin victoria ni derrota. `who` es quien lo dice.
+func retreat(who: String) -> Array:
+	retreated = true
+	return [{"type": "retreat", "target": who}]
+
+
+## Ids de personaje de los que han caído (para su parte de EXP).
+func fallen_ids() -> Array:
+	return party.filter(func(w: String) -> bool: return not is_alive(w)).map(func(w: String) -> String: return fighters[w].id)
+
+
+## Ids de personaje de los que siguen en pie.
+func standing_ids() -> Array:
+	return alive_party().map(func(w: String) -> String: return fighters[w].id)
 
 
 ## Dinero que se gana al vencer: proporcional al nivel de la criatura (cuanto más
@@ -614,10 +655,13 @@ func _targets(who: String, skill_id: String, preferred: String = "") -> Array[St
 		"enemies":
 			candidates.assign(others)
 		"ally":
+			# El indicado si es del mismo bando; si no, el último compañero en pie.
 			candidates.append(who)
 			for other in friends:
 				if other != who:
 					candidates[0] = other
+			if preferred != who and preferred in friends:
+				candidates[0] = preferred
 		"allies", "link":
 			candidates.assign(friends)
 	var required: Array = skill.get("requires", [])

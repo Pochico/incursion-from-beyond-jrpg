@@ -721,7 +721,7 @@ if Story.other_plan_title() != ""
 ~ shiori_hablar_grieta_1
 # titulo: Shiori, días después de la grieta
 # cuando: hablar, flag grieta_etapa_1, una vez
-Shiori: He apuntado todo lo que vimos. El olor, el frío, las luces.
+Shiori: He apuntado todo lo que vimos. El ruido, el olor a aceite, las luces.
 Shiori: Doce. Siempre doce. No creo que sea casualidad.
 => END
 

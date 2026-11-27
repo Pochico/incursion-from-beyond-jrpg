@@ -35,9 +35,16 @@ const XP_MIN_FACTOR := 0.2
 const XP_MAX_FACTOR := 2.0
 const XP_BOSS_MULT := 1.5     ## criaturas con `boss` en su ficha de combate
 const XP_DUEL_MULT := 0.5     ## duelos con personas (no criaturas): entrenar enseña menos
-## Compañeros que no estaban en el combate o la exploración: se llevan esta parte
-## (para que no se queden atrás; el compañero de la mazmorra sale al azar).
-const BENCH_SHARE := 0.5
+## Los que no van (combate o exploración) ganan hasta esta parte de la EXP de los
+## que van, según su afecto por Ren (100 de afecto = todo; ver bench_share).
+const BENCH_MAX_SHARE := 0.5
+## Los que caen en un combate se llevan esta parte de su EXP (y vuelven con 1 PV).
+const FALLEN_SHARE := 0.6
+
+
+## Parte de la EXP para quien no ha ido: según lo que quiere a Ren, hasta BENCH_MAX_SHARE.
+static func bench_share(id: String) -> float:
+	return BENCH_MAX_SHARE * clampf(Social.value(id, CharacterDB.PROTAGONIST, "afecto") / 100.0, 0.0, 1.0)
 
 
 static func battle_xp(enemy_level: int, party_level: int, boss := false, duel := false) -> int:

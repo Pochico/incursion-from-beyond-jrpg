@@ -622,14 +622,14 @@ $> Story.efecto("negro")
 Entre los dos pinos, el aire hace un ruido. Como una tela que se rasga muy despacio.
 $> Story.efecto("temblor")
 $> Story.efecto("vuelve")
-Ahí está. Una raja en el aire, de arriba abajo, más alta que una persona. Por dentro es violeta y se mueve, como si respirara.
+Ahí está. Una raja en el aire, de arriba abajo, más alta que una persona. Por dentro se ve metal y luz roja.
 Rika: ¿Qué es eso? ¿Eso qué es?
 Kenji: No me jodas.
 Yuna: Kenji. Kenji, vámonos.
 Shiori: No la toquéis. Nadie la toque.
 if Story.is_friend("akane")
 	Akane: Es como lo de la máquina. Igual.
-Del otro lado sale aire frío. Huele a hierro.
+Del otro lado sale aire caliente. Huele a aceite quemado.
 Kenji: Yo me asomo. Un segundo y salgo.
 - Voy contigo. [#decidido]
 	Kenji: Eso, my brodel. Los dos.
@@ -644,10 +644,10 @@ Kenji: Yo me asomo. Un segundo y salgo.
 Pasáis los dos. Detrás, Shiori os agarra de la mochila.
 $> Story.efecto("destello")
 $> Story.efecto("negro")
-Del otro lado no hay pinos. Hay un pasillo que no acaba, con paredes que parecen de carne y de cable a la vez.
-Algo gotea. Algo más lejos contesta.
-Kenji: Ren... ¿eso son ojos?
-Al fondo se encienden una docena de luces. Todas a la vez. Todas os miran.
+Del otro lado no hay pinos. Hay un pasillo de metal que no acaba. Se oye maquinaria.
+Al fondo, algo grande se mueve.
+Kenji: Ren... ¿eso se está moviendo?
+Al fondo se encienden una docena de luces rojas. Todas a la vez. Todas os apuntan.
 Ren: Fuera. ¡Fuera!
 $> Story.efecto("temblor")
 $> Story.efecto("vuelve")
@@ -668,8 +668,8 @@ $> Story.set_flag("grieta_vista")
 
 ~ grieta_mirar
 # titulo: Mirar la grieta
-La grieta sigue entre los dos pinos. Se abre y se cierra muy despacio, como si respirara.
-Sale aire frío. Huele a hierro.
+La grieta sigue entre los dos pinos. Dentro sigue sonando la maquinaria.
+Sale aire caliente. Huele a aceite quemado.
 - Todavía no. [#prudente]
 	Ren: Todavía no.
 - Escribir al grupo: hoy entramos. [#decidido]
@@ -694,7 +694,7 @@ Shiori: Hemos hablado. Si lo seguimos dejando, cualquier día entra alguien que 
 	Kenji: Ren. Una semana.
 	Shiori: No es una votación. Bueno, sí lo era. Y has perdido.
 	Ren: Vale. Vale. Vamos.
-Rika: Voy a coger una sudadera. Allí dentro hacía frío.
+Rika: Voy a coger una linterna.
 => END
 
 # --- Entrenamiento (fase 5; TrainingDB): la primera vez, descubrirlo; luego, entrenar ---
@@ -745,7 +745,7 @@ Ren: Más rápido que ayer.
 # titulo: La mazmorra de lo grotesco (descubrirlo)
 En la tele ponen «La mazmorra de lo grotesco». Gente comiendo cosas que no se deberían comer.
 Al principio apartas la vista. Al rato ya no.
-Ren: Si lo de la grieta es así por dentro... Más vale que me acostumbre.
+Ren: Si allí dentro veo algo peor que esto... Más vale que tenga estómago.
 => END
 
 ~ entreno_grotesco

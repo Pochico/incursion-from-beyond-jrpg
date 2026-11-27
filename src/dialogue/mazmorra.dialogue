@@ -15,7 +15,7 @@
 ~ mazmorra_kenji_andar
 % Kenji: Este zumbido de fondo está en si bemol. No me preguntes cómo lo sé.
 % Kenji: Si salimos de aquí, me grabo el ruido de las tuberías para una base.
-% Kenji: Oye, ¿tú también notas que las paredes respiran? Vale, igual soy yo.
+% Kenji: Oye, ¿tú también notas que las paredes vibran? Vale, igual soy yo.
 % Kenji: Tío, cuéntame algo, que el silencio aquí da mal rollo.
 % Kenji: Me estoy quedando sin batería en el móvil. Y en el alma.
 % Kenji: Juraría que ya hemos pasado por aquí. Esto es un loop de cuatro compases.
@@ -276,4 +276,55 @@
 ~ mazmorra_rika_palanca
 % Rika: ¿Has oído? Algo se ha movido por ahí.
 % Rika: Ese ruidito me da buena espina.
+=> END
+
+# --- Retirada forzada y escáner (fase 6) ------------------------------------------------
+
+~ mazmorra_ren_retirada
+% Ren: Vale, se acabó. Nos vamos de aquí.
+% Ren: No llego. Me piro, ya volveré.
+=> END
+
+~ mazmorra_kenji_retirada
+% Kenji: Ren, Ren, Ren. Nos vamos. Ya.
+% Kenji: Echa el freno, magdaleno. Esto nos viene grande. Fuera.
+=> END
+
+~ mazmorra_kenji_escaner
+% Kenji: Eh, mira esto. Estaba aquí tirado. Tiene pantallita y todo.
+=> END
+
+~ mazmorra_shiori_retirada
+% Shiori: Retirada. Volvemos cuando estemos preparados.
+% Shiori: No vamos a ganar esto. Fuera, ya.
+=> END
+
+~ mazmorra_shiori_escaner
+% Shiori: Ren, esto estaba en la entrada. Es un escáner. Y funciona.
+=> END
+
+~ mazmorra_rika_retirada
+% Rika: ¡Vámonos! ¡Vámonos ya, porfa!
+% Rika: Ren, yo no puedo más. Fuera.
+=> END
+
+~ mazmorra_rika_escaner
+% Rika: ¿Esto qué es? Pita cuando lo acercas a las paredes. Toma, para ti.
+=> END
+
+~ mazmorra_yuna_retirada
+% Yuna: Ren, fuera. No es una pregunta.
+% Yuna: Nos vamos. Kenji, tú delante.
+=> END
+
+~ mazmorra_yuna_escaner
+% Yuna: Mira. Estaba enganchado a la pared. Parece un escáner.
+=> END
+
+~ mazmorra_akane_retirada
+% Akane: Fuera. Ya volveremos a por ellos.
+=> END
+
+~ mazmorra_akane_escaner
+% Akane: Toma. Lo he arrancado de ahí. Algo hará.
 => END

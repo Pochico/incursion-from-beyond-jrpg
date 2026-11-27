@@ -217,17 +217,20 @@ const DEFAULT_ENEMY_SIZE := Vector2(560, 600)
 
 
 ## Prepara el combate contra `enemy_ids` (un id o una lista de hasta tres) y lo
-## hace visible (sin dar el control). Con `ally_id`, un compañero lucha junto al
-## protagonista; `ally_skills` sustituye sus habilidades. `vitals`
+## hace visible (sin dar el control). Con `ally_ids` (un id o hasta tres), los
+## compañeros luchan junto al protagonista; `ally_skills` sustituye las del primero. `vitals`
 ## (Battle.party_vitals) = PV y PM con los que empieza el grupo (vacío = al
 ## máximo); al acabar, `party_vitals()`. `enemy_level` > 0 fija el nivel de las
 ## criaturas (ver ProgressionDB). `boss`: el primero es el jefe de la zona.
-func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vitals: Dictionary = {},
+## Reglas (`combat_rules`): `basic_only` (sin habilidades, objetos ni analizar),
+## `retreat` (retirada forzada, Battle.should_retreat) y `no_restore` (sin
+## objetos que curen: se entra con lo puesto).
+func setup(enemy_ids: Variant, ally_ids: Variant = "", ally_skills: Array = [], vitals: Dictionary = {},
 		enemy_level: int = 0, boss: bool = false, combat_rules: Dictionary = {}) -> void:
 	rules = combat_rules
 	var ids: Array = enemy_ids if enemy_ids is Array else [enemy_ids]
 	_enemy_id = ids[0]
-	_battle = Battle.new(CharacterDB.PROTAGONIST, ids, ally_id, ally_skills, enemy_level, boss)
+	_battle = Battle.new(CharacterDB.PROTAGONIST, ids, ally_ids, ally_skills, enemy_level, boss)
 	_battle.set_party_vitals(vitals, 1)
 	_actor = Battle.PLAYER
 	_state = State.IDLE
@@ -263,8 +266,10 @@ func setup(enemy_ids: Variant, ally_id: String = "", ally_skills: Array = [], vi
 	_build_options(0)
 	var who := _foe_names()
 	var verb := "te cierran" if _battle.foes.size() > 1 else "te cierra"
-	if ally_id != "":
-		_log("¡%s %s el paso! %s lucha a tu lado." % [who, verb, CharacterDB.display_name(ally_id)])
+	if _battle.party.size() > 1:
+		var names: Array = _battle.party.slice(1).map(func(w: String) -> String: return _fighter_name(w))
+		var team: String = names[0] if names.size() == 1 else ", ".join(names.slice(0, -1)) + " y " + names.back()
+		_log("¡%s %s el paso! %s %s a tu lado." % [who, verb, team, "luchan" if names.size() > 1 else "lucha"])
 	elif CharacterDB.is_enemy(_enemy_id):
 		_log("¡%s %s el paso!" % [who, verb])
 	else:
@@ -418,12 +423,17 @@ func _first_enabled_option() -> PillButton:
 
 ## ¿Está el comando cerrado por las reglas de este combate?
 func _blocked(command_id: String) -> bool:
+	if command_id == "analyze" and GameState.item_count(ItemDB.SCANNER) <= 0:
+		return true   # sin escáner no se puede analizar (fase 6)
 	return rules.get("basic_only", false) and command_id in ["skill", "item", "analyze"]
 
 
 ## Opciones de cada comando.
 func _options_for(command_id: String) -> Array:
 	var p := _battle.fighter(_actor)
+	if command_id == "analyze" and GameState.item_count(ItemDB.SCANNER) <= 0:
+		return [{"label": "Sin escáner", "icon": "lock", "disabled": true,
+			"desc": "Hace falta un escáner para analizar a las criaturas."}]
 	if _blocked(command_id):
 		return [{"label": "Ahora no", "icon": "lock", "disabled": true,
 			"desc": "No hay tiempo para nada más: atacar, cubrirse o huir."}]
@@ -446,7 +456,7 @@ func _options_for(command_id: String) -> Array:
 			var can_use := _battle.can_use_items(_actor)
 			for id: String in GameState.inventory:
 				var n := GameState.item_count(id)
-				if n <= 0 or not ItemDB.usable_in_combat(id):
+				if n <= 0 or not ItemDB.usable_in_combat(id) or (rules.get("no_restore", false) and ItemDB.restores(id)):
 					continue
 				opts.append({"label": "%s  ×%d" % [ItemDB.display_name(id), n], "icon": ItemDB.get_item(id).get("icon", "can"),
 					"action": "item:%s" % id, "disabled": not can_use,
@@ -787,6 +797,7 @@ func _run_action(action: String) -> void:
 			elif action.begins_with("skill:"):
 				events = _battle.use_skill(_actor, action.substr(6), target)
 	await _play_events(events)
+	await _check_retreat()
 	if not _battle.is_over() and uses_turn:
 		await _advance()
 
@@ -805,10 +816,36 @@ func _advance() -> void:
 			continue
 		await get_tree().create_timer(0.35).timeout
 		await _play_events(_battle.enemy_turn(who))
+		await _check_retreat()
+	if _battle.is_over():
+		return
 	_battle.end_round()
 	var alive := _battle.alive_party()
 	if not alive.is_empty():
 		_actor = alive[0]
+
+
+## Retirada forzada (regla `retreat`): si va demasiado mal, alguien del grupo
+## (un compañero en pie, si hay) dice de irse y el combate acaba sin derrota.
+func _check_retreat() -> void:
+	if not rules.get("retreat", false) or _battle.is_over() or not _battle.should_retreat():
+		return
+	var speaker := Battle.PLAYER
+	for who in _battle.alive_party():
+		if who != Battle.PLAYER:
+			speaker = who
+			break
+	await _play_events(_battle.retreat(speaker))
+
+
+## ¿Ha caído todo el grupo? (DungeonScreen vuelve a la entrada.)
+func party_down() -> bool:
+	return _battle != null and _battle.alive_party().is_empty()
+
+
+## ¿Ha acabado en retirada? (DungeonScreen saca al grupo de la mazmorra.)
+func retreated() -> bool:
+	return _battle != null and _battle.retreated
 
 
 ## Siguiente miembro del grupo en pie después de `who` en esta ronda ("" si no hay).
@@ -906,6 +943,11 @@ func _play_events(events: Array) -> void:
 			"surrender":
 				_log("%s levanta las manos. Se acabó el duelo." % _pname())
 				await get_tree().create_timer(0.8).timeout
+			"retreat":
+				var id: String = _battle.fighter(ev.target).id
+				var line := DungeonBanter.line(id, "retreat")
+				_log("%s: %s" % [_fighter_name(ev.target), line] if line != "" else "El grupo se retira.")
+				await get_tree().create_timer(2.2).timeout
 		for who in _battle.party:
 			_card(who).guarding = _battle.fighter(who).defending
 		_tween_tension()
@@ -1129,8 +1171,8 @@ func _skill_banner(text: String, color: Color) -> void:
 
 func _show_result() -> void:
 	var won := _battle.player_won()
-	_result_text = "VICTORIA" if won else "DERROTA"
-	_result_color = UIStyle.LIME if won else UIStyle.RED
+	_result_text = "VICTORIA" if won else ("RETIRADA" if _battle.retreated else "DERROTA")
+	_result_color = UIStyle.LIME if won else (UIStyle.VIOLET if _battle.retreated else UIStyle.RED)
 	_result_sub = ""
 	_result_levels = ""
 	var gains: Array[String] = []
@@ -1141,7 +1183,8 @@ func _show_result() -> void:
 		queue_redraw()   # La cabecera muestra el dinero.
 	var xp := _battle.xp_reward()
 	if xp > 0:
-		var results := GameState.grant_xp(_battle.party_ids(), xp)
+		# Quien ha caído se lleva una parte (ProgressionDB.FALLEN_SHARE) y vuelve con 1 PV.
+		var results := GameState.grant_xp(_battle.standing_ids(), xp, _battle.fallen_ids())
 		gains.append("+ %d EXP" % xp)
 		_result_levels = GameState.level_up_text(results)
 		for i in _battle.party.size():

@@ -193,9 +193,9 @@ func _look_at_rift() -> void:
 	_set_cast_interactive(false)
 	_fade_cast(false, 0.25)
 	_show_hud(false)
+	GameState.set_flag(Pressure.DECIDED, false)
 	await _conversation.play(Story.cue("grieta_mirar"), "")
-	if GameState.get_flag(Pressure.DECIDED):
-		await _enter_rift()
+	if GameState.get_flag(Pressure.DECIDED) and await _enter_rift():
 		return
 	_fade_cast(true, 0.25)
 	_show_hud(true)
@@ -203,21 +203,21 @@ func _look_at_rift() -> void:
 	_set_cast_interactive(true)
 
 
-## Entrar en la grieta con el grupo. La exploración (elegir equipo, mazmorra)
-## es la fase 6: por ahora se queda decidido y se avisa.
-func _enter_rift() -> void:
-	_rift_decided()
-	GameState.save_game()
-	_fade_cast(true, 0.25)
-	_show_hud(true)
-	_refresh_hints()
-	mode = Mode.EXPLORE
-	_set_cast_interactive(true)
-
-
-func _rift_decided() -> void:
+## Entrar en la grieta: elegir equipo (TeamPicker, ChapterDB.EXPEDITION) y a la
+## mazmorra desde Colinas. Sin `forced` se puede echar atrás (devuelve false y
+## quita la decisión). `forced` = el día límite: no hay «Ahora no».
+func _enter_rift(forced: bool = false) -> bool:
+	var who: Array = ChapterDB.EXPEDITION.filter(func(w: String) -> bool: return Acquaintance.is_friend(w))
+	var team: Variant = await TeamPicker.ask(self, who, ChapterDB.EXPEDITION_SIZE, not forced)
+	if team == null:
+		GameState.set_flag(Pressure.DECIDED, false)
+		return false
 	GameState.set_flag(Pressure.DECIDED)
-	Toast.show_in(self, "Continuará: la primera exploración llega en la fase 6", UIStyle.VIOLET, 5.0, 250.0)
+	GameState.expedition = team
+	GameState.location_id = "plaza"
+	GameState.save_game()
+	SceneRouter.go_to(DUNGEON_SCREEN)
+	return true
 
 
 # --- Entrenamiento (Training) ----------------------------------------------------------
@@ -586,7 +586,8 @@ func _go_to_next_morning(narration: String = "") -> void:
 		GameState.scene_cast = Pressure.TEMPERS.keys().filter(func(w: String) -> bool: return Acquaintance.is_friend(w))
 		await _conversation.play(Story.cue("grieta_ultimatum"), "kenji")
 		GameState.scene_cast = []
-		_rift_decided()
+		await _enter_rift(true)
+		return
 	GameState.save_game()
 	_enter_explore()
 	await _check_partner()

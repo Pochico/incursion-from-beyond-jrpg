@@ -198,7 +198,7 @@ const ALL := {
 }
 
 ## Compañeros que pueden unirse al grupo en combate.
-const COMPANIONS: Array[String] = ["kenji", "shiori", "akane", "rika"]
+const COMPANIONS: Array[String] = ["kenji", "shiori", "akane", "rika", "yuna"]
 ## Agenda del móvil (a quién puede escribir Ren).
 const CONTACTS: Array[String] = ["kenji", "rika", "shiori", "akane", "yuna", "madre_ren"]
 ## Personajes de la app Relaciones del móvil.

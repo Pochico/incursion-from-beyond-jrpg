@@ -8,8 +8,9 @@ extends Control
 ##    puede usar (puerta, palanca, objeto, criatura) se recuadra; clic encima o
 ##    Espacio para usarlo.
 ##  - Columna derecha: automapa (en el hueco del minimapa) y fichas del grupo:
-##    Ren y un compañero al azar (de CharacterDB.COMPANIONS) que entra con él y
-##    lucha a su lado. Clic en una ficha (o Tab) abre su pantalla de estado.
+##    Ren y los que ha elegido para la grieta (GameState.expedition, hasta 3) o,
+##    en La Torre, un compañero al azar (CharacterDB.COMPANIONS). Clic en una
+##    ficha (o Tab) abre su pantalla de estado.
 ##  - Fila de comandos: Usar, Habilidades, Objetos, Mapa, Salir.
 ##  - Fila de opciones + descripción / registro.
 ##
@@ -24,9 +25,18 @@ extends Control
 ## sitio se pierde y los objetos vuelven a su sitio. Por eso no se guarda la
 ## partida hasta salir.
 ##
-## Resonador: cada incursión empieza con ItemDB.charges("resonador") cargas; cada
+## Escáner: cada incursión empieza con ItemDB.charges(ItemDB.SCANNER) cargas; cada
 ## pulso gasta una y las baterías (que traen las cajas) dan más. Al coger una caja
 ## se ofrece abrirla ya o guardarla (se abre luego desde Objetos o el móvil).
+##
+## La grieta (fase 6, GameState.expedition no vacío): el mapa es ChapterDB.RIFT_MAP
+## (mientras no exista, RIFT_FALLBACK_MAP). Retirada forzada en combate y antes
+## de empezar uno (Battle.should_retreat): se sale sin perder nada. Hasta tener
+## el escáner se entra con lo puesto: sin objetos que curen. El escáner está en
+## el mapa; si no lo traen de la primera, en la segunda lo encuentra alguien en
+## la entrada. Al salir: fase `exploracion_1` (o `escaner`, si ya lo tienen).
+## Perder un combate (caen todos) devuelve a la entrada y deshace todo lo
+## ganado en la incursión.
 ##
 ## El compañero comenta de vez en cuando en el registro del visor (DungeonBanter):
 ## al andar, ante una criatura, junto a una pared falsa, al coger algo…
@@ -37,13 +47,13 @@ const COMMAND_Y := 898.0
 const OPTION_ROW := Rect2(30, 990, 1864, 70)
 const RIGHT_X := 1440.0
 const ACCENT := UIStyle.MAGENTA
-const PULSE_PINK := Color("f0a8ff")   ## brillo del resonador (ver pulse.gdshader)
+const PULSE_PINK := Color("f0a8ff")   ## brillo del pulso del escáner (ver pulse.gdshader)
 
 const COMMANDS := [
 	{"id": "use", "label": "Usar", "icon": "sparkle", "desc": "Usar lo que hay justo delante: abrir, coger, accionar o luchar."},
 	{"id": "skills", "label": "Habilidades", "icon": "heart", "desc": "Habilidades que sirven fuera del combate: curar o recuperar PM."},
-	{"id": "items", "label": "Objetos", "icon": "flask", "desc": "Lo que llevas encima. Los que curan se usan sobre quien elijas; el resonador lanza un pulso que delata paredes secretas.  [F]"},
-	{"id": "pulse", "label": "Resonador", "icon": "alert", "desc": "Lanza un pulso que delata paredes secretas. Gasta una carga.  [F]"},
+	{"id": "items", "label": "Objetos", "icon": "flask", "desc": "Lo que llevas encima. Los que curan se usan sobre quien elijas; el escáner lanza un pulso que delata paredes secretas.  [F]"},
+	{"id": "pulse", "label": "Escáner", "icon": "alert", "desc": "Lanza un pulso que delata paredes secretas. Gasta una carga.  [F]"},
 	{"id": "map", "label": "Mapa", "icon": "calendar", "desc": "Automapa de la planta: lo que ya has recorrido.  [M]"},
 	{"id": "look", "label": "Vista", "icon": "play", "desc": "Cambia el estilo visual: normal, PS2 o PS1.  [V]"},
 	{"id": "exit", "label": "Salir", "icon": "run", "desc": "Volver a la calle. Desde una zona de extracción (círculo cian) te llevas lo conseguido."},
@@ -73,13 +83,16 @@ var _busy := false          ## combate o salida en curso
 var _status: StatusPanel
 
 # Grupo: Ren y el compañero de esta visita.
-var _companion := ""
+var _companion := ""            ## quien habla en el registro (uno del grupo)
 var _companion_skills: Array = []
+var _party: Array = []          ## compañeros de Ren en esta incursión (ids)
+var _rift := false              ## incursión en la grieta (con equipo elegido)
+var _entry: Dictionary = {}     ## lo que había al entrar (perder vuelve aquí)
 var _party_battle: Battle    ## PV/PM del grupo fuera del combate, fichas y pantalla de estado
 var _vitals: Dictionary = {}  ## PV y PM del grupo en esta incursión (Battle.party_vitals)
 var _run_start: Dictionary = {}  ## inventario, dinero y objetos cogidos al entrar
 var _was_extraction := false
-var _charges := 0              ## cargas del resonador en esta incursión
+var _charges := 0              ## cargas del escáner en esta incursión
 
 # Comentarios del compañero.
 const IDLE_STEPS := Vector2i(9, 17)    ## pasos entre comentarios sueltos
@@ -99,6 +112,9 @@ var _remarked := {}                      ## criaturas y paredes falsas ya coment
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_map_id = LocationDB.get_location(GameState.location_id).get("dungeon_map", "torre")
+	_rift = not GameState.expedition.is_empty()
+	if _map_id == ChapterDB.RIFT_MAP and not FileAccess.file_exists(DungeonMap.path_for(_map_id)):
+		_map_id = ChapterDB.RIFT_FALLBACK_MAP   # provisional, hasta que exista el mapa de la grieta
 	_map = DungeonMap.load_map(_map_id)
 	_build()
 	resized.connect(_layout)
@@ -106,18 +122,47 @@ func _ready() -> void:
 	if _map == null:
 		_log("No se encuentra el mapa «%s» (src/data/mazmorras/)." % _map_id)
 		return
-	_companion = CharacterDB.COMPANIONS.pick_random()
-	_companion_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(_companion), CharacterDB.get_character(_companion).get("nature", ""))
+	if _rift:
+		_party = GameState.expedition.duplicate()
+	else:
+		_companion = CharacterDB.COMPANIONS.pick_random()
+		_companion_skills = SkillDB.random_skills(2, CharacterDB.combat_tags(_companion), CharacterDB.get_character(_companion).get("nature", ""))
+		_party = [_companion]
 	_next_idle = randi_range(IDLE_STEPS.x, IDLE_STEPS.y)
 	_explorer.setup(_map, GameState.dungeon_state(_map_id))
 	DungeonLook.apply(_view, _explorer)
 	_mark_run_start()
-	_charges = ItemDB.charges("resonador")
+	_entry = _run_start.duplicate(true)
+	_charges = ItemDB.charges(ItemDB.SCANNER)
 	_was_extraction = _explorer.at_extraction()
 	_refresh_party()
 	_set_info(COMMANDS[0].desc)
-	_log("Entras en %s con %s." % [LocationDB.display_name(GameState.location_id), CharacterDB.display_name(_companion)])
-	_comment("enter", 1.8, true)
+	var names: Array = _party.map(func(w: String) -> String: return CharacterDB.display_name(w))
+	_log("Entras en %s%s." % [_place_name(),
+			(" con " + _group_name(_party)) if not names.is_empty() else " a solas"])
+	if _rift and GameState.phase_at_least("exploracion_1") and GameState.item_count(ItemDB.SCANNER) <= 0:
+		_find_scanner_at_entry()
+	else:
+		_comment("enter", 1.8, true)
+
+
+## Segunda entrada sin el escáner: alguien del grupo lo encuentra en la entrada.
+func _find_scanner_at_entry() -> void:
+	await get_tree().create_timer(2.0).timeout
+	GameState.add_item(ItemDB.SCANNER)
+	_mark_run_start()
+	_entry = _run_start.duplicate(true)
+	_charges = ItemDB.charges(ItemDB.SCANNER)
+	var who: String = _party.pick_random() if not _party.is_empty() else ""
+	var line := DungeonBanter.line(who, "scanner") if who != "" else ""
+	if line != "":
+		_companion = who
+		_say(line)
+	else:
+		_log("En la entrada, enganchado a la pared, hay un escáner. Te lo guardas.")
+	await get_tree().create_timer(3.0).timeout
+	if is_inside_tree() and not _busy:
+		_log("Tienes el escáner: Analizar en combate y pulso en la mazmorra [F].")
 
 
 # --- Construcción ----------------------------------------------------------------------
@@ -241,7 +286,7 @@ func _refresh_party() -> void:
 		for who in _party_battle.party:
 			var f := _party_battle.fighter(who)
 			old_max[f.id] = [f.pv_max, f.pm_max]
-	_party_battle = Battle.new(CharacterDB.PROTAGONIST, "imp", _companion, _companion_skills)
+	_party_battle = Battle.new(CharacterDB.PROTAGONIST, "imp", _party, _companion_skills)
 	# Al subir de nivel, lo que crecen PV y PM máximos se suma a los actuales.
 	for who in _party_battle.party:
 		var f := _party_battle.fighter(who)
@@ -505,11 +550,11 @@ func _show_items() -> void:
 	var any := false
 	for id: String in GameState.inventory:
 		var n: int = GameState.inventory[id]
-		if n <= 0:
+		if n <= 0 or (_bare() and ItemDB.restores(id)):
 			continue
 		any = true
 		var name_text := ItemDB.display_name(id)
-		var label := ("%s  ·  %d carga%s" % [name_text, _charges, "" if _charges == 1 else "s"]) if id == "resonador" \
+		var label := ("%s  ·  %d carga%s" % [name_text, _charges, "" if _charges == 1 else "s"]) if id == ItemDB.SCANNER \
 				else "%s  ×%d" % [name_text, n]
 		_add_option(label, func() -> void:
 			_set_info(ItemDB.description(id))
@@ -529,30 +574,45 @@ func _show_items() -> void:
 		_log("No llevas nada.")
 
 
-## Resonador: pulso que hace brillar las paredes secretas a 5 casillas o menos.
+## Nombre de la mazmorra: la grieta o el sitio (La Torre).
+func _place_name() -> String:
+	return "la grieta" if _rift else LocationDB.display_name(GameState.location_id)
+
+
+## Con lo puesto: en la grieta, hasta tener el escáner, no se usan objetos que curen.
+func _bare() -> bool:
+	return _rift and not GameState.phase_at_least("escaner")
+
+
+## Combate: reglas de la grieta (CombatView.setup).
+func _combat_rules() -> Dictionary:
+	return {"retreat": true, "no_restore": _bare()} if _rift else {}
+
+
+## Escáner: pulso que hace brillar las paredes secretas a 5 casillas o menos.
 func _use_resonator() -> void:
-	if GameState.item_count("resonador") <= 0:
+	if GameState.item_count(ItemDB.SCANNER) <= 0:
 		return
 	_clear_options()
 	if _explorer.is_pulsing():
 		return
 	if _charges <= 0:
-		_log("El resonador está sin carga. Hace falta una batería (las traen las cajas).")
+		_log("El escáner está sin carga. Hace falta una batería (las traen las cajas).")
 		if GameState.item_count("bateria") > 0:
 			_add_option("Poner una batería  ×%d" % GameState.item_count("bateria"), _use_battery.bind("bateria"))
 		return
 	_charges -= 1
-	_log("Activas el resonador. Un pulso rosado recorre los pasillos… (quedan %d carga%s)" % [_charges, "" if _charges == 1 else "s"])
+	_log("Activas el escáner. Un pulso rosado recorre los pasillos… (quedan %d carga%s)" % [_charges, "" if _charges == 1 else "s"])
 	_explorer.pulse()
 
 
-## Batería: gasta una y le da sus cargas al resonador (solo dura esta incursión).
+## Batería: gasta una y le da sus cargas al escáner (solo dura esta incursión).
 func _use_battery(id: String) -> void:
 	_clear_options()
 	if not GameState.use_item(id):
 		return
 	_charges += ItemDB.charges(id)
-	_log("Encajas la batería en el resonador. Cargas: %d." % _charges)
+	_log("Encajas la batería en el escáner. Cargas: %d." % _charges)
 
 
 ## Caja recién cogida: abrirla ya o guardarla para luego.
@@ -677,7 +737,19 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 		return
 	_busy = true
 	_clear_options()
-	var ally := _companion
+	# En la grieta, si el grupo ya va muy tocado, ni se pelea: alguien dice de irse.
+	if _rift and _party_battle.should_retreat():
+		var who: String = _party.pick_random() if not _party.is_empty() else CharacterDB.PROTAGONIST
+		var line := DungeonBanter.line(who, "retreat")
+		_companion = who
+		if line != "":
+			_say(line)
+		else:
+			_log("No estáis para pelear. Os retiráis.")
+		await get_tree().create_timer(2.4).timeout
+		_busy = false
+		_exit(true)
+		return
 	var ally_skills := _companion_skills
 	if CharacterDB.is_enemy(enemy_id) and not GameState.first_creature_fight_done:
 		GameState.first_creature_fight_done = true
@@ -685,15 +757,25 @@ func _on_encounter(enemy_id: String, cell: Vector2i) -> void:
 	# Un encuentro puede ser un grupo (`group`: los que acompañan al líder) y el jefe (`boss`).
 	var th := _map.thing(cell)
 	var ids: Array = [enemy_id] + th.get("group", [])
-	_combat.setup(ids, ally, ally_skills, _vitals, _map.creature_level(), th.get("boss", false))
+	_combat.setup(ids, _party, ally_skills, _vitals, _map.creature_level(), th.get("boss", false), _combat_rules())
 	await SceneRouter.fade_in(0.25)
 	_combat.begin()
 	var won: bool = await _combat.finished
+	var retreated := _combat.retreated()
+	var wiped := not won and not retreated and _combat.party_down()
 	# Los PV y PM siguen así en la incursión (quien cayó, con 1 PV).
 	_vitals = _combat.party_vitals()
 	_refresh_party()
-	GameState.record("combat", CharacterDB.PROTAGONIST, enemy_id, {"won": won, "ally": ally, "dungeon": _map_id},
-			[ally] if ally != "" else [])
+	GameState.record("combat", CharacterDB.PROTAGONIST, enemy_id, {"won": won, "ally": ",".join(_party), "dungeon": _map_id},
+			_party.duplicate())
+	if retreated:   # retirada: fuera, sin perder lo ganado
+		_combat.visible = false
+		_busy = false
+		_exit(true)
+		return
+	if wiped:
+		await _restart_at_entry()
+		return
 	await SceneRouter.fade_out(0.25)
 	_combat.visible = false
 	await SceneRouter.fade_in(0.25)
@@ -725,7 +807,7 @@ static func _group_name(ids: Array) -> String:
 
 ## EXP por explorar para el grupo (y la parte del resto de compañeros).
 func _explore_xp(amount: int, what: String) -> void:
-	var results := GameState.grant_xp([CharacterDB.PROTAGONIST, _companion], amount)
+	var results := GameState.grant_xp([CharacterDB.PROTAGONIST] + _party, amount)
 	var ups := GameState.level_up_text(results)
 	_refresh_party()
 	await get_tree().create_timer(2.6).timeout
@@ -747,7 +829,7 @@ func _first_visit_xp() -> void:
 ## Fuera de una zona de extracción: aviso antes de salir.
 func _ask_exit() -> void:
 	_busy = true
-	var ok := await ConfirmPopup.ask(self, "¿Salir de %s?" % LocationDB.display_name(GameState.location_id),
+	var ok := await ConfirmPopup.ask(self, "¿Salir de %s?" % _place_name(),
 			EXIT_WARNING, "Salir", "Continuar explorando")
 	_busy = false
 	if ok:
@@ -765,6 +847,13 @@ func _exit(extracted: bool) -> void:
 	_clear_options()
 	if not extracted:
 		_lose_run()
+	if _rift:
+		# Primera exploración hecha; con el escáner fuera, la fase siguiente (se abre el Pidl).
+		if GameState.item_count(ItemDB.SCANNER) > 0 and not GameState.phase_at_least("escaner"):
+			GameState.set_phase("escaner")
+		elif not GameState.phase_at_least("exploracion_1"):
+			GameState.set_phase("exploracion_1")
+		GameState.expedition = []
 	if GameState.slot_id() != "noche":
 		GameState.advance_slot()
 	GameState.save_game()
@@ -801,6 +890,25 @@ func _lose_run() -> void:
 	_explorer.restore_drops(_run_start.defeated)
 
 
+## El grupo ha caído: de vuelta a la entrada como al entrar (se pierde todo lo
+## de esta incursión, también lo asegurado en puntos de guardado) y con la vida llena.
+func _restart_at_entry() -> void:
+	await SceneRouter.fade_out(0.25)
+	_run_start = _entry.duplicate(true)
+	_lose_run()
+	_vitals = {}
+	_explorer.setup(_map, GameState.dungeon_state(_map_id))
+	DungeonLook.apply(_view, _explorer)
+	_charges = ItemDB.charges(ItemDB.SCANNER) if GameState.item_count(ItemDB.SCANNER) > 0 else 0
+	_refresh_party()
+	_combat.visible = false
+	await SceneRouter.fade_in(0.25)
+	queue_redraw()
+	_busy = false
+	_log("Os despertáis en la entrada. Todo lo de esta incursión se ha perdido.")
+	_on_moved()
+
+
 # --- Registro -------------------------------------------------------------------------------
 
 func _log(text: String) -> void:
@@ -820,8 +928,9 @@ func _say(text: String) -> void:
 ## `delay` s para que antes se lea lo que ha pasado. Sin `force`, no comenta si
 ## lo ha hecho hace menos de COMMENT_GAP pasos.
 func _comment(event: String, delay: float, force := false) -> void:
-	if _companion == "" or (not force and _steps - _last_comment < COMMENT_GAP):
+	if _party.is_empty() or (not force and _steps - _last_comment < COMMENT_GAP):
 		return
+	_companion = _party.pick_random()
 	var text := DungeonBanter.line(_companion, event)
 	if text == "":
 		return
@@ -877,7 +986,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), UIStyle.INK)
 
 	draw_rect(Rect2(28, 16, 12, 50), ACCENT)
-	var title := "Mazmorra - %s" % LocationDB.display_name(GameState.location_id)
+	var title := "Mazmorra - %s" % ("La grieta" if _rift else _place_name())
 	draw_string(UIStyle.FONT_MEDIUM, Vector2(70, 46), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, UIStyle.WHITE)
 	var lvl := _map.level_name() if _map else ""
 	var sub := "%s / Zona: %s / %s" % [GameState.region_name, LocationDB.display_name(GameState.location_id), lvl]
@@ -915,7 +1024,7 @@ func _draw_info() -> void:
 	var div_x := 960.0
 	_info.draw_line(Vector2(div_x, 14), Vector2(div_x, r.size.y - 14), Color(UIStyle.WHITE, 0.6), 1.5)
 	if _options.get_child_count() == 0 and not App.is_touch():
-		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[WASD] Moverte  [Q E] De lado  [Espacio] Usar  [F] Resonador  [M] Mapa  [Tab] Equipo  [V] Vista",
+		_info.draw_string(UIStyle.FONT_REGULAR, Vector2(30, 44), "[WASD] Moverte  [Q E] De lado  [Espacio] Usar  [F] Escáner  [M] Mapa  [Tab] Equipo  [V] Vista",
 				HORIZONTAL_ALIGNMENT_LEFT, div_x - 50, 19, Color(UIStyle.WHITE, 0.6))
 	_info.draw_colored_polygon(UIStyle.slanted_rect(Rect2(div_x + 34, 22, 9, 28), 7), UIStyle.LIME)
 	_info.draw_string(UIStyle.FONT_REGULAR, Vector2(div_x + 60, 44), _info_text, HORIZONTAL_ALIGNMENT_LEFT,

@@ -83,6 +83,14 @@ static func step(id: String) -> Dictionary:
 #   advance_time          al terminar pasa a la franja siguiente (es una actividad)
 #   sets_phase            al terminar, la historia avanza a esa fase
 
+## La grieta (fase 6): quién puede entrar con Ren (los que ya conoce; Akane no) y
+## cuántos como mucho (el grupo es de 4 contando a Ren). Mapa en
+## src/data/mazmorras/<RIFT_MAP>.json; mientras no exista se usa RIFT_FALLBACK_MAP.
+const EXPEDITION: Array[String] = ["rika", "yuna", "kenji", "shiori"]
+const EXPEDITION_SIZE := 3
+const RIFT_MAP := "grieta"
+const RIFT_FALLBACK_MAP := "torre"
+
 const PLANS := {
 	# --- Día 2 (martes) ---
 	"clase_martes": {

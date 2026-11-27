@@ -17,7 +17,7 @@ const MOMENTS := {
 	"enter": "entrar", "idle": "andar", "enemy": "enemigo", "victory": "victoria",
 	"defeat": "derrota", "item": "objeto", "level_up": "subir", "level_down": "bajar",
 	"secret_hint": "pista_secreta", "secret_found": "secreto", "locked": "cerrada",
-	"switch": "palanca",
+	"switch": "palanca", "retreat": "retirada", "scanner": "escaner",
 }
 
 static var _lines := {}     ## cue -> Array[String]

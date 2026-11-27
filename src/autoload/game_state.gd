@@ -40,12 +40,13 @@ var dungeons: Dictionary = {}
 var levels: Dictionary = {}
 ## Atributos entrenados con actividades: id -> {atributo: puntos} (fase de preparación).
 var stat_bonus: Dictionary = {}
+## Quiénes entran con Ren en la grieta (elegidos antes de entrar; ChapterDB.EXPEDITION).
+## Vacío = mazmorra con un compañero al azar (La Torre).
+var expedition: Array = []
 ## Planes que propone Ren (Invites): "ren:N" -> {activity, day, slot, guests: {id: "si"}}.
 var ren_plans: Dictionary = {}
 
-const START_INVENTORY := {"pochicola": 3, "resonador": 1}
-## Lo que Ren siempre lleva (se añade también a las partidas anteriores).
-const ALWAYS_CARRIED := ["resonador"]
+const START_INVENTORY := {"pochicola": 3}
 
 ## Puntos de la historia, en orden. Los diálogos comparan con `phase_at_least`.
 const PHASES: Array[String] = [
@@ -125,6 +126,7 @@ func new_game() -> void:
 	dungeons = {}
 	levels = {}
 	stat_bonus = {}
+	expedition = []
 	ren_plans = {}
 	phase = PHASES[0]
 	flags = {}
@@ -223,16 +225,20 @@ func level_up(id: String) -> Dictionary:
 	return add_xp(id, ProgressionDB.xp_to_next(level_of(id)) - xp_of(id))
 
 
-## Reparte `amount` a quienes participan (`ids`) y BENCH_SHARE al resto de los que
-## suben de nivel. Devuelve los resultados (add_xp) de todos, participantes primero.
-func grant_xp(ids: Array, amount: int) -> Array:
+## Reparte `amount` a quienes participan (`ids`), FALLEN_SHARE a los que han
+## caído (`fallen`) y a los que no estaban su parte según su afecto por Ren
+## (ProgressionDB.bench_share). Devuelve los resultados (add_xp), participantes primero.
+func grant_xp(ids: Array, amount: int, fallen: Array = []) -> Array:
 	var out: Array = []
 	for id: String in ids:
 		if id in levelled_ids():
 			out.append(add_xp(id, amount))
-	var share := roundi(amount * ProgressionDB.BENCH_SHARE)
+	for id: String in fallen:
+		if id in levelled_ids():
+			out.append(add_xp(id, roundi(amount * ProgressionDB.FALLEN_SHARE)))
 	for id: String in levelled_ids():
-		if not id in ids and share > 0:
+		var share := roundi(amount * ProgressionDB.bench_share(id))
+		if not id in ids and not id in fallen and share > 0:
 			out.append(add_xp(id, share))
 	return out
 
@@ -261,7 +267,7 @@ func use_item(item_id: String) -> bool:
 
 
 ## Abre una caja del inventario (ItemDB `loot`): se gasta y da lo que trae.
-## Devuelve lo conseguido como texto («Batería del resonador, Pochicola ×2»),
+## Devuelve lo conseguido como texto («Batería del escáner, Pochicola ×2»),
 ## o "" si no había caja.
 func open_box(item_id: String) -> String:
 	if not ItemDB.is_box(item_id) or not use_item(item_id):
@@ -374,7 +380,7 @@ func save_game() -> void:
 		"version": SAVE_VERSION,
 		"region": region_name, "date": date, "time_slot": time_slot, "money": money,
 		"location": location_id, "inventory": inventory, "messages": messages, "dungeons": dungeons,
-		"levels": levels, "stat_bonus": stat_bonus, "ren_plans": ren_plans,
+		"levels": levels, "stat_bonus": stat_bonus, "expedition": expedition, "ren_plans": ren_plans,
 		"relations": relations, "moods": moods,
 		"phase": phase, "flags": flags, "partners": partners, "secrets": secrets, "events": events.to_dict(), "intro_done": intro_done,
 		"story_step": story_step,
@@ -408,8 +414,7 @@ func load_game() -> bool:
 	relations = data.get("relations", relations)
 	moods = data.get("moods", moods)
 	inventory = _ints(data.get("inventory", START_INVENTORY))
-	for id: String in ALWAYS_CARRIED:
-		inventory[id] = maxi(item_count(id), 1)
+	inventory.erase("resonador")   # partidas de antes del escáner (fase 6): se consigue en la grieta
 	messages = data.get("messages", {})
 	dungeons = data.get("dungeons", {})
 	levels = {}
@@ -419,6 +424,7 @@ func load_game() -> bool:
 	stat_bonus = {}
 	for id: String in data.get("stat_bonus", {}):
 		stat_bonus[id] = _ints(data.stat_bonus[id])
+	expedition = data.get("expedition", [])
 	ren_plans = {}
 	var rp: Dictionary = data.get("ren_plans", {})
 	for id: String in rp:

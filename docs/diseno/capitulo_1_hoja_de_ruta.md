@@ -248,6 +248,19 @@ incursión ya existían para los cuatro.
 
 ### Fase 6 — Primera exploración
 
+> **Hecho** (mecánica; la mazmorra la diseña el usuario, con plantas
+> interconectadas, y el capítulo 1 es todo mecánico): `TeamPicker` al entrar
+> (`ChapterDB.EXPEDITION`, `EXPEDITION_SIZE`; `GameState.expedition`); combate
+> de hasta 4 (`Battle.ALLIES`); retirada [DEFINIDO por el usuario] al bajar del
+> 35 % de PV del grupo o del 15 % de uno (`Battle.should_retreat`, regla
+> `retreat` de `CombatView`; también antes de un combate); caer entero = vuelta
+> a la entrada perdiendo la incursión (`DungeonScreen._restart_at_entry`);
+> escáner `ItemDB.SCANNER` (sustituye al resonador; sin él, *Analizar*
+> bloqueado), en el mapa o, en la segunda entrada, en la entrada; con lo puesto
+> hasta tenerlo (regla `no_restore`); EXP de los que no van según afecto, hasta
+> el 50 % [DEFINIDO por el usuario]; caídos, 60 %. Mapa `grieta.json` pendiente
+> (usa La Torre). Pendiente de decidir: las habilidades BIO de inicio.
+
 - **Elegir equipo** [DEFINIDO]: pantalla antes de entrar. El equipo es de hasta
   4 contando **siempre a Ren**: Ren y hasta 3 más (Ren no se puede quitar). En el
   capítulo 1 solo pueden ir los que Ren ya conoce [DEFINIDO]: **Rika, Yuna, Kenji
