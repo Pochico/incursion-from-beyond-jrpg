@@ -197,18 +197,18 @@ Según salen beben de la manguera que llena el agua de los barquitos de choque y
 ~ dia1_despedida
 Al salir ya está anocheciendo. El aparcamiento empieza a encender sus farolas.
 Rika: Me duele todo. Mañana no me levanto.
-Shiori: Mañana hay clase a primera hora.
-Rika: Por eso lo digo.
+Shiori: ¿Vienes a primera o no?
+Rika: Sí hija sí, pero no será por voluntad propia...
 Un coche se para junto a la acera y baja la ventanilla.
-Madre de Kenji: ¡Kenji! ¡Yuna! Subid, que os acerco. ¡Ren, mi niño! ¿Te llevo a ti también?
+Madre de Kenji: ¡Venga Kenji! Yuna, sube tú también que te acercamos. ¡Ren, mi niño! ¿Te llevo a ti también?
 Ren: No hace falta, gracias. Voy andando, que está aquí al lado.
 Madre de Kenji: Pues dale recuerdos a tu madre. ¡Y abrígate!
-Kenji: Bueno, cada mochuelo a su olivo. Ren, contesta los mensajes, que te conozco.
-- Que sí, pesado. [#bromista]
-	Kenji: Eso dices siempre. Y luego, nada.
-- Gracias por el plan. Me hacía falta. [#cariñoso, #franco]
-	Kenji: ...Vale, eso no me lo esperaba. Me has pillado sin respuesta graciosa.
-	Kenji: De nada, tío. Cuando quieras.
+Kenji: Bueno, mañana nos olemos en clase.
+- Por desgracia. [#bromista]
+	Kenji: Tu cara sí que es una desgracia. Venga anda, hasta mañana. [#cara=sorpresa]
+- Al final me lo he pasado bien y todo. [#cariñoso, #franco]
+	Kenji: Claro, si es que eres tonto, sabes que te lo pasas bien pero luego no quieres venirte.
+	Kenji: A la próxima en vez de hacerte el remolón te vienes directamente, bobo.
 Cada uno se va a su casa.
 => END
 
